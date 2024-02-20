@@ -65,6 +65,7 @@ namespace Easy.EasyAsset
                 generateInfo = ScriptableObject.CreateInstance<GenerateInfo>();
                 AssetDatabase.CreateAsset(generateInfo, EasyAssetEditorConst.GenerateInfoPath);
             }
+            generateInfo.version = long.Parse(DateTime.Now.ToString("yyyyMMddHHmmss"));
             window.generateInfo = generateInfo;
 
             var buildTaskPipeLine = AssetDatabase.LoadAssetAtPath<BuildTaskPipeLine>(EasyAssetEditorConst.EasyAssetBuildTaskPipleLinePath);

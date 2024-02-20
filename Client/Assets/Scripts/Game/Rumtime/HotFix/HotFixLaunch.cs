@@ -15,8 +15,6 @@ namespace Easy
     {
         public string sceneName;
 
-        public int aaa;
-
         private Launch launch;
         // Start is called before the first frame update
         void Start()

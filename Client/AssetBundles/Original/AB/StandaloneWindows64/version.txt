@@ -1,1 +1,0 @@
-{"version":20230827180151,"versionCode":0,"requestCatalogsUrl":"http://127.0.0.1:9999/AB/StandaloneWindows64/catalogs.txt"}
