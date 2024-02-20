@@ -1,0 +1,282 @@
+﻿#include "pch-c.h"
+#ifndef _MSC_VER
+# include <alloca.h>
+#else
+# include <malloc.h>
+#endif
+
+
+#include "codegen/il2cpp-codegen-metadata.h"
+
+
+
+
+
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_m68A06049FBCE46DCB83320627D0785C417536B85 (void);
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_m6D588A34B7EA4E5C6AF6CB0E90A1C459F7EFD481 (void);
+extern void UnityPlayerHelper_GetCurrentActivity_mA09053014AEE0D89580AB91CCB54123FDCD23000 (void);
+extern void VoidResult__ctor_m226B8B8194699C238D70445A700FCBEA4C82699A (void);
+extern void LoadingBar_Update_mD250779416E913767A37A3B0307ED28BDF9E6DEC (void);
+extern void LoadingBar_ApplyBorderWidth_mD3BDA848463EF26D8D29A4ED37E4BDD749ACEC5A (void);
+extern void LoadingBar_SetProgress_m993F37353EB1287A71FDA8EA813E06B6CC3F92D9 (void);
+extern void LoadingBar_FillUntilDone_m605B393DF242B4B0B817F69F34F12F87ADAE9121 (void);
+extern void LoadingBar__ctor_m9AB9E03A23849BC7311DA9AB09BF93782D9D4A4C (void);
+extern void U3CFillUntilDoneU3Ed__12__ctor_m717F76CBC042CB18A9EF71F73DFA0F110C411337 (void);
+extern void U3CFillUntilDoneU3Ed__12_System_IDisposable_Dispose_mD999DEC59E3F7AE9AB5CDED6643EA42CC7F912E7 (void);
+extern void U3CFillUntilDoneU3Ed__12_MoveNext_m6B7DB4BCD18CDB6295B2678A0DCBACB47AF899A7 (void);
+extern void U3CFillUntilDoneU3Ed__12_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_mA14C65BD2F8B82DDFEA73BF4BD0189DD4E91AF1F (void);
+extern void U3CFillUntilDoneU3Ed__12_System_Collections_IEnumerator_Reset_mA72123F9EC1FE7C4556B6779AE18EB8D97A3A7AF (void);
+extern void U3CFillUntilDoneU3Ed__12_System_Collections_IEnumerator_get_Current_mB9959B8394D187C1C49CD4EDCB1FFABAB20AF78A (void);
+extern void LoadingScreen_Start_m7D161169ECA0C67241F2C01898F8D482C873727B (void);
+extern void LoadingScreen_ButtonEventRetryDownload_m267CAF97BE25E762BFDA2593F43F2D1D4E686BC6 (void);
+extern void LoadingScreen_AttemptAssetBundleDownload_m6EE1DEC7C5F40C6E3194B6A12176D9679699C977 (void);
+extern void LoadingScreen_AttemptAssetBundleDownloadsCo_mA64D96E40D7E7183DF7CF52EF64B991B012E3A1B (void);
+extern void LoadingScreen_GetAssetBundle_m705702E899FB42C85DC9A3773C3754356FCEB7F6 (void);
+extern void LoadingScreen_ShowRetryButton_m4466BD4182CA104BEF80CD93E30222423E03C570 (void);
+extern void LoadingScreen_HideRetryButton_mE1E748695CF010FBF809E8601C97805772E554E8 (void);
+extern void LoadingScreen_IsNetworkError_m3E912F67E222160D0D9841947DF95D22C9438BE7 (void);
+extern void LoadingScreen_StartAssetBundleDownload_m72274F60A893ECC9BD88DD43ED4EEC9650C7948A (void);
+extern void LoadingScreen__ctor_mC331C36679F6FE3DBA0FE08648D8F64C23041D16 (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11__ctor_mBC09BF358BA2B5FE77B62F6421808088D3242F18 (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_IDisposable_Dispose_mE2831F3488CBFABB8A77C6446575EC50CE19EADF (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11_MoveNext_m4DCAAB8359E74121B9E85DD8D81E2334E3B952E8 (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m7711D6D016A7EC23D134CA78E7F4A07B7454B94D (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_IEnumerator_Reset_m429A35953FFD9B4B8FD4FDDFB18B89FA55CA185C (void);
+extern void U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_IEnumerator_get_Current_mFDDF2BA18BBC7F6AE0B7AD348A80957118C3B1B5 (void);
+extern void U3CGetAssetBundleU3Ed__12__ctor_m26F2BC8913AECFB4EED7D3F225653D21EF1D0AD5 (void);
+extern void U3CGetAssetBundleU3Ed__12_System_IDisposable_Dispose_m9D76E7F6C16343BC07BE72E0580F8F3D375A6732 (void);
+extern void U3CGetAssetBundleU3Ed__12_MoveNext_mC87EEE4F598A38D4B31308CC46E0E45285C055CB (void);
+extern void U3CGetAssetBundleU3Ed__12_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_mED14706F6552BFA6CDAC1B8799B80728A6A1E428 (void);
+extern void U3CGetAssetBundleU3Ed__12_System_Collections_IEnumerator_Reset_m9482DAC75D6CF9159AB69C07CE90E389BBC1200D (void);
+extern void U3CGetAssetBundleU3Ed__12_System_Collections_IEnumerator_get_Current_mD2C7EDBE30CE7864B9DF6528AF80225E0F1AF8CF (void);
+extern void ScrollingFillAnimator_Update_mE44FC9AF463A45F53708F30A3E67EACB751EA2D7 (void);
+extern void ScrollingFillAnimator_ScrollUvs_m884B7515FDB7160E3A90229FCD9AF0F2D3306682 (void);
+extern void ScrollingFillAnimator_ScaleUvs_m4C2AAF8436112262FC506D129AB03E2528349EFE (void);
+extern void ScrollingFillAnimator_LazyInit_m501006080A45A9DD44AF50A84855EFF1870257FA (void);
+extern void ScrollingFillAnimator__ctor_m5E62435BC4335A58290C864ADE13BA1E06860145 (void);
+static Il2CppMethodPointer s_methodPointers[63] = 
+{
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_m68A06049FBCE46DCB83320627D0785C417536B85,
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_m6D588A34B7EA4E5C6AF6CB0E90A1C459F7EFD481,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	UnityPlayerHelper_GetCurrentActivity_mA09053014AEE0D89580AB91CCB54123FDCD23000,
+	VoidResult__ctor_m226B8B8194699C238D70445A700FCBEA4C82699A,
+	LoadingBar_Update_mD250779416E913767A37A3B0307ED28BDF9E6DEC,
+	LoadingBar_ApplyBorderWidth_mD3BDA848463EF26D8D29A4ED37E4BDD749ACEC5A,
+	LoadingBar_SetProgress_m993F37353EB1287A71FDA8EA813E06B6CC3F92D9,
+	LoadingBar_FillUntilDone_m605B393DF242B4B0B817F69F34F12F87ADAE9121,
+	LoadingBar__ctor_m9AB9E03A23849BC7311DA9AB09BF93782D9D4A4C,
+	U3CFillUntilDoneU3Ed__12__ctor_m717F76CBC042CB18A9EF71F73DFA0F110C411337,
+	U3CFillUntilDoneU3Ed__12_System_IDisposable_Dispose_mD999DEC59E3F7AE9AB5CDED6643EA42CC7F912E7,
+	U3CFillUntilDoneU3Ed__12_MoveNext_m6B7DB4BCD18CDB6295B2678A0DCBACB47AF899A7,
+	U3CFillUntilDoneU3Ed__12_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_mA14C65BD2F8B82DDFEA73BF4BD0189DD4E91AF1F,
+	U3CFillUntilDoneU3Ed__12_System_Collections_IEnumerator_Reset_mA72123F9EC1FE7C4556B6779AE18EB8D97A3A7AF,
+	U3CFillUntilDoneU3Ed__12_System_Collections_IEnumerator_get_Current_mB9959B8394D187C1C49CD4EDCB1FFABAB20AF78A,
+	LoadingScreen_Start_m7D161169ECA0C67241F2C01898F8D482C873727B,
+	LoadingScreen_ButtonEventRetryDownload_m267CAF97BE25E762BFDA2593F43F2D1D4E686BC6,
+	LoadingScreen_AttemptAssetBundleDownload_m6EE1DEC7C5F40C6E3194B6A12176D9679699C977,
+	LoadingScreen_AttemptAssetBundleDownloadsCo_mA64D96E40D7E7183DF7CF52EF64B991B012E3A1B,
+	LoadingScreen_GetAssetBundle_m705702E899FB42C85DC9A3773C3754356FCEB7F6,
+	LoadingScreen_ShowRetryButton_m4466BD4182CA104BEF80CD93E30222423E03C570,
+	LoadingScreen_HideRetryButton_mE1E748695CF010FBF809E8601C97805772E554E8,
+	LoadingScreen_IsNetworkError_m3E912F67E222160D0D9841947DF95D22C9438BE7,
+	LoadingScreen_StartAssetBundleDownload_m72274F60A893ECC9BD88DD43ED4EEC9650C7948A,
+	LoadingScreen__ctor_mC331C36679F6FE3DBA0FE08648D8F64C23041D16,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11__ctor_mBC09BF358BA2B5FE77B62F6421808088D3242F18,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_IDisposable_Dispose_mE2831F3488CBFABB8A77C6446575EC50CE19EADF,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11_MoveNext_m4DCAAB8359E74121B9E85DD8D81E2334E3B952E8,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m7711D6D016A7EC23D134CA78E7F4A07B7454B94D,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_IEnumerator_Reset_m429A35953FFD9B4B8FD4FDDFB18B89FA55CA185C,
+	U3CAttemptAssetBundleDownloadsCoU3Ed__11_System_Collections_IEnumerator_get_Current_mFDDF2BA18BBC7F6AE0B7AD348A80957118C3B1B5,
+	U3CGetAssetBundleU3Ed__12__ctor_m26F2BC8913AECFB4EED7D3F225653D21EF1D0AD5,
+	U3CGetAssetBundleU3Ed__12_System_IDisposable_Dispose_m9D76E7F6C16343BC07BE72E0580F8F3D375A6732,
+	U3CGetAssetBundleU3Ed__12_MoveNext_mC87EEE4F598A38D4B31308CC46E0E45285C055CB,
+	U3CGetAssetBundleU3Ed__12_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_mED14706F6552BFA6CDAC1B8799B80728A6A1E428,
+	U3CGetAssetBundleU3Ed__12_System_Collections_IEnumerator_Reset_m9482DAC75D6CF9159AB69C07CE90E389BBC1200D,
+	U3CGetAssetBundleU3Ed__12_System_Collections_IEnumerator_get_Current_mD2C7EDBE30CE7864B9DF6528AF80225E0F1AF8CF,
+	ScrollingFillAnimator_Update_mE44FC9AF463A45F53708F30A3E67EACB751EA2D7,
+	ScrollingFillAnimator_ScrollUvs_m884B7515FDB7160E3A90229FCD9AF0F2D3306682,
+	ScrollingFillAnimator_ScaleUvs_m4C2AAF8436112262FC506D129AB03E2528349EFE,
+	ScrollingFillAnimator_LazyInit_m501006080A45A9DD44AF50A84855EFF1870257FA,
+	ScrollingFillAnimator__ctor_m5E62435BC4335A58290C864ADE13BA1E06860145,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
+static const int32_t s_InvokerIndices[63] = 
+{
+	20264,
+	12559,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	20183,
+	12559,
+	12559,
+	12559,
+	10411,
+	2070,
+	12559,
+	10289,
+	12559,
+	12239,
+	12384,
+	12559,
+	12384,
+	12559,
+	12559,
+	10289,
+	9252,
+	9256,
+	12559,
+	12559,
+	18974,
+	17253,
+	12559,
+	10289,
+	12559,
+	12239,
+	12384,
+	12559,
+	12384,
+	10289,
+	12559,
+	12239,
+	12384,
+	12559,
+	12384,
+	12559,
+	9359,
+	9359,
+	12559,
+	12559,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+};
+static const Il2CppTokenRangePair s_rgctxIndices[3] = 
+{
+	{ 0x02000004, { 0, 15 } },
+	{ 0x02000005, { 15, 3 } },
+	{ 0x0200000F, { 18, 14 } },
+};
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_t60878927057EA582428085D760F2BF7DFBC97ED7;
+extern const uint32_t g_rgctx_TError_t6BBDDE275E5E43EADC6AD4D6B1E7133ED9E5046A;
+extern const uint32_t g_rgctx_Action_1_tB0DBD3D30A3B02D9718536532D6BCB76BEA3E753;
+extern const uint32_t g_rgctx_Action_1U26_tD6668C339FB7BC57F74804EF27404D983EFF410F;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_get_IsDone_mBEF4C080D6C0466D3F74DDD43AE79BA77012513D;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_get_IsSuccessful_mC957C3FC84AEE4720744A63EFDBF1B0A92E00CE6;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_get_Error_m8F83A70BC6933BCA07F9D2FC58BA32AE6D9C765C;
+extern const Il2CppRGCTXConstrainedData g_rgctx_TError_t6BBDDE275E5E43EADC6AD4D6B1E7133ED9E5046A_Object_ToString_mF8AC1EB9D85AB52EC8FD8B8BDD131E855E69673F;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_GetResultImpl_m750172A390307524089F7542D37BE623B38E192C;
+extern const uint32_t g_rgctx_TResult_tEEE19EEDCD2FA106D19E7CAD9C8E8570868BDAE6;
+extern const uint32_t g_rgctx_Action_1_Invoke_m45AD3832E3A3D50A7107D93CB217D0C91CBDD6F0;
+extern const uint32_t g_rgctx_U3CU3Ec_t4D6A78BE25B1767B36A2A0BE611491741E23B9C9;
+extern const uint32_t g_rgctx_U3CU3Ec_t4D6A78BE25B1767B36A2A0BE611491741E23B9C9;
+extern const uint32_t g_rgctx_U3CU3Ec_U3C_ctorU3Eb__18_0_m96CF025EFEA5A769EB5160553E23AC695909FFDA;
+extern const uint32_t g_rgctx_Action_1__ctor_m7D2FC31C8F3F8A6C350018F84FE72DD3E3EDEA80;
+extern const uint32_t g_rgctx_U3CU3Ec_tDABF42E90B09310115D04C69CEB27069990EDFB5;
+extern const uint32_t g_rgctx_U3CU3Ec__ctor_mAF6B67D9C6E73326CF0E3F4BF43A52D561F6E57A;
+extern const uint32_t g_rgctx_U3CU3Ec_tDABF42E90B09310115D04C69CEB27069990EDFB5;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_get_IsDone_m459DBF82BC54A1C076AF19DA6D3B0A6A74999B99;
+extern const uint32_t g_rgctx_Action_1_t8EFA9C2471603A047AA7A94E9EF719C56A5AB597;
+extern const uint32_t g_rgctx_Action_1_Invoke_m5E6EF0D501C4884C529775F17C85526B5F5000BA;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_tDB8A2E7351AAAA7D274A57CC8086BEE2F22E9A62;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_add_Completed_mEDD589C0DC468208D34F00FC8D1F21B591BFA090;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_remove_Completed_m2EC5851195F413D8A725333BBE2F9F77177B26CB;
+extern const uint32_t g_rgctx_TResult_t8AEA02B52E1A96E8868E671B341E600589246ABF;
+extern const uint32_t g_rgctx_PlayAsyncOperationImpl_2_t77579D4DAE32C34B0376C08D12F6773FF101F63E;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_set_IsDone_m8B161BA603FF246B82FC4CF8FBCA0A93FD7931B9;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_InvokeCompletedEvent_m4183F928D104736FA4EF0E0C574729BBD9340DDE;
+extern const uint32_t g_rgctx_TError_tF1F609F00181463F1D16999EC4265AE73255C2AE;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_set_Error_m45B249B290F1790DB313DFCBB775C1133F28FA05;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2__ctor_m4D80CAD28DAA1A73E6E88A0278C3FD90ECD8D9D5;
+extern const uint32_t g_rgctx_PlayAsyncOperation_2_tDB8A2E7351AAAA7D274A57CC8086BEE2F22E9A62;
+static const Il2CppRGCTXDefinition s_rgctxValues[32] = 
+{
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_PlayAsyncOperation_2_t60878927057EA582428085D760F2BF7DFBC97ED7 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_TError_t6BBDDE275E5E43EADC6AD4D6B1E7133ED9E5046A },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_Action_1_tB0DBD3D30A3B02D9718536532D6BCB76BEA3E753 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_Action_1U26_tD6668C339FB7BC57F74804EF27404D983EFF410F },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_get_IsDone_mBEF4C080D6C0466D3F74DDD43AE79BA77012513D },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_get_IsSuccessful_mC957C3FC84AEE4720744A63EFDBF1B0A92E00CE6 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_get_Error_m8F83A70BC6933BCA07F9D2FC58BA32AE6D9C765C },
+	{ (Il2CppRGCTXDataType)5, (const void *)&g_rgctx_TError_t6BBDDE275E5E43EADC6AD4D6B1E7133ED9E5046A_Object_ToString_mF8AC1EB9D85AB52EC8FD8B8BDD131E855E69673F },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_GetResultImpl_m750172A390307524089F7542D37BE623B38E192C },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_TResult_tEEE19EEDCD2FA106D19E7CAD9C8E8570868BDAE6 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_Action_1_Invoke_m45AD3832E3A3D50A7107D93CB217D0C91CBDD6F0 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_U3CU3Ec_t4D6A78BE25B1767B36A2A0BE611491741E23B9C9 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_U3CU3Ec_t4D6A78BE25B1767B36A2A0BE611491741E23B9C9 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_U3CU3Ec_U3C_ctorU3Eb__18_0_m96CF025EFEA5A769EB5160553E23AC695909FFDA },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_Action_1__ctor_m7D2FC31C8F3F8A6C350018F84FE72DD3E3EDEA80 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_U3CU3Ec_tDABF42E90B09310115D04C69CEB27069990EDFB5 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_U3CU3Ec__ctor_mAF6B67D9C6E73326CF0E3F4BF43A52D561F6E57A },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_U3CU3Ec_tDABF42E90B09310115D04C69CEB27069990EDFB5 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_get_IsDone_m459DBF82BC54A1C076AF19DA6D3B0A6A74999B99 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_Action_1_t8EFA9C2471603A047AA7A94E9EF719C56A5AB597 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_Action_1_Invoke_m5E6EF0D501C4884C529775F17C85526B5F5000BA },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_PlayAsyncOperation_2_tDB8A2E7351AAAA7D274A57CC8086BEE2F22E9A62 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_add_Completed_mEDD589C0DC468208D34F00FC8D1F21B591BFA090 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_remove_Completed_m2EC5851195F413D8A725333BBE2F9F77177B26CB },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_TResult_t8AEA02B52E1A96E8868E671B341E600589246ABF },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_PlayAsyncOperationImpl_2_t77579D4DAE32C34B0376C08D12F6773FF101F63E },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_set_IsDone_m8B161BA603FF246B82FC4CF8FBCA0A93FD7931B9 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_InvokeCompletedEvent_m4183F928D104736FA4EF0E0C574729BBD9340DDE },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_TError_tF1F609F00181463F1D16999EC4265AE73255C2AE },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2_set_Error_m45B249B290F1790DB313DFCBB775C1133F28FA05 },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_PlayAsyncOperation_2__ctor_m4D80CAD28DAA1A73E6E88A0278C3FD90ECD8D9D5 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_PlayAsyncOperation_2_tDB8A2E7351AAAA7D274A57CC8086BEE2F22E9A62 },
+};
+IL2CPP_EXTERN_C const Il2CppCodeGenModule g_Google_Play_Common_CodeGenModule;
+const Il2CppCodeGenModule g_Google_Play_Common_CodeGenModule = 
+{
+	"Google.Play.Common.dll",
+	63,
+	s_methodPointers,
+	0,
+	NULL,
+	s_InvokerIndices,
+	0,
+	NULL,
+	3,
+	s_rgctxIndices,
+	32,
+	s_rgctxValues,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};

@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ba22fd57d7a6e148892176972175a27, type: 3}
+  m_Name: BuildTaskPipleLine
+  m_EditorClassIdentifier: 
+  buildTasks:
+  - rid: 863422349781499912
+  - rid: 863422349781499913
+  - rid: 863422349781499914
+  - rid: 863422349781499915
+  - rid: 863422349781499916
+  - rid: 863422349781499917
+  - rid: 863422349781499918
+  - rid: 863422349781499919
+  tag: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 863422349781499912
+      type: {class: HyBridCLRTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499913
+      type: {class: AnalyseAssetsTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499914
+      type: {class: GenAssetBundleAssetTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499915
+      type: {class: GenUnityAssetBundleTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499916
+      type: {class: GenRawAssetBundleTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499917
+      type: {class: GenCatalogsAndVersionTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499918
+      type: {class: OutputTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 
+    - rid: 863422349781499919
+      type: {class: CopyToStreamAssets, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
+      data: 

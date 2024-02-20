@@ -1,0 +1,31 @@
+{
+  "name": "mod",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "@types/async": "^2.4.2",
+    "@types/flatbuffers": "^1.10.0",
+    "@types/gulp": "^4.0.6",
+    "@types/lodash": "^4.14.130",
+    "@types/minimist": "^1.2.2",
+    "@types/node-xlsx": "^0.12.1",
+    "@types/protobufjs": "^6.0.0",
+    "flatbuffers": "^2.0.6",
+    "gulp": "^4.0.2",
+    "gulp-git": "^2.9.0",
+    "lodash": "^4.17.11",
+    "minimist": "^1.2.6",
+    "msgpack5": "^6.0.2",
+    "node-xlsx": "^0.15.0",
+    "protobufjs": "^7.0.0",
+    "protobufjs-cli": "^1.0.0",
+    "ts-node": "^8.1.0",
+    "typescript": "^3.4.5"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

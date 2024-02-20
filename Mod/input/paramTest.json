@@ -1,0 +1,20 @@
+{
+    "target": "FlatBuffers",
+    "params": {
+        "toCode" : "csharp"
+    },
+    "excelPath": ".\\design\\cfg",
+    "output": {
+        "bin": "..\\Client\\Assets\\GameResources\\Cfg",
+        "code/cs": "..\\Client\\Assets\\Scripts\\Game\\Rumtime\\HotFix\\Cfg\\CS",
+        "code/csharp": "..\\Client\\Assets\\Scripts\\Game\\Rumtime\\HotFix\\Cfg\\FlatBuffers"
+    },
+    "rules": 
+    {
+        "1_常量表": {
+            "sheets": [
+                ["常量","GameConstCfg"]
+            ]
+        }
+    }
+}

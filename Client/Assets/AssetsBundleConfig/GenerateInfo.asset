@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7462046f0ae72ec448fccf97aafd4d89, type: 3}
+  m_Name: GenerateInfo
+  m_EditorClassIdentifier: 
+  originPath: AssetBundles/Original
+  outputPath: AssetBundles/Output
+  buildAssetBuildOptions: 528
+  build_target: 19
+  copyType: 2
+  updateurls:
+  - http://127.0.0.1:9999/
+  requestCatalogsUrl: http://127.0.0.1:9999/
+  version: 20230827180151
+  versionCode: 0
+  hybridCLRPreBuild: 1

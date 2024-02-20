@@ -1,0 +1,16 @@
+{
+  "_requiredBy": [
+    "/"
+  ],
+  "_where": "C:\\WorkSpaces\\MyNewServer",
+  "dependencies": {
+    "@types/node": "^8.5.2"
+  },
+  "deprecated": false,
+  "description": "",
+  "license": "ISC",
+  "main": "",
+  "name": "gulp-git",
+  "types": "index.d.ts",
+  "version": "0.0.1"
+}

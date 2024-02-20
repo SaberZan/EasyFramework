@@ -1,0 +1,132 @@
+apply plugin: 'com.android.library'
+
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation(name: 'androidx.localbroadcastmanager.localbroadcastmanager-1.0.0', ext:'aar')
+    implementation(name: 'androidx.print.print-1.0.0', ext:'aar')
+    implementation(name: 'androidx.viewpager.viewpager-1.0.0', ext:'aar')
+    implementation(name: 'androidx.documentfile.documentfile-1.0.0', ext:'aar')
+    implementation(name: 'androidx.lifecycle.lifecycle-runtime-2.0.0', ext:'aar')
+    implementation(name: 'androidx.coordinatorlayout.coordinatorlayout-1.0.0', ext:'aar')
+    implementation(name: 'androidx.legacy.legacy-support-core-ui-1.0.0', ext:'aar')
+    implementation(name: 'androidx.asynclayoutinflater.asynclayoutinflater-1.0.0', ext:'aar')
+    implementation(name: 'androidx.loader.loader-1.0.0', ext:'aar')
+    implementation(name: 'androidx.customview.customview-1.0.0', ext:'aar')
+    implementation(name: 'AndroidNative', ext:'aar')
+    implementation(name: 'com.google.android.gms.play-services-tasks-18.0.2', ext:'aar')
+    implementation(name: 'com.google.android.gms.play-services-basement-18.1.0', ext:'aar')
+    implementation(name: 'androidx.drawerlayout.drawerlayout-1.0.0', ext:'aar')
+    implementation(name: 'androidx.core.core-1.2.0', ext:'aar')
+    implementation(name: 'com.google.android.play.asset-delivery-2.0.2', ext:'aar')
+    implementation(name: 'androidx.versionedparcelable.versionedparcelable-1.1.0', ext:'aar')
+    implementation(name: 'androidx.fragment.fragment-1.0.0', ext:'aar')
+    implementation(name: 'androidx.arch.core.core-runtime-2.0.0', ext:'aar')
+    implementation(name: 'androidx.lifecycle.lifecycle-viewmodel-2.0.0', ext:'aar')
+    implementation(name: 'androidx.swiperefreshlayout.swiperefreshlayout-1.0.0', ext:'aar')
+    implementation(name: 'androidx.lifecycle.lifecycle-livedata-core-2.0.0', ext:'aar')
+    implementation(name: 'androidx.slidingpanelayout.slidingpanelayout-1.0.0', ext:'aar')
+    implementation(name: 'com.google.android.play.core-common-2.0.2', ext:'aar')
+    implementation(name: 'androidx.interpolator.interpolator-1.0.0', ext:'aar')
+    implementation(name: 'androidx.legacy.legacy-support-core-utils-1.0.0', ext:'aar')
+    implementation(name: 'androidx.cursoradapter.cursoradapter-1.0.0', ext:'aar')
+    implementation(name: 'androidx.lifecycle.lifecycle-livedata-2.0.0', ext:'aar')
+
+}
+
+android {
+    ndkPath "D:/Program Files/Unity/Hub/Editor/2022.3.13f1c1/Editor/Data/PlaybackEngines/AndroidPlayer/NDK"
+
+    compileSdkVersion 32
+    buildToolsVersion '32.0.0'
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    defaultConfig {
+        minSdkVersion 22
+        targetSdkVersion 32
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
+        versionCode 1
+        versionName '0.1'
+        consumerProguardFiles 'proguard-unity.txt'
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+    aaptOptions {
+        noCompress = ['.unity3d', '.ress', '.resource', '.obb', '.bundle', '.unityexp'] + unityStreamingAssets.tokenize(', ')
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+
+    packagingOptions {
+        doNotStrip '*/armeabi-v7a/*.so'
+    }
+}
+
+def getSdkDir() {
+    Properties local = new Properties()
+    local.load(new FileInputStream("${rootDir}/local.properties"))
+    return local.getProperty('sdk.dir')
+}
+
+def BuildIl2Cpp(String workingDir, String configuration, String architecture, String abi, String[] staticLibraries) {
+    def commandLineArgs = []
+    commandLineArgs.add("--compile-cpp")
+    commandLineArgs.add("--platform=Android")
+    commandLineArgs.add("--architecture=" + architecture)
+    commandLineArgs.add("--outputpath=" + workingDir + "/src/main/jniLibs/" + abi + "/libil2cpp.so")
+    commandLineArgs.add("--baselib-directory=" + workingDir + "/src/main/jniStaticLibs/" + abi)
+    commandLineArgs.add("--configuration=" + configuration)
+    commandLineArgs.add("--dotnetprofile=unityaot-linux")
+    commandLineArgs.add("--profiler-report")
+    commandLineArgs.add("--profiler-output-file=" + workingDir + "/build/il2cpp_"+ abi + "_" + configuration + "/il2cpp_conv.traceevents")
+    commandLineArgs.add("--print-command-line")
+    commandLineArgs.add("--data-folder=" + workingDir + "/src/main/Il2CppOutputProject/Source/il2cppOutput/data")
+    commandLineArgs.add("--generatedcppdir=" + workingDir + "/src/main/Il2CppOutputProject/Source/il2cppOutput")
+    commandLineArgs.add("--cachedirectory=" + workingDir + "/build/il2cpp_"+ abi + "_" + configuration + "/il2cpp_cache")
+    commandLineArgs.add("--tool-chain-path=" + android.ndkDirectory)
+    staticLibraries.eachWithIndex {fileName, i->
+        commandLineArgs.add("--additional-libraries=" + workingDir + "/src/main/jniStaticLibs/" + abi + "/" + fileName)
+    }
+    def executableExtension = ""
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        executableExtension = ".exe"
+        commandLineArgs = commandLineArgs*.replace('\"', '\\\"')
+    }
+    exec {
+        executable workingDir + "/src/main/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp" + executableExtension
+        args commandLineArgs
+        environment "ANDROID_SDK_ROOT", getSdkDir()
+    }
+    delete workingDir + "/src/main/jniLibs/" + abi + "/libil2cpp.sym.so"
+    ant.move(file: workingDir + "/src/main/jniLibs/" + abi + "/libil2cpp.dbg.so", tofile: workingDir + "/symbols/" + abi + "/libil2cpp.so")
+}
+
+android {
+    task BuildIl2CppTask {
+        doLast {
+              BuildIl2Cpp(projectDir.toString().replaceAll('\\\\', '/'), 'Release', 'armv7', 'armeabi-v7a', [  ] as String[]);
+        }
+    }
+    afterEvaluate {
+        if (project(':unityLibrary').tasks.findByName('mergeDebugJniLibFolders'))
+            project(':unityLibrary').mergeDebugJniLibFolders.dependsOn BuildIl2CppTask
+        if (project(':unityLibrary').tasks.findByName('mergeReleaseJniLibFolders'))
+            project(':unityLibrary').mergeReleaseJniLibFolders.dependsOn BuildIl2CppTask
+    }
+    sourceSets {
+        main {
+            jni.srcDirs = ["src/main/Il2CppOutputProject"]
+        }
+    }
+}
+
+
+

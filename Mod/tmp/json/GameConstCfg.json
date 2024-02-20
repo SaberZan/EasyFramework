@@ -1,0 +1,34 @@
+{
+    "gameConstCfgArray": [
+        {
+            "id": "STRAIGHT_MOVE_FRAMES",
+            "paramIntArray": [
+                17,
+                15,
+                13,
+                11,
+                9,
+                7
+            ]
+        },
+        {
+            "id": "OBLIQUE_MOVE_FRAMES",
+            "paramIntArray": [
+                23,
+                10,
+                17,
+                14,
+                11,
+                8
+            ]
+        },
+        {
+            "id": "MATCH_MOVE_SPEED_FRAME",
+            "paramInt": 15
+        },
+        {
+            "id": "SWAP_MOVE_SPEED_FRAME",
+            "paramInt": 15
+        }
+    ]
+}

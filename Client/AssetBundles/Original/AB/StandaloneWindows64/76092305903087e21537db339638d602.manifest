@@ -1,0 +1,26 @@
+ManifestFileVersion: 0
+CRC: 3967274938
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: c2fd22cee2bb425f67b729cb3f19ae4d
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 2966dc2a9ef5365d98e1ddd980624334
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: c2fd22cee2bb425f67b729cb3f19ae4d
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 552b77b95b7927c49841b4bd1dfa9897, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/GameResources/HotFix/HotFixLaunch.prefab
+Dependencies: []

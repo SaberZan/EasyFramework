@@ -1,0 +1,20 @@
+ManifestFileVersion: 0
+CRC: 4012958282
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 2339c598a20539f31e3dfabd0d9e9199
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 5ad585dd02dfb5016c0dad519eab8f49
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 2339c598a20539f31e3dfabd0d9e9199
+HashAppended: 0
+ClassTypes:
+- Class: 49
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/HybridCLRBuildCache/HotUpdate/Assembly-CSharp.bytes
+Dependencies: []

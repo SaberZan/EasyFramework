@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eba2f89a4a82314aa07e1e816a780de, type: 3}
+  m_Name: EasyAssetConfig
+  m_EditorClassIdentifier: 
+  customInStreamAssets:
+  - must
+  - common
+  mustDowmload:
+  - must
+  - common
+  IgnoreAssets:
+  - .cs
+  - .meta
+  packageInfos:
+  - _packageName: HybridCLR
+    groups:
+    - _groupName: aotdlls
+      packType: 0
+      downloadPriorityType: 0
+      location: 0
+      isEncrypt: 1
+      isRaw: 0
+      isBind: 0
+      assets:
+      - {fileID: 102900000, guid: 14e995e5f499b074fb4caab6b64d63a2, type: 3}
+    - _groupName: hotupdatedlls
+      packType: 0
+      downloadPriorityType: 0
+      location: 0
+      isEncrypt: 1
+      isRaw: 0
+      isBind: 0
+      assets:
+      - {fileID: 102900000, guid: 0ef8aaf08d866f741ad9151ca42bd2ca, type: 3}
+  - _packageName: GlobalConfig
+    groups:
+    - _groupName: Cfg
+      packType: 0
+      downloadPriorityType: 0
+      location: 0
+      isEncrypt: 1
+      isRaw: 1
+      isBind: 0
+      assets:
+      - {fileID: 102900000, guid: 2527c56e9ec4718448f277bb4c405c28, type: 3}
+  - _packageName: HotFix
+    groups:
+    - _groupName: HotFix
+      packType: 0
+      downloadPriorityType: 0
+      location: 0
+      isEncrypt: 1
+      isRaw: 0
+      isBind: 0
+      assets:
+      - {fileID: 102900000, guid: b83a6b73b14be754a8b2335f5c832ae6, type: 3}
