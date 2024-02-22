@@ -1,7 +1,8 @@
 EasyFramework 
-Client 为 Unity游戏框架
-  集成了 HyBridCLR 将 Assembly-CSharp 作为热更程序集,简单易用
-  也包含了
+
+1.Client 为 Unity游戏框架
+  集成了 HyBridCLR 将 Assembly-CSharp 作为热更程序集,简单易用,也包含了
+    
     资源管理(AssetsMgr)
     文件管理(FileMgr)
     配置管理(ConfigMgr)
@@ -12,10 +13,12 @@ Client 为 Unity游戏框架
     输入管理(InputMgr)
     UI管理(UIMgr)
     ...功能
-  也有便于管理的启动加载流程
+    
+    也有便于管理的启动加载流程
 
-Mod为配置表转换工具
-  可将Excel表转换为 Flatbuffer,ProtoBuffer,JS,TS,JSON
+2.Mod为配置表转换工具
 
-详细信息有需要时补充
+    可将Excel表转换为 Flatbuffer,ProtoBuffer,JS,TS,JSON
+
+3.详细信息有需要时补充
     
