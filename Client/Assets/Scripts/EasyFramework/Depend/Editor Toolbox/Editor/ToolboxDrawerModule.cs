@@ -23,7 +23,6 @@ namespace Toolbox.Editor
             ToolboxEditorHandler.OnEditorReload += ReloadDrawers;
         }
 
-
         private static readonly Type decoratorDrawerBase = typeof(ToolboxDecoratorDrawer<>);
         private static readonly Type conditionDrawerBase = typeof(ToolboxConditionDrawer<>);
         private static readonly Type selfPropertyDrawerBase = typeof(ToolboxSelfPropertyDrawer<>);
@@ -44,7 +43,6 @@ namespace Toolbox.Editor
         /// </summary>
         private static readonly Dictionary<string, ToolboxPropertyHandler> propertyHandlers = new Dictionary<string, ToolboxPropertyHandler>();
 
-
         /// <summary>
         /// Settings provided to handle custom drawers.
         /// </summary>
@@ -55,7 +53,6 @@ namespace Toolbox.Editor
         /// </summary>
         private static bool validationEnabled = true;
 
-
         /// <summary>
         /// Creates all possible attribute-based drawers and add them to proper collections.
         /// </summary>
@@ -63,7 +60,7 @@ namespace Toolbox.Editor
         {
             void AddAttributeDrawer<T>(Type drawerType, Type attributeType, Dictionary<Type, T> drawersCollection) where T : ToolboxAttributeDrawer
             {
-                if (drawerType == null)
+                if (drawerType == null || attributeType == null)
                 {
                     return;
                 }
@@ -261,7 +258,25 @@ namespace Toolbox.Editor
         /// </summary>
         internal static bool HasNativeTypeDrawer(Type type)
         {
-            var parameters = new object[] { type };
+            object[] parameters;
+            var parameterInfos = getDrawerTypeForTypeMethod.GetParameters();
+            var parametersCount = parameterInfos.Length;
+            switch (parametersCount)
+            {
+                default:
+                case 1:
+                    parameters = new object[] { type };
+                    break;
+                //NOTE: Unity 2022.3.23 or above
+                case 2:
+                    parameters = new object[] { type, false };
+                    break;
+                //NOTE: Unity 2023.3.x or above
+                case 3:
+                    parameters = new object[] { type, null, false };
+                    break;
+            }
+
             var result = getDrawerTypeForTypeMethod.Invoke(null, parameters) as Type;
             return result != null && typeof(PropertyDrawer).IsAssignableFrom(result);
         }
@@ -425,10 +440,9 @@ namespace Toolbox.Editor
             }
         }
 
-
         internal static bool ToolboxDrawersAllowed { get; set; }
 
-        //TODO:
+        //TODO: move to utilities
         //NOTE: unfortunately there is no valid, non-reflection way to check if property has a custom native drawer
         private static readonly MethodInfo getDrawerTypeForTypeMethod =
             ReflectionUtility.GetEditorMethod("UnityEditor.ScriptAttributeUtility", "GetDrawerTypeForType",

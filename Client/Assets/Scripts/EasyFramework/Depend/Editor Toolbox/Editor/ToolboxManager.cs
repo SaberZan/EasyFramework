@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿using System.Collections;
+using System.IO;
+
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -71,12 +74,12 @@ namespace Toolbox.Editor
             ToolboxEditorHierarchy.ShowSelectionsCount = settings.ShowSelectionsCount;
             ToolboxEditorHierarchy.DrawSeparationLines = true;
 
-            ToolboxEditorHierarchy.RemoveAllowedHierarchyContentCallbacks();
+            ToolboxEditorHierarchy.RemovePropertyLabels();
 
             //create custom drawers using stored data
             for (var i = 0; i < settings.RowDataTypes.Count; i++)
             {
-                ToolboxEditorHierarchy.CreateAllowedHierarchyContentCallbacks(settings.RowDataTypes[i]);
+                ToolboxEditorHierarchy.CreatePropertyLabels(settings.RowDataTypes[i]);
             }
 
             ToolboxEditorHierarchy.RepaintHierarchyOverlay();
@@ -87,35 +90,67 @@ namespace Toolbox.Editor
             ToolboxEditorSceneView.UpdateSettings(settings);
         }
 
-
-        [InitializeOnLoadMethod]
-        internal static bool InitializeSettings()
+        private static string GetSettingsFileGuid()
         {
-            var guids = AssetDatabase.FindAssets("t:" + settingsType);
+            var guids = AssetDatabase.FindAssets($"t:{settingsType}");
+            string targetGuid = null;
             //try to find a settings file in a non-package directory
-            foreach (var guid in guids)
+            for (var i = guids.Length - 1; i >= 0; i--)
             {
+                var guid = guids[i];
                 var path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.StartsWith("Assets"))
+                targetGuid = guid;
+                if (!IsDefaultSettingsPath(path))
                 {
-                    guids[0] = guid;
                     break;
                 }
             }
 
-            if (InitializeSettings(guids.Length > 0 ? guids[0] : null))
+            return targetGuid;
+        }
+
+        private static bool IsDefaultSettingsPath(string path)
+        {
+            return path.StartsWith("Packages");
+        }
+
+        [InitializeOnLoadMethod]
+        internal static void InitializeToolbox()
+        {
+            IsInitializing = true;
+            if (TryInitializeSettings())
             {
+                IsInitializing = false;
                 IsInitialized = true;
-                return true;
+                return;
             }
-            else
+
+            EditorCoroutineUtility.StartCoroutineOwnerless(InitializeSettingsAsync());
+            IEnumerator InitializeSettingsAsync()
             {
-                ToolboxEditorLog.KitInitializationMessage();
-                return false;
+                yield return null;
+                yield return new WaitWhile(() => EditorApplication.isUpdating);
+                if (TryInitializeSettings())
+                {
+                    IsInitialized = true;
+                }
+                else
+                {
+                    IsInitialized = false;
+                    ToolboxEditorLog.KitInitializationMessage();
+                }
+
+                IsInitializing = false;
             }
         }
 
-        internal static bool InitializeSettings(string settingsGuid)
+        internal static bool TryInitializeSettings()
+        {
+            var settingsGuid = GetSettingsFileGuid();
+            return TryInitializeSettings(settingsGuid);
+        }
+
+        internal static bool TryInitializeSettings(string settingsGuid)
         {
             SettingsGuid = settingsGuid;
             SettingsPath = AssetDatabase.GUIDToAssetPath(settingsGuid);
@@ -123,13 +158,15 @@ namespace Toolbox.Editor
             //try to get proper settings asset from the provided guid
             if (Settings = AssetDatabase.LoadAssetAtPath<ToolboxEditorSettings>(SettingsPath))
             {
+                //TODO: instead of relying on validation events let's prepare appropriate initialize/deinitialize process for all sub-systems
+
                 //subscribe to all related events
                 Settings.OnHierarchySettingsChanged += ManageHierarchyCore;
                 Settings.OnProjectSettingsChanged += ManageProjectCore;
                 Settings.OnInspectorSettingsChanged += ManageInspectorCore;
                 Settings.OnSceneViewSettingsChanged += ManageSceneViewCore;
                 //initialize core functionalities
-                Settings.Validate();
+                Settings.Validate(true);
                 return true;
             }
             else
@@ -152,7 +189,6 @@ namespace Toolbox.Editor
             AssetDatabase.ImportAsset(path);
         }
 
-
         [SettingsProvider]
         internal static SettingsProvider SettingsProvider()
         {
@@ -160,7 +196,7 @@ namespace Toolbox.Editor
 
             void ReintializeProvider()
             {
-                InitializeSettings();
+                InitializeToolbox();
 
                 //rebuild the settings provider right after initialization
                 provider.OnDeactivate();
@@ -193,7 +229,7 @@ namespace Toolbox.Editor
                         AssetDatabase.SaveAssets();
                         AssetDatabase.Refresh();
 
-                        ToolboxEditorLog.LogInfo("Created a settings file at - " + relativePath);
+                        ToolboxEditorLog.LogInfo($"Created a settings file at - {relativePath}");
 
                         ReintializeProvider();
                     }
@@ -202,7 +238,13 @@ namespace Toolbox.Editor
                 }
 
                 EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Settings file location - " + SettingsPath);
+                EditorGUILayout.LabelField($"Settings file location - {SettingsPath}");
+                if (IsDefaultSettingsPath(SettingsPath))
+                {
+                    EditorGUILayout.HelpBox("The currently displayed settings file is the default one, located in the packages directory. " +
+                        "This means all changes can be easily lost. Create a new file for better maintainability.", MessageType.Info);
+                }
+
                 EditorGUILayout.Space();
 
                 globalSettingsEditor.OnInspectorGUI();
@@ -226,11 +268,9 @@ namespace Toolbox.Editor
             return provider;
         }
 
-
         internal static bool IsInitialized { get; private set; }
-
+        internal static bool IsInitializing { get; private set; }
         internal static ToolboxEditorSettings Settings { get; private set; }
-
         internal static string SettingsPath { get; private set; }
         internal static string SettingsGuid { get; private set; }
     }

@@ -93,7 +93,7 @@ namespace Toolbox.Editor
         private bool useToolboxSceneView = true;
 
         [SerializeField]
-        private KeyCode selectorKey = KeyCode.LeftControl;
+        private KeyCode selectorKey = KeyCode.Tab;
 
         [SerializeField, Tooltip("Set to false if you don't want to use Toolbox attributes and related features.")]
         private bool useToolboxDrawers = true;
@@ -117,6 +117,7 @@ namespace Toolbox.Editor
         private bool projectSettingsDirty;
         private bool inspectorSettingsDirty;
         private bool sceneViewSettingsDirty;
+        private int lastValidationFrame;
 
         internal event Action<IToolboxHierarchySettings> OnHierarchySettingsChanged;
         internal event Action<IToolboxProjectSettings> OnProjectSettingsChanged;
@@ -179,12 +180,24 @@ namespace Toolbox.Editor
 
         internal void Validate()
         {
+            Validate(false);
+        }
+
+        internal void Validate(bool force)
+        {
+            //NOTE: additional check to prevent multiple validations in the same frame, e.g. typical case:
+            // - after recompilation we are initializing toolbox and we want to validate settings, in the same time Unity validates all SOs
+            if (lastValidationFrame == Time.frameCount && !force)
+            {
+                return;
+            }
+
             ValidateHierarchySettings();
             ValidateProjectSettings();
             ValidateInspectorSettings();
             ValidateSceneViewSettings();
+            lastValidationFrame = Time.frameCount;
         }
-
 
         /// <summary>
         /// Called internally by the Editor after any value change or the Undo/Redo operation.
@@ -192,7 +205,7 @@ namespace Toolbox.Editor
         private void OnValidate()
         {
             //determine if any section was changed within the Editor
-            var settingsDirty = hierarchySettingsDirty || projectSettingsDirty || inspectorSettingsDirty;
+            var settingsDirty = hierarchySettingsDirty || projectSettingsDirty || inspectorSettingsDirty || sceneViewSettingsDirty;
             if (settingsDirty)
             {
                 //check exactly what settings are changed and apply them
@@ -229,6 +242,7 @@ namespace Toolbox.Editor
             hierarchySettingsDirty = false;
             projectSettingsDirty = false;
             inspectorSettingsDirty = false;
+            sceneViewSettingsDirty = false;
         }
 
         #endregion
@@ -332,7 +346,6 @@ namespace Toolbox.Editor
             smallIconPadding = new Vector2(Defaults.smallFolderIconXPaddingDefault,
                 Defaults.smallFolderIconYPaddingDefault);
         }
-
 
         public bool UseToolboxHierarchy
         {
@@ -464,7 +477,8 @@ namespace Toolbox.Editor
                 HierarchyItemDataType.Toggle,
                 HierarchyItemDataType.Tag,
                 HierarchyItemDataType.Layer,
-                HierarchyItemDataType.Script
+                HierarchyItemDataType.Script,
+                HierarchyItemDataType.TreeLines
             };
         }
     }

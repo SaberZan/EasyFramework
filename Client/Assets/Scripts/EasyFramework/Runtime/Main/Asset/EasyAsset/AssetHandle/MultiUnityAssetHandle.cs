@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Easy.EasyAsset
@@ -92,7 +93,7 @@ namespace Easy.EasyAsset
             }
             else
             {
-                var overTimeTask = Task.Run(async () => { await Task.Delay(BaseUnityAssetHandle.instanceOverTime); });
+                var overTimeTask = Task.Run(async () => { await UniTask.Delay(BaseUnityAssetHandle.instanceOverTime); });
                 taskCompletionSources.Add(taskCompletionSource);
                 await Task.WhenAny(taskCompletionSource.Task, overTimeTask);
                 overTimeTask.Dispose();
@@ -155,7 +156,7 @@ namespace Easy.EasyAsset
             }
             else
             {
-                var overTimeTask = Task.Run(async () => { await Task.Delay(BaseUnityAssetHandle.instanceOverTime); });
+                var overTimeTask = Task.Run(async () => { await UniTask.Delay(BaseUnityAssetHandle.instanceOverTime); });
                 taskCompletionSources.Add(taskCompletionSource);
                 await Task.WhenAny(taskCompletionSource.Task, overTimeTask);
                 overTimeTask.Dispose();
@@ -215,7 +216,7 @@ namespace Easy.EasyAsset
             }
             else
             {
-                var overTimeTask = Task.Run(async () => { await Task.Delay(BaseUnityAssetHandle.instanceOverTime); });
+                var overTimeTask = Task.Run(async () => { await UniTask.Delay(BaseUnityAssetHandle.instanceOverTime); });
                 taskCompletionSources.Add(taskCompletionSource);
                 await Task.WhenAny(taskCompletionSource.Task, overTimeTask);
                 overTimeTask.Dispose();

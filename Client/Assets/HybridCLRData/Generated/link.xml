@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <linker>
-  <assembly fullname="EasyFrameworkMain">
+  <assembly fullname="EasyFramework.Main">
     <type fullname="Easy.AssetsMgr" preserve="all" />
     <type fullname="Easy.BindEvent" preserve="all" />
     <type fullname="Easy.EasyConfig" preserve="all" />
@@ -13,6 +13,8 @@
     <type fullname="Easy.GameObjectExtension" preserve="all" />
     <type fullname="Easy.GameObjectPoolMgr" preserve="all" />
     <type fullname="Easy.IBaseAssetHandle" preserve="all" />
+    <type fullname="Easy.IMultiRawAssetHandle" preserve="all" />
+    <type fullname="Easy.IMultiUnityAssetHandle" preserve="all" />
     <type fullname="Easy.ISingleRawAssetHandle" preserve="all" />
     <type fullname="Easy.ISingleUnityAssetHandle`1" preserve="all" />
     <type fullname="Easy.ISingleton" preserve="all" />
@@ -46,10 +48,10 @@
     <type fullname="Newtonsoft.Json.JsonSerializerSettings" preserve="all" />
     <type fullname="Newtonsoft.Json.TypeNameHandling" preserve="all" />
   </assembly>
-  <assembly fullname="UnityEngine.AndroidJNIModule">
-    <type fullname="UnityEngine.AndroidJavaClass" preserve="all" />
-    <type fullname="UnityEngine.AndroidJavaObject" preserve="all" />
-    <type fullname="UnityEngine.AndroidJavaProxy" preserve="all" />
+  <assembly fullname="UniTask">
+    <type fullname="Cysharp.Threading.Tasks.PlayerLoopTiming" preserve="all" />
+    <type fullname="Cysharp.Threading.Tasks.UniTask" preserve="all" />
+    <type fullname="Cysharp.Threading.Tasks.UniTask/Awaiter" preserve="all" />
   </assembly>
   <assembly fullname="UnityEngine.AudioModule">
     <type fullname="UnityEngine.AudioClip" preserve="all" />
@@ -62,7 +64,6 @@
     <type fullname="UnityEngine.Color" preserve="all" />
     <type fullname="UnityEngine.Component" preserve="all" />
     <type fullname="UnityEngine.Coroutine" preserve="all" />
-    <type fullname="UnityEngine.Debug" preserve="all" />
     <type fullname="UnityEngine.DisallowMultipleComponent" preserve="all" />
     <type fullname="UnityEngine.Events.UnityAction" preserve="all" />
     <type fullname="UnityEngine.Events.UnityAction`1" preserve="all" />
@@ -72,9 +73,7 @@
     <type fullname="UnityEngine.GameObject" preserve="all" />
     <type fullname="UnityEngine.HeaderAttribute" preserve="all" />
     <type fullname="UnityEngine.HideInInspector" preserve="all" />
-    <type fullname="UnityEngine.ILogger" preserve="all" />
     <type fullname="UnityEngine.KeyCode" preserve="all" />
-    <type fullname="UnityEngine.LogType" preserve="all" />
     <type fullname="UnityEngine.Material" preserve="all" />
     <type fullname="UnityEngine.Mathf" preserve="all" />
     <type fullname="UnityEngine.MonoBehaviour" preserve="all" />
@@ -103,9 +102,6 @@
     <type fullname="UnityEngine.Input" preserve="all" />
     <type fullname="UnityEngine.Touch" preserve="all" />
     <type fullname="UnityEngine.TouchPhase" preserve="all" />
-  </assembly>
-  <assembly fullname="UnityEngine.JSONSerializeModule">
-    <type fullname="UnityEngine.JsonUtility" preserve="all" />
   </assembly>
   <assembly fullname="UnityEngine.TextRenderingModule">
     <type fullname="UnityEngine.FontStyle" preserve="all" />
@@ -139,10 +135,7 @@
     <type fullname="System.Action" preserve="all" />
     <type fullname="System.Action`1" preserve="all" />
     <type fullname="System.Action`2" preserve="all" />
-    <type fullname="System.Action`3" preserve="all" />
     <type fullname="System.Activator" preserve="all" />
-    <type fullname="System.ArgumentException" preserve="all" />
-    <type fullname="System.ArgumentNullException" preserve="all" />
     <type fullname="System.Array" preserve="all" />
     <type fullname="System.ArraySegment`1" preserve="all" />
     <type fullname="System.AsyncCallback" preserve="all" />
@@ -161,7 +154,6 @@
     <type fullname="System.Collections.Generic.EqualityComparer`1" preserve="all" />
     <type fullname="System.Collections.Generic.IEnumerable`1" preserve="all" />
     <type fullname="System.Collections.Generic.IEnumerator`1" preserve="all" />
-    <type fullname="System.Collections.Generic.IReadOnlyList`1" preserve="all" />
     <type fullname="System.Collections.Generic.KeyValuePair`2" preserve="all" />
     <type fullname="System.Collections.Generic.List`1" preserve="all" />
     <type fullname="System.Collections.Generic.List`1/Enumerator" preserve="all" />
@@ -216,11 +208,9 @@
     <type fullname="System.Runtime.CompilerServices.CompilationRelaxationsAttribute" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.CompilerGeneratedAttribute" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.IAsyncStateMachine" preserve="all" />
-    <type fullname="System.Runtime.CompilerServices.IsVolatile" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.IteratorStateMachineAttribute" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.RuntimeCompatibilityAttribute" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.RuntimeHelpers" preserve="all" />
-    <type fullname="System.Runtime.CompilerServices.TaskAwaiter" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.TaskAwaiter`1" preserve="all" />
     <type fullname="System.RuntimeFieldHandle" preserve="all" />
     <type fullname="System.RuntimeTypeHandle" preserve="all" />
@@ -228,10 +218,10 @@
     <type fullname="System.StringSplitOptions" preserve="all" />
     <type fullname="System.Text.Encoding" preserve="all" />
     <type fullname="System.Text.StringBuilder" preserve="all" />
+    <type fullname="System.Threading.CancellationToken" preserve="all" />
     <type fullname="System.Threading.Interlocked" preserve="all" />
     <type fullname="System.Threading.Monitor" preserve="all" />
     <type fullname="System.Threading.ParameterizedThreadStart" preserve="all" />
-    <type fullname="System.Threading.Tasks.Task" preserve="all" />
     <type fullname="System.Threading.Tasks.Task`1" preserve="all" />
     <type fullname="System.Threading.Thread" preserve="all" />
     <type fullname="System.Threading.ThreadPool" preserve="all" />

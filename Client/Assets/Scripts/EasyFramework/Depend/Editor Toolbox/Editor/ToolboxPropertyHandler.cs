@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Toolbox.Editor
 {
-    using Toolbox.Attributes;
+    using Toolbox.Attributes.Property;
     using Toolbox.Editor.Drawers;
 
     /// <summary>
@@ -89,7 +89,6 @@ namespace Toolbox.Editor
         /// This will be replaced with validation attributes.
         /// </summary>
         private ILabelProcessorAttribute labelProcessorAttribute;
-
 
         /// <summary>
         /// Constructor prepares all property-related data for custom drawing.
@@ -396,7 +395,6 @@ namespace Toolbox.Editor
                     return;
             }
         }
-
 
         /// <summary>
         /// Draw property using built-in layout system and cached <see cref="ToolboxAttributeDrawer"/>s.

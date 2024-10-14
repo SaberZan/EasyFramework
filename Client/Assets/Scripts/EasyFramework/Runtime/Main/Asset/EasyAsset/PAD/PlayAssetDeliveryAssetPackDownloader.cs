@@ -50,7 +50,7 @@ namespace Easy.EasyAsset
                     var asyncOperation = PlayAssetDelivery.ShowCellularDataConfirmation();
                     while(!asyncOperation.IsDone)
                     {
-                        await Task.Yield();
+                        await UniTask.Yield();
                     }
 
                     if (asyncOperation.Error != AssetDeliveryErrorCode.NoError || asyncOperation.GetResult() != ConfirmationDialogResult.Accepted)
@@ -64,12 +64,12 @@ namespace Easy.EasyAsset
                     {
                         while (_request.Status == AssetDeliveryStatus.WaitingForWifi)
                         {
-                            await Task.Yield();
+                            await UniTask.Yield();
                         }
                     }
                 }
                 currentSize = (long)(size * _request.DownloadProgress);
-                await Task.Yield();
+                await UniTask.Yield();
             }
 
             if (_request.Error != AssetDeliveryErrorCode.NoError)

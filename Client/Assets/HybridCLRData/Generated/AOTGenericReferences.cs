@@ -5,10 +5,9 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	// {{ AOT assemblies
 	public static readonly IReadOnlyList<string> PatchedAOTAssemblyList = new List<string>
 	{
-		"EasyFrameworkMain.dll",
+		"EasyFramework.Main.dll",
 		"Newtonsoft.Json.dll",
 		"System.Core.dll",
-		"UnityEngine.AndroidJNIModule.dll",
 		"UnityEngine.CoreModule.dll",
 		"UnityEngine.JSONSerializeModule.dll",
 		"mscorlib.dll",
@@ -31,24 +30,20 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	// Google.FlatBuffers.Offset<CfgSpace.StringArray>
 	// System.Action<int,object>
 	// System.Action<int>
-	// System.Action<object,object,object>
 	// System.Action<object,object>
 	// System.Action<object>
 	// System.ArraySegment.Enumerator<Google.FlatBuffers.Offset<CfgSpace.GameConstCfg>>
 	// System.ArraySegment.Enumerator<Google.FlatBuffers.StringOffset>
-	// System.ArraySegment.Enumerator<UnityEngine.jvalue>
 	// System.ArraySegment.Enumerator<byte>
 	// System.ArraySegment.Enumerator<float>
 	// System.ArraySegment.Enumerator<int>
 	// System.ArraySegment.Enumerator<ushort>
 	// System.ArraySegment<Google.FlatBuffers.Offset<CfgSpace.GameConstCfg>>
 	// System.ArraySegment<Google.FlatBuffers.StringOffset>
-	// System.ArraySegment<UnityEngine.jvalue>
 	// System.ArraySegment<byte>
 	// System.ArraySegment<float>
 	// System.ArraySegment<int>
 	// System.ArraySegment<ushort>
-	// System.ByReference<UnityEngine.jvalue>
 	// System.ByReference<ushort>
 	// System.Collections.Generic.ArraySortHelper<int>
 	// System.Collections.Generic.ArraySortHelper<object>
@@ -164,16 +159,12 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	// System.Nullable<CfgSpace.GameConstCfg>
 	// System.Predicate<int>
 	// System.Predicate<object>
-	// System.ReadOnlySpan.Enumerator<UnityEngine.jvalue>
 	// System.ReadOnlySpan.Enumerator<ushort>
-	// System.ReadOnlySpan<UnityEngine.jvalue>
 	// System.ReadOnlySpan<ushort>
 	// System.Runtime.CompilerServices.ConfiguredTaskAwaitable.ConfiguredTaskAwaiter<object>
 	// System.Runtime.CompilerServices.ConfiguredTaskAwaitable<object>
 	// System.Runtime.CompilerServices.TaskAwaiter<object>
-	// System.Span.Enumerator<UnityEngine.jvalue>
 	// System.Span.Enumerator<ushort>
-	// System.Span<UnityEngine.jvalue>
 	// System.Span<ushort>
 	// System.Threading.Tasks.ContinuationTaskFromResultTask<object>
 	// System.Threading.Tasks.Task<object>
@@ -193,7 +184,9 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	public void RefMethods()
 	{
 		// Easy.ISingleUnityAssetHandle<object> Easy.AssetsLoader.LoadUnityAsset<object>(string)
+		// Easy.IMultiUnityAssetHandle Easy.AssetsLoader.LoadUnityAssetsByPath<object>(System.Collections.Generic.IEnumerable<string>)
 		// Easy.ISingleUnityAssetHandle<object> Easy.AssetsMgr.LoadAsset<object>(string)
+		// Easy.IMultiUnityAssetHandle Easy.AssetsMgr.LoadAssetsByPath<object>(System.Collections.Generic.IEnumerable<string>)
 		// object Easy.EasyFrameworkConfig.GetEasyConfig<object>()
 		// object Easy.GameObjectExtension.GetOrAddComponent<object>(UnityEngine.GameObject)
 		// bool Easy.GameObjectExtension.HasComponent<object>(UnityEngine.GameObject)
@@ -267,7 +260,6 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 		// object[] System.Array.Empty<object>()
 		// System.Void System.Array.Resize<byte>(byte[]&,int)
 		// int System.Linq.Enumerable.Count<object>(System.Collections.Generic.IEnumerable<object>)
-		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.Empty<object>()
 		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.Select<object,object>(System.Collections.Generic.IEnumerable<object>,System.Func<object,object>)
 		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.SelectMany<object,object,object>(System.Collections.Generic.IEnumerable<object>,System.Func<object,System.Collections.Generic.IEnumerable<object>>,System.Func<object,object,object>)
 		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.SelectManyIterator<object,object,object>(System.Collections.Generic.IEnumerable<object>,System.Func<object,System.Collections.Generic.IEnumerable<object>>,System.Func<object,object,object>)
@@ -277,7 +269,7 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.Where<object>(System.Collections.Generic.IEnumerable<object>,System.Func<object,bool>)
 		// System.Collections.Generic.IEnumerable<object> System.Linq.Enumerable.Iterator<object>.Select<object>(System.Func<object,object>)
 		// object System.Reflection.CustomAttributeExtensions.GetCustomAttribute<object>(System.Reflection.MemberInfo)
-		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.AwaitUnsafeOnCompleted<System.Runtime.CompilerServices.TaskAwaiter,Easy.ToastUILayer.<ShowToast>d__3>(System.Runtime.CompilerServices.TaskAwaiter&,Easy.ToastUILayer.<ShowToast>d__3&)
+		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.AwaitUnsafeOnCompleted<Cysharp.Threading.Tasks.UniTask.Awaiter,Easy.ToastUILayer.<ShowToast>d__3>(Cysharp.Threading.Tasks.UniTask.Awaiter&,Easy.ToastUILayer.<ShowToast>d__3&)
 		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.AwaitUnsafeOnCompleted<System.Runtime.CompilerServices.TaskAwaiter<object>,Easy.FlatBufferConfigLoader.<LoadConfigCacheAsync>d__10<object>>(System.Runtime.CompilerServices.TaskAwaiter<object>&,Easy.FlatBufferConfigLoader.<LoadConfigCacheAsync>d__10<object>&)
 		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.AwaitUnsafeOnCompleted<System.Runtime.CompilerServices.TaskAwaiter<object>,Easy.FlatBufferConfigLoader.<LoadConfigCacheAsync>d__8>(System.Runtime.CompilerServices.TaskAwaiter<object>&,Easy.FlatBufferConfigLoader.<LoadConfigCacheAsync>d__8&)
 		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.AwaitUnsafeOnCompleted<System.Runtime.CompilerServices.TaskAwaiter<object>,Easy.FlatBufferConfigLoader.<LoadConfigUnCacheAsync>d__12>(System.Runtime.CompilerServices.TaskAwaiter<object>&,Easy.FlatBufferConfigLoader.<LoadConfigUnCacheAsync>d__12&)
@@ -297,28 +289,6 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 		// System.Void System.Runtime.CompilerServices.AsyncVoidMethodBuilder.Start<Easy.ToastUILayer.<ShowToast>d__3>(Easy.ToastUILayer.<ShowToast>d__3&)
 		// object& System.Runtime.CompilerServices.Unsafe.As<object,object>(object&)
 		// System.Void* System.Runtime.CompilerServices.Unsafe.AsPointer<object>(object&)
-		// byte UnityEngine.AndroidJNIHelper.ConvertFromJNIArray<byte>(System.IntPtr)
-		// int UnityEngine.AndroidJNIHelper.ConvertFromJNIArray<int>(System.IntPtr)
-		// object UnityEngine.AndroidJNIHelper.ConvertFromJNIArray<object>(System.IntPtr)
-		// System.IntPtr UnityEngine.AndroidJNIHelper.GetFieldID<object>(System.IntPtr,string,bool)
-		// System.IntPtr UnityEngine.AndroidJNIHelper.GetMethodID<byte>(System.IntPtr,string,object[],bool)
-		// System.IntPtr UnityEngine.AndroidJNIHelper.GetMethodID<int>(System.IntPtr,string,object[],bool)
-		// System.IntPtr UnityEngine.AndroidJNIHelper.GetMethodID<object>(System.IntPtr,string,object[],bool)
-		// byte UnityEngine.AndroidJavaObject.Call<byte>(string,object[])
-		// int UnityEngine.AndroidJavaObject.Call<int>(string,object[])
-		// object UnityEngine.AndroidJavaObject.Call<object>(string,object[])
-		// byte UnityEngine.AndroidJavaObject.FromJavaArrayDeleteLocalRef<byte>(System.IntPtr)
-		// int UnityEngine.AndroidJavaObject.FromJavaArrayDeleteLocalRef<int>(System.IntPtr)
-		// object UnityEngine.AndroidJavaObject.FromJavaArrayDeleteLocalRef<object>(System.IntPtr)
-		// object UnityEngine.AndroidJavaObject.GetStatic<object>(string)
-		// byte UnityEngine.AndroidJavaObject._Call<byte>(System.IntPtr,object[])
-		// byte UnityEngine.AndroidJavaObject._Call<byte>(string,object[])
-		// int UnityEngine.AndroidJavaObject._Call<int>(System.IntPtr,object[])
-		// int UnityEngine.AndroidJavaObject._Call<int>(string,object[])
-		// object UnityEngine.AndroidJavaObject._Call<object>(System.IntPtr,object[])
-		// object UnityEngine.AndroidJavaObject._Call<object>(string,object[])
-		// object UnityEngine.AndroidJavaObject._GetStatic<object>(System.IntPtr)
-		// object UnityEngine.AndroidJavaObject._GetStatic<object>(string)
 		// object UnityEngine.Component.GetComponent<object>()
 		// object UnityEngine.GameObject.AddComponent<object>()
 		// object UnityEngine.GameObject.GetComponent<object>()
@@ -329,15 +299,5 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 		// object UnityEngine.Object.FindObjectOfType<object>()
 		// object UnityEngine.Object.Instantiate<object>(object)
 		// object UnityEngine.Object.Instantiate<object>(object,UnityEngine.Vector3,UnityEngine.Quaternion)
-		// byte UnityEngine._AndroidJNIHelper.ConvertFromJNIArray<byte>(System.IntPtr)
-		// int UnityEngine._AndroidJNIHelper.ConvertFromJNIArray<int>(System.IntPtr)
-		// object UnityEngine._AndroidJNIHelper.ConvertFromJNIArray<object>(System.IntPtr)
-		// System.IntPtr UnityEngine._AndroidJNIHelper.GetFieldID<object>(System.IntPtr,string,bool)
-		// System.IntPtr UnityEngine._AndroidJNIHelper.GetMethodID<byte>(System.IntPtr,string,object[],bool)
-		// System.IntPtr UnityEngine._AndroidJNIHelper.GetMethodID<int>(System.IntPtr,string,object[],bool)
-		// System.IntPtr UnityEngine._AndroidJNIHelper.GetMethodID<object>(System.IntPtr,string,object[],bool)
-		// string UnityEngine._AndroidJNIHelper.GetSignature<byte>(object[])
-		// string UnityEngine._AndroidJNIHelper.GetSignature<int>(object[])
-		// string UnityEngine._AndroidJNIHelper.GetSignature<object>(object[])
 	}
 }

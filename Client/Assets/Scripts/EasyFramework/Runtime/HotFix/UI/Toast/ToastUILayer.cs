@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -67,7 +68,7 @@ namespace Easy
             black.color = new Color(0, 0, 0, 0);
             Text txt = toast.GetComponentInChildren<Text>();
             txt.text = content;
-            await Task.Delay((int)(time * 1000));
+            await UniTask.Delay((int)(time * 1000));
             GameObjectPoolMgr.Instance.PutGameObject("ToastNode", toast);
         }
     }

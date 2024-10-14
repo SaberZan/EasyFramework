@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,7 +26,11 @@ namespace Easy
 
         public GameObject gameObject;
 
-        public List<BaseUI> subUIs = new List<BaseUI>(); 
+        public List<BaseUI> subUIs = new List<BaseUI>();
+
+        public List<Coroutine> coroutines = new List<Coroutine>();
+
+        public List<IBaseAssetHandle> handles = new List<IBaseAssetHandle>();
 
         private int showCount;
 
@@ -118,6 +123,19 @@ namespace Easy
         public virtual void Destroy()
         {
             subUIs.ForEach(subUI=>{ if(subUI.GetUIState(UIState.Awake)) subUI.Destroy(); });
+
+            foreach (var routine in coroutines)
+            {
+                CoroutineMgr.Instance.StopCoroutine(routine);
+            }
+            coroutines.Clear();
+
+            foreach (var handle in handles)
+            {
+                AssetsMgr.Instance.Release(handle);
+            }
+            handles.Clear();
+
             if (handle != null)
             {
                 if (gameObject != null)
@@ -221,6 +239,47 @@ namespace Easy
         public bool GetUIState(UIState state)
         {
             return (uiState & state) != UIState.None;
+        }
+
+        public Coroutine StartCoroutine(IEnumerator item)
+        {
+           var routine = CoroutineMgr.Instance.StartCoroutine(item);
+           coroutines.Add(routine);
+           return routine;
+        }
+
+        public void StopCoroutine(Coroutine routine)
+        {
+           CoroutineMgr.Instance.StopCoroutine(routine);
+           coroutines.Remove(routine);
+        }
+
+        public IBaseAssetHandle LoadAsset(string path)
+        {
+            IBaseAssetHandle handle = AssetsMgr.Instance.LoadAsset<UnityEngine.Object>(path);
+            handles.Add(handle);
+            return handle;
+        }
+
+        public IBaseAssetHandle LoadAssets(List<string> paths)
+        {
+            IBaseAssetHandle handle = AssetsMgr.Instance.LoadAssetsByPath<UnityEngine.Object>(paths);
+            handles.Add(handle);
+            return handle;
+        }
+
+        public IBaseAssetHandle LoadRawAsset(string path)
+        {
+            IBaseAssetHandle handle = AssetsMgr.Instance.LoadRawAsset(path);
+            handles.Add(handle);
+            return handle;
+        }
+
+        public IBaseAssetHandle LoadRawAssets(List<string> paths)
+        {
+            IBaseAssetHandle handle = AssetsMgr.Instance.LoadRawAssetsByPath(paths);
+            handles.Add(handle);
+            return handle;
         }
 
     }

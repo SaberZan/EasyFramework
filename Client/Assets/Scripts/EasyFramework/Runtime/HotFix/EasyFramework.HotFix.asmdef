@@ -1,0 +1,19 @@
+{
+    "name": "EasyFramework.HotFix",
+    "rootNamespace": "",
+    "references": [
+        "GUID:9dfa1493764ed1d48a4215ffa7725741",
+        "GUID:696a0953692949b40bec8730e64e1fdd",
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

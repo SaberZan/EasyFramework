@@ -28,7 +28,6 @@ namespace Toolbox.Editor.Drawers
                             if (editor is ToolboxEditor toolboxEditor)
                             {
                                 toolboxEditor.IgnoreProperty(PropertyUtility.Defaults.scriptPropertyName);
-                                toolboxEditor.IgnoreProperty(PropertyUtility.Defaults.serializedDataModeControllerPropertyName);
                             }
                         }
 

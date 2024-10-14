@@ -17,7 +17,7 @@
         /// <summary>
         /// 挂哉协同方法的对象
         /// </summary>
-        private static MonoBehaviour _behaviour;
+        private MonoBehaviour _behaviour;
 
         public override void Init(InitCompleteCallback complete)
         {
@@ -38,7 +38,7 @@
         #region 通过方法名称开启和关闭协同
 
         [Obsolete("Don't use the function! Instend of using \"StartCoroutine(IEnumerator coroutine)\"")]
-        public static bool StartCoroutine(string funcname, object value = null)
+        public bool StartCoroutine(string funcname, object value = null)
         {
             if (_behaviour == null) return false;
             if (value == null)
@@ -48,7 +48,7 @@
             return true;
         }
 
-        public static bool StopCoroutine(string funcname)
+        public bool StopCoroutine(string funcname)
         {
             if (_behaviour == null) return false;
             _behaviour.StopCoroutine(funcname);
@@ -59,7 +59,7 @@
 
         #region 通过枚举器开启和关闭协同
 
-        public static Coroutine StartCoroutine(IEnumerator coroutine)
+        public Coroutine StartCoroutine(IEnumerator coroutine)
         {
             if (_behaviour == null) return null;
 
@@ -67,21 +67,21 @@
             //return true;
         }
 
-        public static bool StopCoroutine(IEnumerator coroutine)
+        public bool StopCoroutine(IEnumerator coroutine)
         {
             if (_behaviour == null) return false;
             _behaviour.StopCoroutine(coroutine);
             return true;
         }
 
-        public static bool StopCoroutine(Coroutine coroutine)
+        public bool StopCoroutine(Coroutine coroutine)
         {
             if (_behaviour == null) return false;
             _behaviour.StopCoroutine(coroutine);
             return true;
         }
 
-        public static void StopAllCoroutine()
+        public void StopAllCoroutine()
         {
             if (_behaviour == null) return;
             _behaviour.StopAllCoroutines();
