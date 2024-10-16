@@ -1,6 +1,7 @@
 import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
+import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../Utils';
 import BaseTranslate from '../BaseTranslate';
@@ -37,37 +38,37 @@ export default class Xlsx2Cs extends BaseTranslate {
 
     private publicMergeStr = "\t\t[Newtonsoft.Json.JsonIgnore]\r\n \t\tpublic System.Collections.Generic.Dictionary<{0}, {1}> {2}Dic => {3}Dic;\r\n\r\n";
 
-    public TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) {
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
-        super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        await super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
         this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
         this.outputPathJsonStr = path.join(outputPathStr, "json");
 
         if(!fs.existsSync(this.outputPathCsStr)) {
-            fs.mkdirSync(this.outputPathCsStr, { recursive: true });
+            await mkdir(this.outputPathCsStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
-            fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+            await mkdir(this.outputPathJsonStr, { recursive: true });
         }
 
         if(this.toDir != undefined) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr, this.toDir);
             if(!fs.existsSync(this.outputPathJsonStr)) {
-                fs.mkdirSync(this.outputPathJsonStr);
+                await mkdir(this.outputPathJsonStr);
             }
         }
 
         if (this.isDir) { 
-            let files =fs.readdirSync(pathStr);
+            let files = await readdir(pathStr);
             for(let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
-                this.TransferTableJson(files[i].replace(path.extname(files[i]),""));
+                await this.TransferTableJson(files[i].replace(path.extname(files[i]),""));
                 if(i == "0") {
-                    this.TransferTableCs();
+                    await this.TransferTableCs();
                 }
             }
         } else {
@@ -78,12 +79,12 @@ export default class Xlsx2Cs extends BaseTranslate {
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
-            this.TransferTableJson();
-            this.TransferTableCs();
+            await this.TransferTableJson();
+            await this.TransferTableCs();
         }
     }
 
-    private TransferTableCs() {
+    private async TransferTableCs() : Promise<void> {
         if(this.merge) {
 
             let classContent = this.namespaceStart;
@@ -110,7 +111,7 @@ export default class Xlsx2Cs extends BaseTranslate {
             classContent += this.classEnd;
             classContent += this.namespaceEnd;
 
-            this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, this.mergeName));
+            await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, this.mergeName));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
@@ -132,7 +133,7 @@ export default class Xlsx2Cs extends BaseTranslate {
                 classContent += this.classEnd;
                 classContent += this.namespaceEnd;
     
-                this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
+                await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
             }
         }
     }
@@ -166,11 +167,11 @@ export default class Xlsx2Cs extends BaseTranslate {
         return classContent;
     }
 
-    private SaveCsToFile(data: any, filePath: string) {
-        fs.writeFileSync(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
+    private async SaveCsToFile(data: any, filePath: string) : Promise<void> {
+        await writeFile(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransferTableJson(file: string = "") {
+    private async TransferTableJson(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -182,13 +183,13 @@ export default class Xlsx2Cs extends BaseTranslate {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
                 all[translateNamekeyLower + "Dic"] = jsonData;
             }
-            this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
+                await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }

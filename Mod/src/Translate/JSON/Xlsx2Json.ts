@@ -1,6 +1,7 @@
 import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
+import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../Utils';
 import BaseTranslate from '../BaseTranslate';
@@ -9,29 +10,31 @@ export default class Xlsx2Json extends BaseTranslate {
 
     private outputPathJsonStr: string = '';
 
-    public TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) {
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
-        super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        await super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        console.log("-- isDir " + this.isDir + "    " + this.translateSheets)
 
         this.outputPathJsonStr = path.join(outputPathStr , "json");
         if(!fs.existsSync(this.outputPathJsonStr)) {
-            fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+            await mkdir(this.outputPathJsonStr, { recursive: true });
         }
+
         if(this.toDir != undefined) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr,this.toDir);
             if(!fs.existsSync(this.outputPathJsonStr)) {
-                fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+                await mkdir(this.outputPathJsonStr, { recursive: true });
             }
         }
 
         if (this.isDir) { 
-            let files = fs.readdirSync(pathStr);
+            let files = await readdir(pathStr);
             for(let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
-                this.TransferTable(files[i].replace(path.extname(files[i]),""));
+                await this.TransferTable(files[i].replace(path.extname(files[i]),""));
             }
         } else {
             let parsedPath = path.parse(pathStr);
@@ -41,11 +44,11 @@ export default class Xlsx2Json extends BaseTranslate {
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
-            this.TransferTable();
+            await this.TransferTable();
         }
     }
 
-    private TransferTable(file: string = "") {
+    private async TransferTable(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -57,13 +60,13 @@ export default class Xlsx2Json extends BaseTranslate {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
                 all[translateNamekeyLower] = jsonData;
             }
-            this.SaveJsonToFile(all, path.join(this.outputPathJsonStr,this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr,this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
+                await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
@@ -129,10 +132,10 @@ export default class Xlsx2Json extends BaseTranslate {
         return output;
     }
 
-    private SaveJsonToFile(data: any, filePath: string) {
+    private async SaveJsonToFile(data: any, filePath: string) : Promise<void>{
         var _str_all = "";
         _str_all += JSON.stringify(data, null, 4);
-        fs.writeFileSync(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
+        return writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
     private TransformType(type: string) {

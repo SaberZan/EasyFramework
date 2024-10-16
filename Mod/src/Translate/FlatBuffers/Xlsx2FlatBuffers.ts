@@ -1,6 +1,7 @@
 import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
+import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../Utils';
@@ -54,28 +55,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
 
     private stringArray = "table StringArray { \n\t data : [string];\n}\n\n";
 
-
-    public BeforeTranslate(outputPathStr: string, params: any) {
-        this.outputPathFbsStr = path.join(outputPathStr, "fbs");
-        this.outputPathCodeStr = path.join(outputPathStr, "code" , params.toCode);
-        this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
-        this.toCode = params.toCode;
-        if(!fs.existsSync(this.outputPathFbsStr)) {
-            fs.mkdirSync(this.outputPathFbsStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathCodeStr)) {
-            fs.mkdirSync(this.outputPathCodeStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathCsStr)) {
-            fs.mkdirSync(this.outputPathCsStr, { recursive: true });
-        }
-        this.TransferCommonFbs();
-        let fbsPath = path.join(this.outputPathFbsStr, "Common.fbs");
-        this.GenCode(fbsPath, this.toCode, this.outputPathCodeStr); 
-    }
-
-
-    public TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) {
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
@@ -86,42 +66,42 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
         this.toCode = params.toCode;
 
         if(!fs.existsSync(this.outputPathFbsStr)) {
-            fs.mkdirSync(this.outputPathFbsStr, { recursive: true });
+            await mkdir(this.outputPathFbsStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathBinStr)) {
-            fs.mkdirSync(this.outputPathBinStr, { recursive: true });
+            await mkdir(this.outputPathBinStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathCodeStr)) {
-            fs.mkdirSync(this.outputPathCodeStr, { recursive: true });
+            await mkdir(this.outputPathCodeStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
-            fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+            await mkdir(this.outputPathJsonStr, { recursive: true });
         }
 
         if(this.toDir != undefined) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr, this.toDir);
             if(!fs.existsSync(this.outputPathJsonStr)) {
-                fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+                await mkdir(this.outputPathJsonStr, { recursive: true });
             }
         }
 
         if (this.isDir) { 
-            let files = fs.readdirSync(pathStr);
+            let files = await readdir(pathStr);
             for(let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
                 let fileName = files[i].replace(path.extname(files[i]),"");
-                this.TransferTableJson(fileName);
+                await this.TransferTableJson(fileName);
                 if(i == "0") {
-                    this.TransferTableCs();
-                    this.TransferTableFbs();
-                    this.GenCode(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
-                    this.toCode,
-                    this.outputPathCodeStr);
+                    await this.TransferTableCs();
+                    await this.TransferTableFbs();
+                    await this.GenCode(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
+                        this.toCode,
+                        this.outputPathCodeStr);
                 }
-                this.GenBin(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
+                await this.GenBin(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
                                 path.join(this.outputPathJsonStr, this.mergeName + fileName+".json"),
                                 path.join(this.outputPathBinStr, this.mergeName));
             }
@@ -133,32 +113,23 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
-            this.TransferTableJson();
-            this.TransferTableFbs();
-            this.TransferTableCs();
+            await this.TransferTableJson();
+            await this.TransferTableFbs();
+            await this.TransferTableCs();
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                this.GenBin(path.join(this.outputPathFbsStr, translateName + ".fbs") , 
+                await this.GenBin(path.join(this.outputPathFbsStr, translateName + ".fbs") , 
                                 path.join(this.outputPathJsonStr, translateName+".json"),
                                 this.outputPathBinStr);
-                this.GenCode(path.join(this.outputPathFbsStr, translateName + ".fbs") ,
+                await this.GenCode(path.join(this.outputPathFbsStr, translateName + ".fbs") ,
                                 this.toCode,
                                 this.outputPathCodeStr);
             }
         }
     }
 
-    private TransferCommonFbs() {
-        let fbsContent = this.namespaceStart;
-        fbsContent += this.intArray;
-        fbsContent += this.boolArray;
-        fbsContent += this.floatArray;
-        fbsContent += this.stringArray;
-        this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, "Common"));
-    }
-
-    private TransferTableFbs() {
+    private async TransferTableFbs() : Promise<void> {
         if(this.merge) {
 
             let fbsContent = this.packageCommonImport; 
@@ -183,7 +154,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
 
             fbsContent += Utils.FormatStr(this.rootType, this.mergeName);
 
-            this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, this.mergeName));
+            await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, this.mergeName));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
 
@@ -199,7 +170,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
                 fbsContent += Utils.FormatStr(this.fieldStr, translateNamekeyLower + "Array","[" + translateName + "]");
                 fbsContent += this.tableEnd;
                 fbsContent += Utils.FormatStr(this.rootType, translateName + "s");
-                this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, translateName));
+                await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, translateName));
             }
         }
     }
@@ -226,11 +197,11 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
         return tableContent;
     }
 
-    private SaveFbsToFile(data: any, filePath: string) {
-        fs.writeFileSync(filePath + ".fbs", data, { flag: 'w', encoding: 'utf8' });
+    private async SaveFbsToFile(data: any, filePath: string) : Promise<void> {
+        await writeFile(filePath + ".fbs", data, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransferTableJson(file: string = "") {
+    private async TransferTableJson(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -242,13 +213,13 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
                 all[translateNamekeyLower + "Array"] = jsonData[translateNamekeyLower + "Array"];
             }
-            this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
+                await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
@@ -309,32 +280,40 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
         return output;
     }
 
-    private SaveJsonToFile(data: any, filePath: string) {
+    private async SaveJsonToFile(data: any, filePath: string) : Promise<void> {
         var _str_all = "";
         _str_all += JSON.stringify(data, null, 4);
-        fs.writeFileSync(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
+        await writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
-    private GenBin(fbsPath: string, jsonPath: string, outputPath: string) {
-        let cmd = ".\\lib\\flatc\\flatc.exe " + " -I " + path.dirname(fbsPath)   + " -o " + outputPath + " -b " + fbsPath + " " + jsonPath;
-        exec(cmd, (err, stdout, stderr) => {
-            if(err) {
-                throw err;
-            }
-            console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-            console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
-        });
+    private async GenBin(fbsPath: string, jsonPath: string, outputPath: string) : Promise<void> {
+        return new Promise((resolve, reject)=>{
+            let cmd = ".\\lib\\flatc\\flatc.exe " + " -I " + path.dirname(fbsPath)   + " -o " + outputPath + " -b " + fbsPath + " " + jsonPath;
+            exec(cmd, (err, stdout, stderr) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
+                console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
+                resolve();
+            });
+        })
     }
 
-    private GenCode(fbsPath: string, toCode: string, outputPath: string) {
-        let cmd = ".\\lib\\flatc\\flatc.exe -o " + outputPath + " --" + toCode +" " + fbsPath;
-        exec(cmd, (err, stdout, stderr) => {
-            if(err) {
-                throw err;
-            }
-            console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-            console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
-        });
+    private async GenCode(fbsPath: string, toCode: string, outputPath: string) : Promise<void> {
+        return new Promise((resolve, reject)=>{
+            let cmd = ".\\lib\\flatc\\flatc.exe -o " + outputPath + " --" + toCode +" " + fbsPath;
+            exec(cmd, (err, stdout, stderr) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
+                console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
+                resolve();
+            });
+        })
     }
 
     private TransformType(type: string) {

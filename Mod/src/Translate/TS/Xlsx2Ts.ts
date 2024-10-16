@@ -1,6 +1,7 @@
 import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
+import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../Utils';
 import BaseTranslate from '../BaseTranslate';
@@ -9,41 +10,44 @@ export default class Xlsx2Ts extends BaseTranslate {
 
     private outputTsPathStr: string = '';
 
-    public TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) {
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
-        super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        await super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
-        this.outputTsPathStr = path.join(this.outputTsPathStr , "ts");
+        this.outputTsPathStr = path.join(outputPathStr , "ts");
         if(!fs.existsSync(this.outputTsPathStr)) {
-            fs.mkdirSync(this.outputTsPathStr, { recursive: true });
+            await mkdir(this.outputTsPathStr, { recursive: true });
         }
 
-        this.outputTsPathStr = path.join(this.outputTsPathStr , this.toDir);
-        if(!fs.existsSync(this.outputTsPathStr)) {
-            fs.mkdirSync(this.outputTsPathStr, { recursive: true });
+        if(this.toDir != undefined) {
+            this.outputTsPathStr = path.join(this.outputTsPathStr , this.toDir);
+            if(!fs.existsSync(this.outputTsPathStr)) {
+                await mkdir(this.outputTsPathStr, { recursive: true });
+            }
         }
 
         if (this.isDir) { 
-            let files = fs.readdirSync(pathStr);
+            let files = await readdir(pathStr);
             for(let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
-                this.TransferTable(files[i].replace(path.extname(files[i]),""));
+                await this.TransferTable(files[i].replace(path.extname(files[i]),""));
             }
         } else {
             let parsedPath = path.parse(pathStr);
-            parsedPath.ext = "xlsx";
+            parsedPath.base += ".xlsx";
+            parsedPath.ext = ".xlsx";
             let data = xlsx.parse(path.format(parsedPath));
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
-            this.TransferTable();
+            await this.TransferTable();
         }
     }
 
-    private TransferTable(file: string = "") {
+    private async TransferTable(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -52,13 +56,13 @@ export default class Xlsx2Ts extends BaseTranslate {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName]);
                 all[translateName] = jsonData;
             }
-            this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + file));
+            await this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName]);
-                this.SaveTsToFile(jsonData, path.join(this.outputTsPathStr, translateName));
+                await this.SaveTsToFile(jsonData, path.join(this.outputTsPathStr, translateName));
             }
         }
     }
@@ -124,12 +128,12 @@ export default class Xlsx2Ts extends BaseTranslate {
         return output;
     }
 
-    private SaveTsToFile(data: any, filePath: string) {
+    private async SaveTsToFile(data: any, filePath: string) : Promise<void> {
         var _str_all = "";
         _str_all += '//automatic generation,DO NOT EDIT IT!\nexport default \n';
         _str_all += JSON.stringify(data, null, 4);
         _str_all += ';';
-        fs.writeFileSync(filePath + ".ts", _str_all, { flag: 'w', encoding: 'utf8' });
+        await writeFile(filePath + ".ts", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
     private TransformType(type: string) {
@@ -247,93 +251,5 @@ export default class Xlsx2Ts extends BaseTranslate {
         return result;
     }
 
-    /// ------------------生成Index文件-----------------start
-    private _ignore_arr: string[] = [
-        "/.",
-        "tools",
-        ".git",
-        "node_modules",
-        "index.js",
-        "Index.js",
-        "index.ts",
-        "Index.ts"
-    ];
-
-    private isIgnore(fileName: string ,ignore_dir: string[]){
-        for(var i = 0 ; i < ignore_dir.length ; i++ ){
-            var item = ignore_dir[i];
-            if(fileName.indexOf(item) >= 0){
-                return true;
-            }
-        }
-        return false;
-    }
-                      
-    private genTsIndexFile (root: string, files_ts: string[], files_dir: string[]){
-
-        let _format_head: string[] = [
-            "/**",
-            "DO NOT EDIT IT!! ",
-            "*/",
-            "\n"
-        ];
-
-        let _format_before_this_module: string = "//当前模块";
-        let _format_before_sub_module: string = "//子模块";
-
-        let _format_ts: string  = "export {default as $1} from \'./$1\';";
-        let _format_dir: string = "export * as $1 from \'./$1/Index\';";
-
-        let _contents: string[] = [];
-        _contents = _contents.concat(_format_head);
-        _contents.push("\n");
-        _contents = _contents.concat(_format_before_this_module);
-        files_ts.forEach(function(item){
-            let _basename: string = path.basename(item,".ts");
-            _contents.push(_format_ts.replace("$1",_basename).replace("$1",_basename))
-        });
-        _contents.push("\n");
-        _contents.push(_format_before_sub_module);
-        files_dir.forEach(function(item){
-            let _basename: string = path.basename(item,"");
-            _contents.push(_format_dir.replace("$1",_basename).replace("$1",_basename))
-        });
-
-        var _str_contents: string = "";
-        _contents.forEach(function (item) {
-            _str_contents += ( item + "\n" );
-        });
-
-        let _file_name:string = "index.ts";
-        _file_name  = _file_name[0].toUpperCase() + _file_name.substr(1);
-        let _headers_file:string = path.join(root, _file_name);
-
-        fs.writeFileSync(_headers_file, _str_contents);
-    }
-
-    public genIndex (tmpCfgPath: string){
-        let tsPath = tmpCfgPath + "/ts";
-        let files = fs.readdirSync(tsPath);
-
-        let fileList_js:string[]= [];
-        let fileList_dir:string[]= [];
-        for(let i in files) {
-            let fileName = files[i];
-            var _full_path = tsPath + '/' + fileName;
-            if(fs.statSync(_full_path).isDirectory()){
-                //屏蔽目录
-                if(!this.isIgnore(_full_path,this._ignore_arr) ){
-                    fileList_dir.push(_full_path);
-                    this.genIndex(_full_path);
-                }
-            }else{
-                if(!this.isIgnore(_full_path,this._ignore_arr) && (fileName.indexOf(".ts") > 0)){
-                    fileList_js.push(_full_path);
-                }
-            }
-        }
-        this.genTsIndexFile(tsPath,fileList_js,fileList_dir);
-    }
-
-    /// ------------------生成Index文件-----------------end
+    
 }

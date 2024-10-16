@@ -1,6 +1,7 @@
 import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
+import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../Utils';
@@ -48,26 +49,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
 
     private stringArray = "message StringArray {\n\t repeated string data = 1;\n}\n\n";
 
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
-    public BeforeTranslate(outputPathStr: string, params: any) {
-        this.outputPathProtosStr = path.join(outputPathStr , "protos");
-        this.outputPathCodeStr = path.join(outputPathStr , "code" , params.toCode);
-        this.toCode = params.toCode;
-        if(!fs.existsSync(this.outputPathProtosStr)) {
-            fs.mkdirSync(this.outputPathProtosStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathCodeStr)) {
-            fs.mkdirSync(this.outputPathCodeStr, { recursive: true });
-        }
-        this.TransferCommonProtos();
-        let protoPath = path.join(this.outputPathProtosStr, "Common.proto");
-        this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
-    }
-
-
-    public TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) {
-
-        super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        await super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
         this.outputPathProtosStr = path.join(outputPathStr , "protos");
         this.outputPathBytesStr = path.join(outputPathStr , "bytes");
@@ -76,25 +60,25 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
         this.toCode = params.toCode;
 
         if(!fs.existsSync(this.outputPathProtosStr)) {
-            fs.mkdirSync(this.outputPathProtosStr, { recursive: true });
+            await mkdir(this.outputPathProtosStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathBytesStr)) {
-            fs.mkdirSync(this.outputPathBytesStr, { recursive: true });
+            await mkdir(this.outputPathBytesStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathCodeStr)) {
-            fs.mkdirSync(this.outputPathCodeStr, { recursive: true });
+            await mkdir(this.outputPathCodeStr, { recursive: true });
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
-            fs.mkdirSync(this.outputPathJsonStr, { recursive: true });
+            await mkdir(this.outputPathJsonStr, { recursive: true });
         }
         if(this.toDir != undefined) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr, this.toDir);
             if(!fs.existsSync(this.outputPathJsonStr)) {
-                fs.mkdirSync(this.outputPathJsonStr);
+                await mkdir(this.outputPathJsonStr);
             }
             this.outputPathBytesStr = path.join(this.outputPathBytesStr, this.toDir);
             if(!fs.existsSync(this.outputPathBytesStr)) {
-                fs.mkdirSync(this.outputPathBytesStr);
+                await mkdir(this.outputPathBytesStr);
             }
         }
 
@@ -111,12 +95,12 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
                 let jsonPath = path.join(this.outputPathJsonStr, this.mergeName + fileName+".json");
                 let bytesPath = path.join(this.outputPathBytesStr, this.mergeName + fileName+".bytes");
                 let messageName = "CfgSpace." + this.mergeName;
-                this.TransferTableJson(fileName);
+                await this.TransferTableJson(fileName);
                 if(i == "0") {
-                    this.TransferTableProtos();
-                    this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
+                    await this.TransferTableProtos();
+                    await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
                 }
-                this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
+                await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
             }
 
         } else {
@@ -127,8 +111,8 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
-            this.TransferTableJson();
-            this.TransferTableProtos();
+            await this.TransferTableJson();
+            await this.TransferTableProtos();
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
@@ -137,23 +121,13 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
                 let jsonPath = path.join(this.outputPathJsonStr, translateName+".json");
                 let bytesPath = path.join(this.outputPathBytesStr, translateName+".bytes");
                 let messageName = "CfgSpace." + translateName + "s";
-                this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
-                this.GenCode(protoPath,this.toCode,this.outputPathCodeStr);
+                await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
+                await this.GenCode(protoPath,this.toCode,this.outputPathCodeStr);
             }
         }
     }
 
-    private TransferCommonProtos() {
-        let protosContent = this.syntax;
-        protosContent += this.packageStart;
-        protosContent += this.intArray;
-        protosContent += this.boolArray;
-        protosContent += this.floatArray;
-        protosContent += this.stringArray;
-        this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, "Common"));
-    }
-
-    private TransferTableProtos() {
+    private async TransferTableProtos() : Promise<void> {
         if(this.merge) {
 
             let protosContent = this.syntax;
@@ -177,7 +151,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
             }
             protosContent += this.messageEnd;
 
-            this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, this.mergeName));
+            await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, this.mergeName));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
 
@@ -193,7 +167,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
                 protosContent += Utils.FormatStr(this.messageStart, translateName + "s");
                 protosContent += Utils.FormatStr(this.fieldStr, "repeated " +  translateName, translateNamekeyLower + "Array", "1");
                 protosContent += this.messageEnd;
-                this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, translateName));
+                await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, translateName));
             }
         }
     }
@@ -220,11 +194,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
         return tableContent;
     }
 
-    private SaveProtosToFile(data: any, filePath: string) {
-        fs.writeFileSync(filePath + ".proto", data, { flag: 'w', encoding: 'utf8' });
+    private async SaveProtosToFile(data: any, filePath: string) : Promise<void> {
+        await writeFile(filePath + ".proto", data, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransferTableJson(file: string = "") {
+    private async TransferTableJson(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -236,13 +210,13 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
                 all[translateNamekeyLower + "Array"] = jsonData[translateNamekeyLower + "Array"];
             }
-            this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
+                await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
@@ -303,13 +277,13 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
         return output;
     }
 
-    private SaveJsonToFile(data: any, filePath: string) {
+    private async SaveJsonToFile(data: any, filePath: string) : Promise<void> {
         var _str_all = "";
         _str_all += JSON.stringify(data, null, 4);
-        fs.writeFileSync(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
+        await writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
-    private GenBytes(protoPath: string, jsonPath: string, messageName: string ,bytesPath: string) {
+    private async GenBytes(protoPath: string, jsonPath: string, messageName: string ,bytesPath: string) : Promise<void> {
         let jsonData = JSON.parse(fs.readFileSync(jsonPath).toString());
         let root = protobuf.loadSync(protoPath)
         if(root != null)
@@ -317,11 +291,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
             let allMessages= root.lookupType(messageName);
             let message = allMessages.create(jsonData);
             let buffer = allMessages.encode(message).finish();
-            fs.writeFileSync(bytesPath, buffer);
+            await writeFile(bytesPath, buffer);
         }
     }
 
-    private GenCode(protoPath: string, toCode: string, outputPath: string) {
+    private async GenCode(protoPath: string, toCode: string, outputPath: string) : Promise<void> {
         let cmd = "";
         let parsedPath = path.parse(protoPath);
         switch (toCode) {
@@ -332,25 +306,33 @@ export default class Xlsx2ProtoBuffers extends BaseTranslate {
                 let jsPath = path.format(parsedPath);
                 parsedPath.ext = ".d.ts";
                 let dtsPath = path.format(parsedPath);
-                pbjs.main(["-t", "static-module", "-w","commonjs", "-o", jsPath,  protoPath, "-p", path.dirname(protoPath)],(err, output)=>{
-                    if(err){
-                        console.log("err == " + err);
-                    }
-                    pbts.main(["-o",dtsPath, jsPath]);
-                });
-                break;
+
+                return new Promise((resolve,reject)=>{
+                    pbjs.main(["-t", "static-module", "-w","commonjs", "-o", jsPath,  protoPath, "-p", path.dirname(protoPath)],(err, output)=>{
+                        if(err){
+                            console.log("err == " + err);
+                            reject(err);
+                            return;
+                        }
+                        pbts.main(["-o",dtsPath, jsPath]);
+                        resolve();
+                    });
+                })
 
             default:
-                cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir +  " --" + toCode +"_out " + outputPath + " " + protoPath;
-                console.log(cmd);
-                exec(cmd, (err, stdout, stderr) => {
-                    if(err) {
-                        throw err;
-                    }
-                    console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-                    console.log(stderr);  // stderr为执行命令行操作后返回的错误提示    
+                return new Promise((resolve,reject)=>{
+                    cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir +  " --" + toCode +"_out " + outputPath + " " + protoPath;
+                    console.log(cmd);
+                    exec(cmd, (err, stdout, stderr) => {
+                        if(err) {
+                            reject(err);
+                            return;
+                        }
+                        console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
+                        console.log(stderr);  // stderr为执行命令行操作后返回的错误提示    
+                        resolve();
+                    });
                 });
-                break;
         }
     }
 
