@@ -63,6 +63,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
         this.outputPathBinStr = path.join(outputPathStr , "bin");
         this.outputPathCodeStr = path.join(outputPathStr , "code" , params.toCode);
         this.outputPathJsonStr = path.join(outputPathStr , "json");
+        this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
         this.toCode = params.toCode;
 
         if(!fs.existsSync(this.outputPathFbsStr)) {
@@ -76,6 +77,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslate {
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
             await mkdir(this.outputPathJsonStr, { recursive: true });
+        }
+        if(!fs.existsSync(this.outputPathCsStr)) {
+            await mkdir(this.outputPathCsStr, { recursive: true });
         }
 
         if(this.toDir != undefined) {
