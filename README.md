@@ -1,17 +1,18 @@
-EasyFramework 
+# **EasyFramework** 
 
 
 
-# **1.Client 为 Unity游戏框架 集成了 HyBridCLR**
+## **1.Client 为 Unity游戏框架 集成了 HyBridCLR**
     
   ### 资源管理(AssetsMgr)
     可使用自带EasyAsset和Addressable
+    EasyAsset 实现热更,边玩边下,资源分包DLC,加解密,资源去重,引用计数释放
   ### 文件管理(FileMgr)
-  
+    实现文件加解密
   ### 配置管理(ConfigMgr)
-
+    配合转表工具使用
   ### 事件管理(EventMgr)
-  
+    手动注册反注册事件,通过属性自动注册反注册事件,线程安全事件
   ### 协程管理(CoroutineMgr)
   
   ### 有限状态机(FMSMachine)
@@ -19,12 +20,13 @@ EasyFramework
   ### 多语言(I18NMgr)
   
   ### 输入管理(InputMgr)
-  
+
   ### UI管理(UIMgr)
-  
+    实现层级管理,弹窗管理
   ### 启动流程  
+    实现了单例模块的加载顺序,卸载重载
   
-# **2.Execl为配置表转换工具**
+## **2.Execl为配置表转换工具**
 
   可将Excel表转换为 Flatbuffers,ProtoBuffers,JS,TS,JSON
 
@@ -59,5 +61,5 @@ EasyFramework
 
 
 
-# **3.详细信息有需要时补充**
+## **3.详细信息有需要时补充**
     
