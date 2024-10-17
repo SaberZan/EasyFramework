@@ -1,0 +1,26 @@
+{
+    "target": "JSON",
+    "params": {
+        "toCode" : "csharp"
+    },
+    "excelPath": ".\\design\\cfg",
+    "output": {
+        "json" : "your target"
+    },
+    "rules": 
+    {
+        "1_常量表": {
+            "sheets": [
+                ["常量","GameConstCfg"]
+            ]
+        },
+        "2_关卡表": {
+            "sheets": [
+                ["Maps","MapsCfg"],
+                ["Monster","MonsterCfg"]
+            ],
+            "mergeName": "LevelCfg",
+            "toDir": "Level"
+        }
+    }
+}
