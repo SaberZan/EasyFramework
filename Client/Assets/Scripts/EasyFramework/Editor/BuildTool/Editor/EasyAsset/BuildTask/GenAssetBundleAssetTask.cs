@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -14,7 +15,7 @@ namespace Easy.EasyAsset
             return "生成打bundle的配置";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             if (Directory.Exists(EasyAssetEditorConst.tempPath))
                 Directory.Delete(EasyAssetEditorConst.tempPath, true);
@@ -54,6 +55,10 @@ namespace Easy.EasyAsset
                 if(keyValuePair.Key.EndsWith(".unity"))
                 {
                     abName += "_scene";
+                }
+                else if(keyValuePair.Key.EndsWith(".shader")) 
+                {
+                    abName = "shaders";
                 }
                 abName = MD5Utility.GetMd5Hash(abName);
                 abAssetConfigInfo.abName = abName;

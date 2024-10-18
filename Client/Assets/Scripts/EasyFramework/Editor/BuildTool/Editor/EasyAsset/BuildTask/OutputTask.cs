@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using Newtonsoft.Json;
 using UnityEditor.Build.Content;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -16,7 +17,7 @@ namespace Easy.EasyAsset
             return "加密Bundle";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             if (Directory.Exists(context.generateInfo.OutputPath))
                 Directory.Delete(context.generateInfo.OutputPath, true);

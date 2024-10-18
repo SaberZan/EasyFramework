@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -12,6 +13,6 @@ namespace Easy.EasyAsset
     {
         string BuildName();
         
-        BuildResult Run(GenerateContext context);
+        Task<BuildResult> Run(GenerateContext context);
     }
 }

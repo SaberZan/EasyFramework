@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -19,7 +20,7 @@ namespace Easy.EasyAsset
             return "分析资源";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             _packageConfig = context.packageConfig;
             if (_packageConfig == null || _packageConfig.packageInfos.Count == 0)

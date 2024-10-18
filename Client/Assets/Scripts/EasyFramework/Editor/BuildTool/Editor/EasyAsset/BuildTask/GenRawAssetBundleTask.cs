@@ -4,6 +4,7 @@ using System.IO;
 using UnityEditor;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -14,7 +15,7 @@ namespace Easy.EasyAsset
             return "生成原始资源";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             foreach (var kv in context.easyAssetBundleConfigInfos)
             {

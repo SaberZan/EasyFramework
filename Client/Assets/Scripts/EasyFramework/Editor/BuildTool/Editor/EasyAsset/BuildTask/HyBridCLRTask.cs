@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using HybridCLR.Editor;
 using HybridCLR.Editor.Commands;
 using UnityEditor;
@@ -16,7 +17,7 @@ namespace Easy.EasyAsset
             return "c#代码热更新";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             if (Directory.Exists(EasyAssetEditorConst.HybridCLRAOT))
                 Directory.Delete(EasyAssetEditorConst.HybridCLRAOT, true);

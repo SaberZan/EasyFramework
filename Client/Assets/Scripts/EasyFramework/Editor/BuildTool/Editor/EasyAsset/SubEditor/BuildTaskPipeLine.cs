@@ -19,6 +19,7 @@ namespace Easy.EasyAsset
         {
             buildTasks = new List<IBuildTask>()
             {
+                new ShaderVariantTask(),
                 new HyBridCLRTask(),
                 new AnalyseAssetsTask(),
                 new GenAssetBundleAssetTask(),
@@ -33,14 +34,14 @@ namespace Easy.EasyAsset
         [EditorButton(nameof(Start))]
         [Hide]
         public int tag;
-        public void Start()
+        public async void Start()
         {
             GenerateContext.Instance.Reset();
             for (int i = 0; i < buildTasks.Count; i++)
             {
                 EditorUtility.DisplayProgressBar(buildTasks[i].BuildName(), "Start", 0);
                 var watch = Stopwatch.StartNew();
-                buildTasks[i].Run(GenerateContext.Instance);
+                await buildTasks[i].Run(GenerateContext.Instance);
                 watch.Stop();
                 UnityEngine.Debug.Log(buildTasks[i].BuildName() + " 耗时 = " + watch.Elapsed);
                 EditorUtility.DisplayProgressBar(buildTasks[i].BuildName(), "End", 1);

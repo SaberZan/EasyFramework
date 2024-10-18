@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEditor;
 
 namespace Easy.EasyAsset
@@ -11,7 +12,7 @@ namespace Easy.EasyAsset
             return "拷贝到StreamAssets";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             if(context.generateInfo.copyType != CopyType.CopyNone)
             {

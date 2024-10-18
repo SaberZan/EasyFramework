@@ -7,6 +7,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -17,7 +18,7 @@ namespace Easy.EasyAsset
             return "生成资源总表";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             Version version = new Version();
             Catalogs catalogs = new Catalogs();

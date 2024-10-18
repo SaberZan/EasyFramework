@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEditor;
 
 namespace Easy.EasyAsset
@@ -11,7 +12,7 @@ namespace Easy.EasyAsset
             return "生成Bundle";
         }
 
-        public BuildResult Run(GenerateContext context)
+        public async Task<BuildResult> Run(GenerateContext context)
         {
             if (Directory.Exists(context.generateInfo.OriginPath))
                 Directory.Delete(context.generateInfo.OriginPath, true);
