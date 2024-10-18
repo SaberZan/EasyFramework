@@ -201,7 +201,7 @@ namespace Easy
                         buildTaskPipeLine = ScriptableObject.CreateInstance<BuildTaskPipeLine>();
                         AssetDatabase.CreateAsset(buildTaskPipeLine, EasyAssetEditorConst.EasyAssetBuildTaskPipleLinePath);
                     }
-                    buildTaskPipeLine.Start();
+                    buildTaskPipeLine.StartTask();
     #endif
                 }
                 catch (System.Exception ex)

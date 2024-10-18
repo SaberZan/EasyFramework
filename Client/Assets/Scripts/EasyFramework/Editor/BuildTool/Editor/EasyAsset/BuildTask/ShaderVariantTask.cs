@@ -28,6 +28,7 @@ namespace Easy.EasyAsset
 
         public async Task<BuildResult> Run(GenerateContext context)
         {
+            EditorApplication.update -= EditorUpdate;
             EditorApplication.update += EditorUpdate;
 
             materials = new List<Material>();
@@ -116,23 +117,6 @@ namespace Easy.EasyAsset
                 }
             }
 
-            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
-            InvokeInternalStaticMethod(typeof(ShaderUtil), "ClearCurrentShaderVariantCollection");
-            Debug.Log(InvokeInternalStaticMethod(typeof(ShaderUtil),"GetCurrentShaderVariantCollectionVariantCount"));
-            _elapsedTime.Stop();
-            _elapsedTime.Reset();
-            _elapsedTime.Start();
-
-            while(materials.Count > 0)
-            {
-                await Task.Yield();
-            }
-
-            InvokeInternalStaticMethod(typeof(ShaderUtil), "SaveCurrentShaderVariantCollection", ShaderVariantCollectionPath);
-            Debug.Log(InvokeInternalStaticMethod(typeof(ShaderUtil), "GetCurrentShaderVariantCollectionShaderCount"));
-            
-            DestroyAllSpheres();
-
             var sb = new System.Text.StringBuilder();
             foreach (var kvp in shaderDict)
             {
@@ -149,6 +133,25 @@ namespace Easy.EasyAsset
                 }
             }
             Debug.Log(sb.ToString());
+
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
+            InvokeInternalStaticMethod(typeof(ShaderUtil), "ClearCurrentShaderVariantCollection");
+            Debug.Log(InvokeInternalStaticMethod(typeof(ShaderUtil),"GetCurrentShaderVariantCollectionVariantCount"));
+            _elapsedTime.Stop();
+            _elapsedTime.Reset();
+            _elapsedTime.Start();
+
+            while(materials.Count > 0)
+            {
+                await Task.Yield();
+            }
+
+            await Task.Delay(1000);
+
+            InvokeInternalStaticMethod(typeof(ShaderUtil), "SaveCurrentShaderVariantCollection", ShaderVariantCollectionPath);
+            Debug.Log(InvokeInternalStaticMethod(typeof(ShaderUtil), "GetCurrentShaderVariantCollectionShaderCount"));
+            
+            DestroyAllSpheres();
 
             EditorApplication.update -= EditorUpdate;
             return BuildResult.Success;
