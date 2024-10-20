@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System;
+using System.IO;
 
 namespace Easy.EasyAsset
 {
@@ -23,7 +24,7 @@ namespace Easy.EasyAsset
         /// <summary>
         /// 原始文件夹
         /// </summary>
-        public string OriginPath => Application.dataPath + "/" + originPath + (originPath.EndsWith("/") ? "AB/" : "/AB/") + build_target.ToString() + "/";
+        public string OriginPath => Path.IsPathRooted(originPath) ? originPath :  Application.dataPath + "/" + originPath + (originPath.EndsWith("/") ? "AB/" : "/AB/") + build_target.ToString() + "/";
         /// <summary>
         /// 输出文件夹
         /// </summary>
@@ -32,7 +33,7 @@ namespace Easy.EasyAsset
         /// <summary>
         /// 输出文件夹
         /// </summary>
-        public string OutputPath => Application.dataPath + "/" + outputPath + (outputPath.EndsWith("/") ? "AB/" : "/AB/") + build_target.ToString() + "/";
+        public string OutputPath => Path.IsPathRooted(outputPath) ? outputPath : Application.dataPath + "/" + outputPath + (outputPath.EndsWith("/") ? "AB/" : "/AB/") + build_target.ToString() + "/";
         /// <summary>
         /// ab包操作类型类型
         /// </summary>
