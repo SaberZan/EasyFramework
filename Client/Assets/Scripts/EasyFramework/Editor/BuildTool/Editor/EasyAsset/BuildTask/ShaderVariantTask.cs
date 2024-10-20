@@ -153,6 +153,33 @@ namespace Easy.EasyAsset
             
             DestroyAllSpheres();
 
+            AssetDatabase.Refresh();
+
+            for (int i = 0; i < context.packageConfig.packageInfos.Count; ++i)
+            {
+                if(context.packageConfig.packageInfos[i].packageName.Contains(EasyAssetEditorConst.Shaders))
+                {
+                    context.packageConfig.packageInfos.RemoveAt(i);
+                    --i;
+                }
+            }
+
+            PackageConfigInfo packageConfigInfo = new PackageConfigInfo();
+            packageConfigInfo.packageName = EasyAssetEditorConst.Shaders;
+            packageConfigInfo.groups = new List<GroupConfigInfo>();
+            
+            GroupConfigInfo groupConfigInfo = new GroupConfigInfo();
+            groupConfigInfo.groupName = EasyAssetEditorConst.Shaders;
+            groupConfigInfo.isEncrypt = true;
+            groupConfigInfo.downloadPriorityType = DownloadPriority.Must;
+            groupConfigInfo.isRaw = false;
+            groupConfigInfo.packType = PackType.PackTogger;
+            groupConfigInfo.assets = new List<UnityEngine.Object>();
+            groupConfigInfo.assets.Add(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ShaderVariantCollectionPath));
+            packageConfigInfo.groups.Add(groupConfigInfo);
+            
+            context.packageConfig.packageInfos.Insert(0, packageConfigInfo);
+
             EditorApplication.update -= EditorUpdate;
             return BuildResult.Success;
         }

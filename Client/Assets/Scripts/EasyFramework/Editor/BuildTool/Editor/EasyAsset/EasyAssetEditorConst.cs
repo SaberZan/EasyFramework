@@ -49,6 +49,12 @@ namespace Easy.EasyAsset
 
         public const string AOT_DLLS = "aotdlls";
 
+        public const string HybridCLR = "HybridCLR";
+
+        public const string Shaders = "Shaders";
+
+        public const string shaders = "shaders";
+
     }
 
 }

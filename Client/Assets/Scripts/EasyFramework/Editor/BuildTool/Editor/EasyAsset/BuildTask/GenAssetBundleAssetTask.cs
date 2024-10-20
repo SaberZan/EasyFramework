@@ -56,9 +56,9 @@ namespace Easy.EasyAsset
                 {
                     abName += "_scene";
                 }
-                else if(keyValuePair.Key.EndsWith(".shader")) 
+                else if(keyValuePair.Key.EndsWith(".shader")|| keyValuePair.Key.EndsWith(".shadervariants")) 
                 {
-                    abName = "shaders";
+                    abName = EasyAssetEditorConst.Shaders + EasyAssetEditorConst.shaders;
                 }
                 abName = MD5Utility.GetMd5Hash(abName);
                 abAssetConfigInfo.abName = abName;

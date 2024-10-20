@@ -66,7 +66,7 @@ namespace Easy.EasyAsset
             
             for (int i = 0; i < context.packageConfig.packageInfos.Count; ++i)
             {
-                if(context.packageConfig.packageInfos[i].packageName.Contains("HybridCLR"))
+                if(context.packageConfig.packageInfos[i].packageName.Contains(EasyAssetEditorConst.HybridCLR))
                 {
                     context.packageConfig.packageInfos.RemoveAt(i);
                     --i;
@@ -75,7 +75,7 @@ namespace Easy.EasyAsset
 
 
             PackageConfigInfo packageConfigInfo = new PackageConfigInfo();
-            packageConfigInfo.packageName = "HybridCLR";
+            packageConfigInfo.packageName = EasyAssetEditorConst.HybridCLR;
             packageConfigInfo.groups = new List<GroupConfigInfo>();
             
             //AOT------------

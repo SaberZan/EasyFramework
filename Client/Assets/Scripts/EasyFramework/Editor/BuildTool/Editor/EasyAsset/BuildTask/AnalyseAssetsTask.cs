@@ -40,6 +40,11 @@ namespace Easy.EasyAsset
                     string groupName = abGroupInfo.groupName;
                     foreach (UnityEngine.Object asset in abGroupInfo.assets)
                     {
+                        if(asset == null)
+                        {
+                            continue;
+                        }
+
                         string path = AssetDatabase.GetAssetPath(asset);
                         if (Directory.Exists(path))
                         {
