@@ -8,7 +8,7 @@ using Cysharp.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
-    public class HttpDownloader : Downloader
+    public class WebHttpDownloader : Downloader
     {
         /// <summary>
         /// 临时保存位置
@@ -63,7 +63,7 @@ namespace Easy.EasyAsset
         /// </summary>
         public CancellationTokenSource cancellationTokenSource;
 
-        public HttpDownloader(string fileName, long size, DownloadPriority downloadPriority, long version, string saveDirPath, Action<DownloadCode, string> callback, List<string> urls) :base(fileName, size, downloadPriority, version, saveDirPath, callback)
+        public WebHttpDownloader(string fileName, long size, DownloadPriority downloadPriority, long version, string saveDirPath, Action<DownloadCode, string> callback, List<string> urls) :base(fileName, size, downloadPriority, version, saveDirPath, callback)
         {
             updateUrls = urls;
         }
@@ -76,14 +76,14 @@ namespace Easy.EasyAsset
         {
             downloadType = DownloadType.Start;
             cancellationTokenSource = new CancellationTokenSource();
-            Task.Factory.StartNew(StartDownload, timeout, cancellationTokenSource.Token);
+            StartDownload(timeout, cancellationTokenSource.Token);
         }
 
         /// <summary>
         /// 线程开始下载
         /// </summary>
         /// <param name="timeout"></param>
-        public void StartDownload(object timeout)
+        public async void StartDownload(object timeout, CancellationToken cancellationToken)
         {
 
             try
@@ -125,7 +125,7 @@ namespace Easy.EasyAsset
                     long downloadedByte = 0;
                     while (downloadedByte < _contentLength)
                     {
-                        if(cancellationTokenSource.Token.IsCancellationRequested)
+                        if(cancellationToken.IsCancellationRequested)
                         {
                             break;
                         }
@@ -136,9 +136,8 @@ namespace Easy.EasyAsset
                         _fileStream.Write(bytes, 0, size);
                         _currLength += size;
                         currentSize = _currLength;
-                        Thread.Sleep(1);
+                        await UniTask.Delay(100, cancellationToken : cancellationToken);
                     }
-                    Thread.Sleep(1);   
 
                     if(_fileStream != null)
                     {
@@ -217,6 +216,7 @@ namespace Easy.EasyAsset
             {
                 OnFinal();
             }
+
             cancellationTokenSource?.Cancel();
             cancellationTokenSource = null;
         }
@@ -252,6 +252,5 @@ namespace Easy.EasyAsset
             }
             _callback?.Invoke(code, fileName);
         }
-        
     }
 }

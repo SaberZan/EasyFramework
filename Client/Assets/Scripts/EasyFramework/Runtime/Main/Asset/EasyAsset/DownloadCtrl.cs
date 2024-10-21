@@ -255,7 +255,11 @@ namespace Easy.EasyAsset
                     }
                     if (!have)
                     {
+#if !UNITY_WEBGL
                         Downloader abDownloader = new HttpDownloader(abInfo.md5, abInfo.size, abInfo.abDownloadPriority, catalogs.version, Const.localAssetBundleFolder, UpdateBundleCallBack, catalogs.updateUrls);
+#else
+                        Downloader abDownloader = new WebHttpDownloader(abInfo.md5, abInfo.size, abInfo.abDownloadPriority, catalogs.version, Const.localAssetBundleFolder, UpdateBundleCallBack, catalogs.updateUrls);
+#endif
                         _allDownloader.Add(abDownloader);
                     }
                 }
