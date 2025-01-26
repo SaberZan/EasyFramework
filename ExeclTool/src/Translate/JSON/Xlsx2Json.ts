@@ -1,9 +1,9 @@
-import xlsx from 'node-xlsx';
+import * as xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
-import Utils from '../../Utils';
+import Utils from '../../utils';
 import BaseTranslate from '../BaseTranslate';
 
 export default class Xlsx2Json extends BaseTranslate {

@@ -7,7 +7,15 @@
     "output": {
         "json" : "your target"
     },
-    "rules": 
+    "enum":
+    {
+    
+    },
+    "struct":
+    {
+
+    },
+    "config": 
     {
         "1_常量表": {
             "sheets": [
@@ -16,7 +24,7 @@
         },
         "2_关卡表": {
             "sheets": [
-                ["Maps","MapsCfg"],
+                ["Map","MapCfg"],
                 ["Monster","MonsterCfg"]
             ],
             "mergeName": "LevelCfg",

@@ -4,7 +4,7 @@ import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _, { reject } from 'lodash';
 import { exec } from 'child_process'
-import Utils from '../../Utils';
+import Utils from '../../utils';
 import protobuf from 'protobufjs'
 import { pbjs, pbts } from 'protobufjs-cli';
 import BaseTranslateBefore from '../BaseTranslateBefore';

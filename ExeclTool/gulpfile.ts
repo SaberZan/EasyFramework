@@ -22,7 +22,6 @@ import Xlsx2FlatBuffers from './src/Translate/FlatBuffers/Xlsx2FlatBuffers';
 import Xlsx2ProtoBuffersBefore from './src/Translate/ProtoBuffers/Xlsx2ProtoBuffersBefore';
 import Xlsx2ProtoBuffers from './src/Translate/ProtoBuffers/Xlsx2ProtoBuffers';
 
-
 let knowOptions = {
     string: 'paramPath',
     default: {paramPath : process.env.NODE_ENV || './input/param.json' }
@@ -47,37 +46,37 @@ gulp.task("git",(cb)=>{
 });
 
 gulp.task("genCfg",(cb)=>{
-    let selectTranslateBeforeRule  = BaseTranslateBefore;
-    let selectTranslateRule = BaseTranslate;
-    let selectTranslateAfterRule = BaseTranslateAfter;
+    let selectTranslateBefore  = BaseTranslateBefore;
+    let selectTranslateConfig = BaseTranslate;
+    let selectTranslateAfter = BaseTranslateAfter;
 
     let isValid = true;
     switch (param.target) {
         case Target.JS:
-            selectTranslateBeforeRule = Xlsx2JsBefore
-            selectTranslateRule = Xlsx2Js;
-            selectTranslateAfterRule = Xlsx2JsAfter
+            selectTranslateBefore = Xlsx2JsBefore
+            selectTranslateConfig = Xlsx2Js;
+            selectTranslateAfter = Xlsx2JsAfter
             break;
         case Target.TS:
-            selectTranslateBeforeRule = Xlsx2TsBefore
-            selectTranslateRule = Xlsx2Ts;
-            selectTranslateAfterRule = Xlsx2TsAfter
+            selectTranslateBefore = Xlsx2TsBefore
+            selectTranslateConfig = Xlsx2Ts;
+            selectTranslateAfter = Xlsx2TsAfter
             break;
         case Target.JSON:
-            selectTranslateBeforeRule = Xlsx2JsonBefore
-            selectTranslateRule = xlsx2Json;
+            selectTranslateBefore = Xlsx2JsonBefore
+            selectTranslateConfig = xlsx2Json;
             break;
         case Target.CS:
-            selectTranslateBeforeRule = Xlsx2CsBefore
-            selectTranslateRule = Xlsx2Cs;
+            selectTranslateBefore = Xlsx2CsBefore
+            selectTranslateConfig = Xlsx2Cs;
             break;
         case Target.FlatBuffers:
-            selectTranslateBeforeRule = Xlsx2FlatBuffersBefore;
-            selectTranslateRule = Xlsx2FlatBuffers;
+            selectTranslateBefore = Xlsx2FlatBuffersBefore;
+            selectTranslateConfig = Xlsx2FlatBuffers;
             break;
         case Target.ProtoBuffers:
-            selectTranslateBeforeRule = Xlsx2ProtoBuffersBefore;
-            selectTranslateRule = Xlsx2ProtoBuffers;
+            selectTranslateBefore = Xlsx2ProtoBuffersBefore;
+            selectTranslateConfig = Xlsx2ProtoBuffers;
             break;
         default:
             isValid = false;
@@ -86,26 +85,26 @@ gulp.task("genCfg",(cb)=>{
 
     if(isValid){
         async function trans() {
-            let before = new selectTranslateBeforeRule();
+            let before = new selectTranslateBefore();
             await before.BeforeTranslate(tmp_path, param.params);
 
             let promiseArr : Promise<void>[] = [];
-            for(let key in param.rules) {
+            for(let key in param.configs) {
                 let tmpKey = key;
-                let tmpResult = param.rules[key];
-                let translateRule = new selectTranslateRule();
+                let tmpResult = param.configs[key];
+                let translateRule = new selectTranslateConfig();
                 promiseArr.push(translateRule.TranslateExcel(path.join(param.excelPath, tmpKey) , tmp_path, tmpResult, param.params));
 
             }
             await Promise.all(promiseArr);
-            let after = new selectTranslateAfterRule();
+            let after = new selectTranslateAfter();
             await after.AfterTranslate(tmp_path);
             cb();
         }
         trans();
         
     }else{
-        cb("error");
+        cb(new Error("error"));
     }
 });
 
