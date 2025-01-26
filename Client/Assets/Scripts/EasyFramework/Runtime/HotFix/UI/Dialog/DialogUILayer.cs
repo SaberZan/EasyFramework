@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Reflection;
+using System;
 
 namespace Easy 
 {
@@ -13,6 +14,19 @@ namespace Easy
         public bool isShowMask;
         public bool triggerMaskClick;
     }
+
+    public enum DialogExecEnum
+    {
+        Open,
+        Close,
+    }
+
+    public class DialogExecParam
+    {
+        public DialogExecEnum execEnum;
+        public BaseDialogUI dialogUI;
+        public string dialogUIName;
+    }
     
     [LayerParams(layerType = LayerType.DIALOG, order = 1)]
     public class DialogUILayer : BaseUILayer
@@ -21,144 +35,272 @@ namespace Easy
 
         public List<BaseDialogUI> dialogs = new List<BaseDialogUI>();
 
-        public BaseDialogUI nowDialog;
+        public BaseDialogUI nowDialog => dialogs.Count > 0 ? dialogs[^1] : null;
+
+        public Queue<DialogExecParam> dialogsExecQueue = new Queue<DialogExecParam>();
+
+        private bool _execLock = false;
+
+        private Dictionary<string,Type> _allDialogTypes = new Dictionary<string, Type>();
+
+        public override void Awake()
+        {
+            base.Awake();
+            InitDialogTypeInfos();
+        }
+
+        private void InitDialogTypeInfos()
+        {
+            //查找全部数据类
+            List<Type> types = EasyFrameworkMain.Instance.GetTypes();
+            foreach (var t in types)
+            {
+                if (typeof(BaseDialogUI).IsInstanceOfType(t))
+                {
+                    string key = t.Name;
+                    if(_allDialogTypes.ContainsKey(key))
+                    {
+                        throw new Exception("DialogUI 不允许有重名");
+                    }
+                    _allDialogTypes.Add(key, t);
+                }
+            }
+        }
 
         /// <summary>
         /// 显示弹窗
         /// </summary>
-        /// <param name="prbDialog"></param>
-        /// <param name="dialog"></param>
-        public void ShowDialog(BaseDialogUI dialog)
+        /// <param name="dialogUIName"></param>
+        /// <param name="prefabPath">预制路径</param>
+        public void OpenDialog(string dialogUIName, string prefabPath)
         {
-            var preDialog = nowDialog;
-            if (preDialog != null)
+            if(_allDialogTypes.ContainsKey(dialogUIName))
             {
-                preDialog.Hide(()=>
-                {
-                    dialogs.Push(dialog);
-                    preDialog.gameObject.transform.parent.gameObject.SetActive(false);
-                    ShowDialogInterval(dialog);
-                });
-            }
-            else
-            {
-                ShowDialogInterval(dialog);
+                BaseDialogUI obj = (BaseDialogUI)Activator.CreateInstance(_allDialogTypes[dialogUIName]);
+                obj.SetPrefabPath(prefabPath);
+                OpenDialog(obj);
             }
         }
 
-        private void ShowDialogInterval(BaseDialogUI dialog)
+        /// <summary>
+        /// 显示弹窗
+        /// </summary>
+        /// <param name="dialogUIName"></param>
+        /// <param name="dialogGameObject">显示对象</param>
+        public void OpenDialog(string dialogUIName, GameObject dialogGameObject)
         {
-            nowDialog = dialog;
-            nowDialog.Awake();
-            nowDialog.Start();
-
-            bool isShowMask = true;
-            bool isTriggerMaskClick = true;
-            if(nowDialog.GetType().IsDefined(typeof(DialogParamsAttribute), false))
+            if(_allDialogTypes.ContainsKey(dialogUIName))
             {
-                DialogParamsAttribute dialogParams = nowDialog.GetType().GetCustomAttribute<DialogParamsAttribute>();
-                isShowMask = dialogParams.isShowMask;
-                isTriggerMaskClick = dialogParams.triggerMaskClick;
+                BaseDialogUI obj = (BaseDialogUI)Activator.CreateInstance(_allDialogTypes[dialogUIName]);
+                obj.SetGameObject(dialogGameObject);
+                OpenDialog(obj);
             }
+        }
 
-            GameObject blackMask = new GameObject();
-            Image image = blackMask.AddComponent<Image>();
-            image.raycastTarget = false;
-            image.material = new Material(Shader.Find("UI/Default"));
-            image.color = new Color(0, 0, 0, 0);
-            if (isShowMask)
+        /// <summary>
+        /// 显示弹窗
+        /// </summary>
+        /// <param name="dialog"></param>
+        public void OpenDialog(BaseDialogUI dialogUI)
+        {
+            dialogsExecQueue.Enqueue(new DialogExecParam()
             {
-                image.raycastTarget = true;
-            }
-            if (isTriggerMaskClick)
-            {
-                //是否点击关闭
-                image.raycastTarget = true;
-                Button button = blackMask.AddComponent<Button>();
-                button.onClick.AddListener(nowDialog.OnClickMask);
-            }
-            UIMgr.Instance.AddFullScreenRectTransform(blackMask);
-            //blackMask.GetComponent<RectTransform>().offsetMax = new Vector2(0.0f, 200);
-            dialog.gameObject.transform.SetParent(blackMask.transform);
-            blackMask.transform.SetParent(gameObject.transform, false);
-            dialog.gameObject.transform.localPosition = Vector3.zero;
-            dialog.gameObject.transform.localScale = Vector3.one;
-            UIMgr.Instance.AddFullScreenRectTransform(dialog.gameObject);
-
-            nowDialog.Show();
+                execEnum = DialogExecEnum.Open,
+                dialogUI = dialogUI
+            });
+            ExecQueue();
         }
 
         /// <summary>
         /// 移除弹窗
         /// </summary>
-        public void RemoveDialog(string uiName)
+        public void CloseDialog(string dialogUIName)
+        {
+            dialogsExecQueue.Enqueue(new DialogExecParam()
+            {
+                execEnum = DialogExecEnum.Close,
+                dialogUIName = dialogUIName
+            });
+            ExecQueue();
+        }
+
+        /// <summary>
+        /// 移除弹窗
+        /// </summary>
+        public void CloseDialog(BaseDialogUI dialogUI)
+        {
+            dialogsExecQueue.Enqueue(new DialogExecParam()
+            {
+                execEnum = DialogExecEnum.Close,
+                dialogUI = dialogUI
+            });
+            ExecQueue();
+        }
+
+        /// <summary>
+        /// 移除所有弹窗
+        /// </summary>
+        public void CloseAllDialog()
+        {
+            foreach (var dialogUIView in dialogs)
+            {
+                CloseDialogInterval(dialogUIView);
+            }
+            dialogs.Clear();
+            dialogsExecQueue.Clear();
+            _execLock = false;
+        }
+
+
+        public void ExecQueue()
+        {
+            if (!_execLock && dialogsExecQueue.Count > 0)
+            {
+                _execLock = true;
+                var dialogExecParam = dialogsExecQueue.Dequeue();
+                if (dialogExecParam.execEnum == DialogExecEnum.Open)
+                {
+                    ExecOpenDialog(dialogExecParam);
+                }
+                else if (dialogExecParam.execEnum == DialogExecEnum.Close)
+                {
+                    ExecCloseDialog(dialogExecParam);
+                }
+            }
+        }
+
+        public void UnLockAndExecQueue()
+        {
+            _execLock = false;
+            ExecQueue();
+        }
+
+
+        private void ExecOpenDialog(DialogExecParam dialogExecParam)
+        {
+            HideDialogInterval(nowDialog,()=>
+            {
+                ShowDialogInterval(dialogExecParam.dialogUI, UnLockAndExecQueue);
+            });
+        }
+
+        private void ExecCloseDialog(DialogExecParam dialogExecParam)
         {
             for (int i = 0, count = dialogs.Count; i < count; ++i)
             {
-                if(dialogs[i].GetUIName() == uiName)
+                if(dialogs[i].GetUIName() == dialogExecParam.dialogUIName)
                 {
-                    RemoveDialog(dialogs[i]);
+                    ExecCloseDialog(dialogs[i]);
                     break;
                 }
             }
         }
 
         /// <summary>
-        /// 移除弹窗
+        /// 关闭弹窗
         /// </summary>
-        public void RemoveDialog(BaseDialogUI dialog)
+        private void ExecCloseDialog(BaseDialogUI dialog)
         {
             if(nowDialog == dialog)
             {
-                nowDialog.Hide(RemoveNowDialogHideCallback);
+                HideDialogInterval(dialog, ()=>{
+                    CloseDialogInterval(nowDialog);
+                    if(dialogsExecQueue.Count == 0)
+                    {
+                        dialogsExecQueue.Enqueue(new DialogExecParam()
+                        {
+                            execEnum = DialogExecEnum.Open,
+                            dialogUI = nowDialog
+                        });
+                    }
+                    UnLockAndExecQueue();
+                });
             }
             else
             {
-                RemoveDialogInterval(dialog);
+                CloseDialogInterval(dialog);
+                UnLockAndExecQueue();
             }
         }
 
-        /// <summary>
-        /// 正在显示的弹窗关闭后的回调
-        /// </summary>
-        private void RemoveNowDialogHideCallback()
+        private void ShowDialogInterval(BaseDialogUI dialog, Action callback)
         {
-            RemoveDialogInterval(nowDialog);
-            nowDialog = null;
-            if (dialogs.Count > 0)
+            if(dialog == null)
             {
-                nowDialog = dialogs.Pop();
-                nowDialog.gameObject.transform.parent.gameObject.SetActive(true);
-                nowDialog.Show();
+                callback();
+                return;
             }
+
+            if(dialogs.Contains(dialog))
+            {
+                dialog.gameObject.transform.parent.gameObject.SetActive(true);
+                dialog.Show(callback);
+            }
+            else
+            {
+                dialogs.Push(dialog);
+                dialog.Awake();
+                dialog.Start();
+
+                bool isShowMask = true;
+                bool isTriggerMaskClick = true;
+                if(dialog.GetType().IsDefined(typeof(DialogParamsAttribute), false))
+                {
+                    DialogParamsAttribute dialogParams = dialog.GetType().GetCustomAttribute<DialogParamsAttribute>();
+                    isShowMask = dialogParams.isShowMask;
+                    isTriggerMaskClick = dialogParams.triggerMaskClick;
+                }
+
+                GameObject blackMask = new GameObject();
+                Image image = blackMask.AddComponent<Image>();
+                image.raycastTarget = false;
+                image.material = new Material(Shader.Find("UI/Default"));
+                image.color = new Color(0, 0, 0, 0);
+                if (isShowMask)
+                {
+                    image.raycastTarget = true;
+                }
+                if (isTriggerMaskClick)
+                {
+                    //是否点击关闭
+                    image.raycastTarget = true;
+                    Button button = blackMask.AddComponent<Button>();
+                    button.onClick.AddListener(dialog.OnClickMask);
+                }
+                UIMgr.Instance.AddFullScreenRectTransform(blackMask);
+                //blackMask.GetComponent<RectTransform>().offsetMax = new Vector2(0.0f, 200);
+                dialog.gameObject.transform.SetParent(blackMask.transform);
+                blackMask.transform.SetParent(gameObject.transform, false);
+                dialog.gameObject.transform.localPosition = Vector3.zero;
+                dialog.gameObject.transform.localScale = Vector3.one;
+                UIMgr.Instance.AddFullScreenRectTransform(dialog.gameObject);
+                dialog.Show(callback);
+            }
+        }
+
+        private void HideDialogInterval(BaseDialogUI dialog, Action callback)
+        {
+            if(dialog == null)
+            {
+                callback();
+                return;
+            }
+            dialog.Hide(()=>{
+                dialog.gameObject.transform.parent.gameObject.SetActive(false);
+                callback();
+            });
         }
 
         /// <summary>
         /// 移除弹窗没有hide
         /// </summary>
-        private void RemoveDialogInterval(BaseDialogUI dialog)
+        private void CloseDialogInterval(BaseDialogUI dialog)
         {
             dialogs.Remove(dialog);
             dialog.Destroy();
             dialog.Destroyed();
             var backMask = dialog.gameObject.transform.parent.gameObject;
-            Object.Destroy(backMask);
-        }
-
-        /// <summary>
-        /// 移除所有弹窗
-        /// </summary>
-        public void RemoveAllDialog()
-        {
-            foreach (var dialogUIView in dialogs)
-            {
-                RemoveDialogInterval(dialogUIView);
-            }
-            dialogs.Clear();
-            if(nowDialog != null)
-            {
-                RemoveDialogInterval(nowDialog);
-            }
+            GameObject.Destroy(backMask);
         }
 
         /// <summary>
@@ -190,7 +332,7 @@ namespace Easy
         public override void Destroy()
         {
             base.Destroy();
-            RemoveAllDialog();
+            CloseAllDialog();
         }
     }
 }

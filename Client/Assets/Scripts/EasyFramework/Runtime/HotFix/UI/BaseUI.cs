@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace Easy
@@ -36,16 +37,19 @@ namespace Easy
 
         private int hideCount;
 
-        public void Awake()
-        {
-            EventMgr.Instance.SubscribeByTarget(this);
-            subUIs.ForEach(subUI=> { if(subUI.uiState == UIState.None) subUI.Awake(); });
-            uiState = UIState.Awake;
-        }
+        public CancellationTokenSource cancellationTokenSource;
 
         public virtual string GetUIName()
         {
             return GetType().Name;
+        }
+
+        public virtual void Awake()
+        {
+            cancellationTokenSource = new CancellationTokenSource();
+            EventMgr.Instance.SubscribeByTarget(this);
+            subUIs.ForEach(subUI=> { if(subUI.uiState == UIState.None) subUI.Awake(); });
+            uiState = UIState.Awake;
         }
 
         public virtual void Start()
@@ -68,6 +72,7 @@ namespace Easy
         {
             if(isShow)
             {
+                callback?.Invoke();
                 return;
             }
             isShow = true;
@@ -94,6 +99,7 @@ namespace Easy
         {
             if(!isShow)
             {
+                callback?.Invoke(); 
                 return;
             }
             isShow = false;
@@ -122,6 +128,7 @@ namespace Easy
 
         public virtual void Destroy()
         {
+
             subUIs.ForEach(subUI=>{ if(subUI.GetUIState(UIState.Awake)) subUI.Destroy(); });
 
             foreach (var routine in coroutines)
@@ -129,6 +136,9 @@ namespace Easy
                 CoroutineMgr.Instance.StopCoroutine(routine);
             }
             coroutines.Clear();
+
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource = null;
 
             foreach (var handle in handles)
             {

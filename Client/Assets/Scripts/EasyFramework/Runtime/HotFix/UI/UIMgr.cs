@@ -121,10 +121,9 @@ namespace Easy
             List<Type> types = EasyFrameworkMain.Instance.GetTypes();
             foreach (var t in types)
             {
-                if (t.BaseType == typeof(BaseUILayer) || (t.BaseType != null && t.BaseType.BaseType == typeof(BaseUILayer)))
+                if (typeof(BaseUILayer).IsInstanceOfType(t))
                 {
-                    string key = t.FullName;
-                    BaseUILayer obj = (BaseUILayer)GetType().Assembly.CreateInstance(key);
+                    BaseUILayer obj = (BaseUILayer)Activator.CreateInstance(t);
                     AddLayer(obj);
                 }
             }

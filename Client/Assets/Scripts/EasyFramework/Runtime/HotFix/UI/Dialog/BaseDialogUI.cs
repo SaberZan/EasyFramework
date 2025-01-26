@@ -6,7 +6,7 @@ namespace Easy
 
         public void Close()
         {
-            Easy.UIMgr.Instance.GetLayer<DialogUILayer>().RemoveDialog(this);
+            Easy.UIMgr.Instance.GetLayer<DialogUILayer>().CloseDialog(this);
         }
 
         public virtual void OnBackPressed()

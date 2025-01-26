@@ -140,6 +140,14 @@ namespace Easy
                 {
                     if (eventList[i].eventTarget == target && handle == eventList[i].eventHandle)
                     {
+                        eventList[i] = null;
+                    }
+                }
+
+                for (int i = eventList.Count - 1; i >= 0; --i)
+                {
+                    if (eventList[i] == null)
+                    {
                         eventList.RemoveAt(i);
                     }
                 }
