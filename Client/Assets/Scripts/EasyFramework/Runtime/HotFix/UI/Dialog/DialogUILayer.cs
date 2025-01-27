@@ -204,7 +204,7 @@ namespace Easy
         {
             if(nowDialog == dialog)
             {
-                HideDialogInterval(dialog, ()=>{
+                HideDialogInterval(nowDialog, ()=>{
                     CloseDialogInterval(nowDialog);
                     if(dialogsExecQueue.Count == 0)
                     {
