@@ -1,8 +1,5 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 
 namespace Easy.EasyAsset
 {
@@ -68,26 +65,24 @@ namespace Easy.EasyAsset
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async Task<T> GetResultAsync(Action<T> action = null)
+        public async UniTask<T> GetResultAsync(Action<T> action = null)
         {
             if (isInPool)
             {
                 throw new Exception("handle 已被回收 !!");
             }
-            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
-            var overTimeTask = Task.Run(async () => { await UniTask.Delay(BaseUnityAssetHandle.instanceOverTime); });
             if (IsDone())
             {
-                taskCompletionSource.SetResult(true);
+                var result = GetResult();
+                action?.Invoke(result);
+                return result;
             }
-            else
-            {
-                taskCompletionSources.Add(taskCompletionSource);
-            }
-            await Task.WhenAny(taskCompletionSource.Task, overTimeTask);
-            overTimeTask.Dispose();
+            UniTaskCompletionSource<bool> taskCompletionSource = new UniTaskCompletionSource<bool>();;
+            taskCompletionSources.Add(taskCompletionSource);
+            var overTimeTask = UniTask.Delay(BaseUnityAssetHandle.instanceOverTime);
+            await UniTask.WhenAny(taskCompletionSource.Task, overTimeTask);
             T t = null;
-            if (taskCompletionSource.Task.IsCompleted && taskCompletionSource.Task.Result)
+            if (taskCompletionSource.Task.Status == UniTaskStatus.Succeeded)
             {
                 t = GetResult();
             }
@@ -119,27 +114,24 @@ namespace Easy.EasyAsset
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async Task<T> InstantiateAsync(Action<T> action = null)
+        public async UniTask<T> InstantiateAsync(Action<T> action = null)
         {
             if(isInPool)
             {
                 throw new Exception("handle 已被回收 !!");
             }
-
-            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
-            if(IsDone())
+            if (IsDone())
             {
-                taskCompletionSource.SetResult(true);
+                var result = Instantiate();
+                action?.Invoke(result);
+                return result;
             }
-            else
-            {
-                var overTimeTask = Task.Run(async () => { await UniTask.Delay(BaseUnityAssetHandle.instanceOverTime); });
-                taskCompletionSources.Add(taskCompletionSource);
-                await Task.WhenAny(taskCompletionSource.Task, overTimeTask);
-                overTimeTask.Dispose();
-            }
+            UniTaskCompletionSource<bool> taskCompletionSource = new UniTaskCompletionSource<bool>();;
+            taskCompletionSources.Add(taskCompletionSource);
+            var overTimeTask = UniTask.Delay(BaseUnityAssetHandle.instanceOverTime);
+            await UniTask.WhenAny(taskCompletionSource.Task, overTimeTask);
             T t = null;
-            if (taskCompletionSource.Task.IsCompleted && taskCompletionSource.Task.Result)
+            if (taskCompletionSource.Task.Status == UniTaskStatus.Succeeded)
             {
                 t = Instantiate();
             }

@@ -5,7 +5,6 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Google.Play.AssetDelivery;
 
 namespace Easy.EasyAsset

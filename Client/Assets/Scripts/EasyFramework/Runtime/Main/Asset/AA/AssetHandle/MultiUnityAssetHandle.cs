@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Easy.AA
@@ -59,7 +60,7 @@ namespace Easy.AA
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async Task<List<UnityEngine.Object>> GetResultAsync(System.Action<List<UnityEngine.Object>> action = null)
+        public async UniTask<List<UnityEngine.Object>> GetResultAsync(System.Action<List<UnityEngine.Object>> action = null)
         {
             if(isInPool)
             {
@@ -110,7 +111,7 @@ namespace Easy.AA
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async Task<List<UnityEngine.Object>> InstantiatesAsync(System.Action<List<UnityEngine.Object>> action = null)
+        public async UniTask<List<UnityEngine.Object>> InstantiatesAsync(System.Action<List<UnityEngine.Object>> action = null)
         {
             if(isInPool)
             {
@@ -161,7 +162,7 @@ namespace Easy.AA
         /// <param name="action"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<UnityEngine.Object> InstantiateAsync(string path, Action<UnityEngine.Object> action = null)
+        public async UniTask<UnityEngine.Object> InstantiateAsync(string path, Action<UnityEngine.Object> action = null)
         {
             if(isInPool)
             {

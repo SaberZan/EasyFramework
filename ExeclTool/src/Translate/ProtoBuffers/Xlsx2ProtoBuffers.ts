@@ -7,9 +7,9 @@ import { exec } from 'child_process'
 import Utils from '../../utils';
 import protobuf from 'protobufjs'
 import { pbjs, pbts } from 'protobufjs-cli';
-import BaseTranslate from '../BaseTranslate';
+import BaseTranslateConfig from '../BaseTranslateConfig';
 
-export default class Xlsx2ProtoBuffers extends BaseTranslate {
+export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
     private outputPathProtosStr: string = '';
 

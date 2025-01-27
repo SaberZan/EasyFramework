@@ -5,9 +5,9 @@ import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../utils';
-import BaseTranslate from '../BaseTranslate';
+import BaseTranslateConfig from '../BaseTranslateConfig';
 
-export default class Xlsx2FlatBuffers extends BaseTranslate {
+export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
     private outputPathFbsStr: string = '';
 

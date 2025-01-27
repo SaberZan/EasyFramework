@@ -4,7 +4,7 @@ import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
-import BaseTranslate from '../BaseTranslate';
+import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateBefore from '../BaseTranslateBefore';
 
 export default class Xlsx2CsBefore extends BaseTranslateBefore {

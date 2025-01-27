@@ -4,9 +4,9 @@ import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
-import BaseTranslate from '../BaseTranslate';
+import BaseTranslateConfig from '../BaseTranslateConfig';
 
-export default class Xlsx2Json extends BaseTranslate {
+export default class Xlsx2Json extends BaseTranslateConfig {
 
     private outputPathJsonStr: string = '';
 

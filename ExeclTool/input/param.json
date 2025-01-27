@@ -3,17 +3,26 @@
     "params": {
         "toCode" : "csharp"
     },
-    "excelPath": ".\\design\\cfg",
+    "designPath": ".\\design",
     "output": {
-        "json" : "your target"
+        "code" : "../Client/Assets/Scripts/Game/Rumtime/HotFix/Cfg",
+        "bin" : "../Client/Assets/GameResources/Cfg"
     },
     "enum":
     {
-    
+        "Enum1":{
+            "sheets":[
+                "EnumTest"
+            ]
+        }
     },
     "struct":
     {
-
+        "Struct1":{
+            "sheets":[
+                "StructTest"
+            ]
+        }
     },
     "config": 
     {

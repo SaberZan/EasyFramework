@@ -1,6 +1,6 @@
 import fs from "fs";
 
-export default class BaseTranslate {
+export default class BaseTranslateConfig {
 
     public xlsxData: { [Key: string]: any } = {};
 

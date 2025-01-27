@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 
 namespace Easy.EasyAsset

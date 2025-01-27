@@ -4,7 +4,7 @@ import path from 'path';
 import git from 'gulp-git';
 import minimist from 'minimist';
 import { Target } from './src/Enum';
-import BaseTranslate from './src/Translate/BaseTranslate';
+import BaseTranslateConfig from './src/Translate/BaseTranslateConfig';
 import BaseTranslateBefore from './src/Translate/BaseTranslateBefore';
 import BaseTranslateAfter from './src/Translate/BaseTranslateAfter';
 import xlsx2Json from './src/Translate/JSON/Xlsx2Json';
@@ -47,7 +47,7 @@ gulp.task("git",(cb)=>{
 
 gulp.task("genCfg",(cb)=>{
     let selectTranslateBefore  = BaseTranslateBefore;
-    let selectTranslateConfig = BaseTranslate;
+    let selectTranslateConfig = BaseTranslateConfig;
     let selectTranslateAfter = BaseTranslateAfter;
 
     let isValid = true;
@@ -93,7 +93,7 @@ gulp.task("genCfg",(cb)=>{
                 let tmpKey = key;
                 let tmpResult = param.config[key];
                 let translateRule = new selectTranslateConfig();
-                promiseArr.push(translateRule.TranslateExcel(path.join(param.excelPath, tmpKey) , tmp_path, tmpResult, param.params));
+                promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "cfg", tmpKey) , tmp_path, tmpResult, param.params));
 
             }
             await Promise.all(promiseArr);

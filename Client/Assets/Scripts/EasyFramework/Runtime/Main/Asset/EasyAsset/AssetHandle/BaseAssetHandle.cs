@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 namespace Easy.EasyAsset
 {
@@ -27,7 +26,7 @@ namespace Easy.EasyAsset
         /// 资源加载完成列表
         /// </summary>
         /// <returns></returns>
-        public List<TaskCompletionSource<bool>> taskCompletionSources = new List<TaskCompletionSource<bool>>();
+        public List<UniTaskCompletionSource<bool>> taskCompletionSources = new List<UniTaskCompletionSource<bool>>();
 
         /// <summary>
         /// 是否已加载完成
@@ -157,7 +156,7 @@ namespace Easy.EasyAsset
                 {
                     for(int i = taskCompletionSources.Count - 1; i >= 0; ++i)
                     {
-                        taskCompletionSources[i].SetResult(isDone);
+                        taskCompletionSources[i].TrySetResult(isDone);
                     }
                 }
             }
