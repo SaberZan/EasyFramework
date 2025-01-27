@@ -53,9 +53,10 @@ namespace Easy
         {
             //查找全部数据类
             List<Type> types = EasyFrameworkMain.Instance.GetTypes();
+            var BaseDialogUIType = typeof(BaseDialogUI);
             foreach (var t in types)
             {
-                if (typeof(BaseDialogUI).IsInstanceOfType(t))
+                if (BaseDialogUIType.IsAssignableFrom(t) && t != BaseDialogUIType)
                 {
                     string key = t.Name;
                     if(_allDialogTypes.ContainsKey(key))

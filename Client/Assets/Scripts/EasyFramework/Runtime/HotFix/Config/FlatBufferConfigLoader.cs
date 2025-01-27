@@ -63,7 +63,7 @@ namespace Easy
             }
             foreach (var kv in _needLoadConfig)
             {
-                LoadConfigCacheAsync(configPath + kv.Key + ".txt", kv.Value, LoadConfigCallBack);
+                LoadConfigCacheAsync(configPath + kv.Key + ".bin", kv.Value, LoadConfigCallBack);
             }
 
         }

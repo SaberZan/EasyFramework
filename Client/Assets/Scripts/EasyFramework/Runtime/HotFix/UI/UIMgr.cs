@@ -119,9 +119,10 @@ namespace Easy
         {
             //查找全部数据类
             List<Type> types = EasyFrameworkMain.Instance.GetTypes();
+            var BaseUILayerType = typeof(BaseUILayer);
             foreach (var t in types)
             {
-                if (typeof(BaseUILayer).IsInstanceOfType(t))
+                if (BaseUILayerType.IsAssignableFrom(t) && t != BaseUILayerType)
                 {
                     BaseUILayer obj = (BaseUILayer)Activator.CreateInstance(t);
                     AddLayer(obj);

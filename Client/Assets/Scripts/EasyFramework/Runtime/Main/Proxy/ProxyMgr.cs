@@ -28,13 +28,14 @@
             {
                 //查找全部数据类
                 List<Type> types = EasyFrameworkMain.Instance.GetTypes();
+                var ProxyType = typeof(Proxy);
                 foreach (var t in types)
                 {
                     if(t.IsAbstract)
                     {
                         continue;
                     }
-                    if (typeof(Proxy).IsAssignableFrom(t))
+                    if (ProxyType.IsAssignableFrom(t))
                     {
                         string key = t.FullName??t.Name;
                         Proxy obj = (Proxy)t.Assembly.CreateInstance(key);

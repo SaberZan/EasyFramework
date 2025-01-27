@@ -89,9 +89,9 @@ gulp.task("genCfg",(cb)=>{
             await before.BeforeTranslate(tmp_path, param.params);
 
             let promiseArr : Promise<void>[] = [];
-            for(let key in param.configs) {
+            for(let key in param.config) {
                 let tmpKey = key;
-                let tmpResult = param.configs[key];
+                let tmpResult = param.config[key];
                 let translateRule = new selectTranslateConfig();
                 promiseArr.push(translateRule.TranslateExcel(path.join(param.excelPath, tmpKey) , tmp_path, tmpResult, param.params));
 

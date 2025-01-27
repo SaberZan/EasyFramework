@@ -27,10 +27,11 @@ namespace Easy
             _allTypes = new Dictionary<string, Type>();
             _listTypes = new List<Type>();
             //查找全部数据类
+            var CacheDataType = typeof(CacheData);
             List<Type> types = EasyFrameworkMain.Instance.GetTypes();
             foreach (var t in types)
             {
-                if (typeof(CacheData).IsAssignableFrom(t))
+                if (CacheDataType.IsAssignableFrom(t))
                 {
                     _listTypes.Add(t);
                 }
@@ -64,9 +65,10 @@ namespace Easy
         {
             _allDatas = new Dictionary<string, CacheData>();
             var types = _allTypes.Values;
+            var CacheDataType = typeof(CacheData);
             foreach (var t in types)
             {
-                if (typeof(CacheData).IsAssignableFrom(t) && t != typeof(CacheData))
+                if (CacheDataType.IsAssignableFrom(t) && t != CacheDataType)
                 {
                     string key = t.Name;
                     CacheData data = (CacheData) t.GetConstructor(Type.EmptyTypes)?.Invoke(null);
