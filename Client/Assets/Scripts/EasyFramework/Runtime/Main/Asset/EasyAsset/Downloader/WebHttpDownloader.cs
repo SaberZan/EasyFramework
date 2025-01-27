@@ -135,7 +135,7 @@ namespace Easy.EasyAsset
                         _fileStream.Write(bytes, 0, size);
                         _currLength += size;
                         currentSize = _currLength;
-                        await UniTask.Delay(100, cancellationToken : cancellationToken);
+                        await UniTask.Yield(cancellationToken : cancellationToken);
                     }
 
                     if(_fileStream != null)
