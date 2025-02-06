@@ -12,8 +12,9 @@ namespace Easy
         None = 0,
         Awake = 1 << 1,
         Start = 1 << 2,
-        Destroy = 1 << 3,
-        Destroyed = 1 << 4,
+        Show = 1 << 3,
+        Destroy = 1 << 4,
+        Destroyed = 1 << 5,
     }
 
     public class BaseUI
@@ -21,13 +22,13 @@ namespace Easy
 
         public UIState uiState = UIState.None;
 
-        public bool isShow;
-
         public ISingleUnityAssetHandle<GameObject> handle;
 
         public GameObject gameObject;
 
         public List<BaseUI> subUIs = new List<BaseUI>();
+
+        public List<BaseUI> tmpSubUIs = new List<BaseUI>();
 
         public List<Coroutine> coroutines = new List<Coroutine>();
 
@@ -48,8 +49,8 @@ namespace Easy
         {
             cancellationTokenSource = new CancellationTokenSource();
             EventMgr.Instance.SubscribeByTarget(this);
-            subUIs.ForEach(subUI=> { if(subUI.uiState == UIState.None) subUI.Awake(); });
-            uiState = UIState.Awake;
+            subUIs.ForEach(subUI=> { if(!subUI.GetUIState(UIState.Awake)) subUI.Awake(); });
+            AddUIState(UIState.Awake);
         }
 
         public virtual void Start()
@@ -64,20 +65,30 @@ namespace Easy
                 gameObject = new GameObject(GetType().Name);
             }
 
-            subUIs.ForEach(subUI=> { if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start)) subUI.Start(); });
-            uiState = UIState.Start;
+            AddUIState(UIState.Start);
+
+            subUIs.ForEach(subUI=>
+            { 
+                if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start))
+                { 
+                    subUI.Start(); 
+                }
+            });
+            
         }
 
         public virtual void Show(Action callback = null)
         {
-            if(isShow)
+            if(GetUIState(UIState.Show))
             {
                 callback?.Invoke();
                 return;
             }
-            isShow = true;
-            showCount = subUIs.Count;
-            subUIs.ForEach(subUI=> 
+            AddUIState(UIState.Show);
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            showCount = tmpSubUIs.Count;
+            tmpSubUIs.ForEach(subUI=> 
             { 
                 if(subUI.GetUIState(UIState.Start))
                 { 
@@ -97,14 +108,16 @@ namespace Easy
 
         public virtual void Hide(Action callback = null)
         {
-            if(!isShow)
+            if(!GetUIState(UIState.Show))
             {
                 callback?.Invoke(); 
                 return;
             }
-            isShow = false;
-            hideCount = subUIs.Count;
-            subUIs.ForEach(subUI=> 
+            SubUIState(UIState.Show);
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            hideCount = tmpSubUIs.Count;
+            tmpSubUIs.ForEach(subUI=> 
             { 
                 if(subUI.GetUIState(UIState.Start))
                 { 
@@ -121,16 +134,31 @@ namespace Easy
             });
         }
 
-        public virtual void Update()
+
+        public virtual void Update(float deltaTime)
         {
-            subUIs.ForEach(subUI=> { if(subUI.GetUIState(UIState.Start)) subUI.Update(); });
+            if(GetUIState(UIState.Start))
+            {
+                tmpSubUIs.Clear();
+                tmpSubUIs.AddRange(subUIs);
+                tmpSubUIs.ForEach(subUI=> 
+                { 
+                    subUI.Update(deltaTime);
+                });
+            }
         }
 
         public virtual void Destroy()
         {
-
-            subUIs.ForEach(subUI=>{ if(subUI.GetUIState(UIState.Awake)) subUI.Destroy(); });
-
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            tmpSubUIs.ForEach(subUI=>
+            { 
+                if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Destroy))
+                { 
+                    subUI.Destroy(); 
+                }
+            });
             foreach (var routine in coroutines)
             {
                 CoroutineMgr.Instance.StopCoroutine(routine);
@@ -163,16 +191,23 @@ namespace Easy
                     gameObject = null;
                 }
             }
-
-            uiState = UIState.Destroy;
+            AddUIState(UIState.Destroy);
         }
 
         public void Destroyed()
         {
-            subUIs.ForEach(subUI=>{ if(subUI.GetUIState(UIState.Destroy)) subUI.Destroyed(); });
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            tmpSubUIs.ForEach(subUI=>
+            { 
+                if(subUI.GetUIState(UIState.Destroy) && !subUI.GetUIState(UIState.Destroyed))
+                { 
+                    subUI.Destroyed(); 
+                }
+            });
             subUIs.Clear();
             EventMgr.Instance.UnSubscribeByTarget(this);
-            uiState = UIState.Destroyed;
+            AddUIState(UIState.Destroyed);
         }
 
         public void SetPrefabPath(string path)
@@ -196,21 +231,45 @@ namespace Easy
         public void AddSubUI(BaseUI subUI)
         {
             subUIs.Add(subUI);
-            if(!subUI.GetUIState(UIState.Awake))
+            if(GetUIState(UIState.Awake))
             {
-                subUI.Awake();
+                if(!subUI.GetUIState(UIState.Awake))
+                {
+                    subUI.Awake();
+                }
             }
-            if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start))
+
+            if(GetUIState(UIState.Start))
             {
-                subUI.Start();
+                if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start))
+                {
+                    subUI.Start();
+                }
             }
-            if(isShow)
+
+            if(GetUIState(UIState.Show))
             {
                 subUI.Show();
             }
             else
             {
                 subUI.Hide();
+            }
+
+            if(GetUIState(UIState.Destroy))
+            {
+                if(subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Destroy))
+                {
+                    subUI.Destroy();
+                }
+            }
+
+            if(GetUIState(UIState.Destroyed))
+            {
+                if(subUI.GetUIState(UIState.Destroy) && !subUI.GetUIState(UIState.Destroyed))
+                {
+                    subUI.Destroyed();
+                }
             }
         }
 

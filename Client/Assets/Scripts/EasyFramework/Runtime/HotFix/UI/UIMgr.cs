@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Reflection;
+using System.Linq;
 
 namespace Easy
 {
@@ -447,6 +448,15 @@ namespace Easy
             UnityEngine.Object.DestroyImmediate(_staticCanvasNode);
             UnityEngine.Object.DestroyImmediate(_dynamicCanvasNode);
             UnityEngine.Object.DestroyImmediate(_eventSystemNode);
+        }
+
+        public override void Update(float deltaTime)
+        {
+            base.Update(deltaTime);
+            foreach (var item in _layers.Values.ToArray())
+            {
+                item.Update(deltaTime);
+            }
         }
     }
 

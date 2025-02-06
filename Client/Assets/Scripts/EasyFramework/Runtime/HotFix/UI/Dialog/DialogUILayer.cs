@@ -49,6 +49,10 @@ namespace Easy
             InitDialogTypeInfos();
         }
 
+        /// <summary>
+        /// 反射初始化所有Dialog类型
+        /// </summary>
+        /// <exception cref="Exception"></exception>
         private void InitDialogTypeInfos()
         {
             //查找全部数据类
@@ -152,7 +156,9 @@ namespace Easy
             _execLock = false;
         }
 
-
+        /// <summary>
+        /// 执行队列
+        /// </summary>
         public void ExecQueue()
         {
             if (!_execLock && dialogsExecQueue.Count > 0)
@@ -170,13 +176,18 @@ namespace Easy
             }
         }
 
+        /// <summary>
+        /// 解除队列锁并执行队列
+        /// </summary>
         public void UnLockAndExecQueue()
         {
             _execLock = false;
             ExecQueue();
         }
 
-
+        /// <summary>
+        /// 执行打开弹窗
+        /// </summary>
         private void ExecOpenDialog(DialogExecParam dialogExecParam)
         {
             HideDialogInterval(nowDialog,()=>
@@ -185,6 +196,9 @@ namespace Easy
             });
         }
 
+        /// <summary>
+        /// 执行关闭弹窗
+        /// </summary>
         private void ExecCloseDialog(DialogExecParam dialogExecParam)
         {
             for (int i = 0, count = dialogs.Count; i < count; ++i)
@@ -198,7 +212,7 @@ namespace Easy
         }
 
         /// <summary>
-        /// 关闭弹窗
+        /// 执行关闭弹窗
         /// </summary>
         private void ExecCloseDialog(BaseDialogUI dialog)
         {
@@ -224,6 +238,11 @@ namespace Easy
             }
         }
 
+        /// <summary>
+        /// 展示弹窗内部接口
+        /// </summary>
+        /// <param name="dialog"></param>
+        /// <param name="callback"></param>
         private void ShowDialogInterval(BaseDialogUI dialog, Action callback)
         {
             if(dialog == null)
@@ -279,6 +298,11 @@ namespace Easy
             }
         }
 
+        /// <summary>
+        /// 隐藏弹窗内部接口
+        /// </summary>
+        /// <param name="dialog"></param>
+        /// <param name="callback"></param>
         private void HideDialogInterval(BaseDialogUI dialog, Action callback)
         {
             if(dialog == null)
@@ -307,11 +331,11 @@ namespace Easy
         /// <summary>
         /// 获得弹窗
         /// </summary>
-        public BaseDialogUI GetDialog(string uiName)
+        public BaseDialogUI GetDialog(string dialogUiName)
         {
             for (int i = 0, count = dialogs.Count; i < count; ++i)
             {
-                if(dialogs[i].GetUIName() == uiName)
+                if(dialogs[i].GetUIName() == dialogUiName)
                 {
                     return dialogs[i];
                 }

@@ -68,7 +68,7 @@ namespace Easy
             black.color = new Color(0, 0, 0, 0);
             Text txt = toast.GetComponentInChildren<Text>();
             txt.text = content;
-            await UniTask.Delay((int)(time * 1000));
+            await UniTask.Delay((int)(time * 1000), cancellationToken : cancellationTokenSource.Token);
             GameObjectPoolMgr.Instance.PutGameObject("ToastNode", toast);
         }
     }
