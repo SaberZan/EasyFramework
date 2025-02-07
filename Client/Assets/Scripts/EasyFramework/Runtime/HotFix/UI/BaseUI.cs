@@ -49,8 +49,8 @@ namespace Easy
         {
             cancellationTokenSource = new CancellationTokenSource();
             EventMgr.Instance.SubscribeByTarget(this);
-            subUIs.ForEach(subUI=> { if(!subUI.GetUIState(UIState.Awake)) subUI.Awake(); });
             AddUIState(UIState.Awake);
+            subUIs.ForEach(subUI=> { if(!subUI.GetUIState(UIState.Awake)) subUI.Awake(); });
         }
 
         public virtual void Start()
@@ -150,6 +150,7 @@ namespace Easy
 
         public virtual void Destroy()
         {
+            AddUIState(UIState.Destroy);
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
             tmpSubUIs.ForEach(subUI=>
@@ -191,11 +192,11 @@ namespace Easy
                     gameObject = null;
                 }
             }
-            AddUIState(UIState.Destroy);
         }
 
         public void Destroyed()
         {
+            AddUIState(UIState.Destroyed);
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
             tmpSubUIs.ForEach(subUI=>
@@ -207,7 +208,6 @@ namespace Easy
             });
             subUIs.Clear();
             EventMgr.Instance.UnSubscribeByTarget(this);
-            AddUIState(UIState.Destroyed);
         }
 
         public void SetPrefabPath(string path)
