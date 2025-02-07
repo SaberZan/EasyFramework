@@ -32,6 +32,8 @@ namespace Easy
 
         public List<Coroutine> coroutines = new List<Coroutine>();
 
+        public List<TimerObj> timerObjs = new List<TimerObj>();
+
         public List<IBaseAssetHandle> handles = new List<IBaseAssetHandle>();
 
         private int showCount;
@@ -165,6 +167,8 @@ namespace Easy
                 CoroutineMgr.Instance.StopCoroutine(routine);
             }
             coroutines.Clear();
+
+            TimerMgr.Instance.ClearByTarget(this);
 
             cancellationTokenSource.Cancel();
             cancellationTokenSource = null;
@@ -314,13 +318,18 @@ namespace Easy
         {
            var routine = CoroutineMgr.Instance.StartCoroutine(item);
            coroutines.Add(routine);
-           return routine;
+           return routine; 
         }
 
         public void StopCoroutine(Coroutine routine)
         {
            CoroutineMgr.Instance.StopCoroutine(routine);
            coroutines.Remove(routine);
+        }
+
+        public void RegisterTimer(TimerCallBack timerCallBack, object[] args , int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
+        {
+            TimerMgr.Instance.Register(this, timerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond));
         }
 
         public IBaseAssetHandle LoadAsset(string path)

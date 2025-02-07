@@ -108,7 +108,7 @@ namespace Easy
         /// <param name="loop"></param>
         /// <param name="loopInterval"></param>
         /// <returns></returns>
-        public TimerObj Register(object target, TimerCallBack timerCallBack, object[] args , int priority = 1, long tickTime = 0, int loop = 0, long loopInterval = 1000)
+        public TimerObj Register(object target, TimerCallBack timerCallBack, object[] args , int priority = 1, long tickTime = 0, int loop = 0, long loopInterval = TimeSpan.TicksPerSecond)
         {
             TimerObj timerObj = Get();
             timerObj.target = target;
