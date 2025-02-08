@@ -8,41 +8,91 @@ using System;
 namespace Easy 
 {
     
-    // 弹窗显示黑遮罩
+    /// <summary>
+    /// 弹窗显示黑遮罩
+    /// </summary>
     public class DialogParamsAttribute : System.Attribute 
     {
+        /// <summary>
+        /// 是否显示遮罩
+        /// </summary>
         public bool isShowMask;
+        
+        /// <summary>
+        /// 是否触发遮罩点击
+        /// </summary>
         public bool triggerMaskClick;
     }
 
+    /// <summary>
+    /// 弹窗执行枚举
+    /// </summary>
     public enum DialogExecEnum
     {
         Open,
         Close,
     }
 
+    /// <summary>
+    /// 弹窗执行参数
+    /// </summary>
     public class DialogExecParam
     {
+        /// <summary>
+        /// 执行类型
+        /// </summary>
         public DialogExecEnum execEnum;
+        
+        /// <summary>
+        /// 弹窗UI实例
+        /// </summary>
         public BaseDialogUI dialogUI;
+        
+        /// <summary>
+        /// 弹窗UI名称
+        /// </summary>
         public string dialogUIName;
     }
     
+    /// <summary>
+    /// 对话框UI层
+    /// </summary>
     [LayerParams(layerType = LayerType.DIALOG, order = 1)]
     public class DialogUILayer : BaseUILayer
     {
+        /// <summary>
+        /// 缓存所有对话框
+        /// </summary>
         public Dictionary<string, BaseDialogUI> dialogCaches = new Dictionary<string, BaseDialogUI>();
 
+        /// <summary>
+        /// 当前显示的对话框列表
+        /// </summary>
         public List<BaseDialogUI> dialogs = new List<BaseDialogUI>();
 
+        /// <summary>
+        /// 当前显示的对话框
+        /// </summary>
         public BaseDialogUI nowDialog => dialogs.Count > 0 ? dialogs[^1] : null;
 
+        /// <summary>
+        /// 对话框执行队列
+        /// </summary>
         public Queue<DialogExecParam> dialogsExecQueue = new Queue<DialogExecParam>();
 
+        /// <summary>
+        /// 执行锁
+        /// </summary>
         private bool _execLock = false;
 
+        /// <summary>
+        /// 所有对话框类型
+        /// </summary>
         private Dictionary<string,Type> _allDialogTypes = new Dictionary<string, Type>();
 
+        /// <summary>
+        /// 初始化
+        /// </summary>
         public override void Awake()
         {
             base.Awake();
@@ -75,7 +125,7 @@ namespace Easy
         /// <summary>
         /// 显示弹窗
         /// </summary>
-        /// <param name="dialogUIName"></param>
+        /// <param name="dialogUIName">弹窗名称</param>
         /// <param name="prefabPath">预制路径</param>
         public void OpenDialog(string dialogUIName, string prefabPath)
         {
@@ -90,7 +140,7 @@ namespace Easy
         /// <summary>
         /// 显示弹窗
         /// </summary>
-        /// <param name="dialogUIName"></param>
+        /// <param name="dialogUIName">弹窗名称</param>
         /// <param name="dialogGameObject">显示对象</param>
         public void OpenDialog(string dialogUIName, GameObject dialogGameObject)
         {
@@ -105,7 +155,7 @@ namespace Easy
         /// <summary>
         /// 显示弹窗
         /// </summary>
-        /// <param name="dialog"></param>
+        /// <param name="dialog">弹窗实例</param>
         public void OpenDialog(BaseDialogUI dialogUI)
         {
             dialogsExecQueue.Enqueue(new DialogExecParam()
@@ -241,8 +291,8 @@ namespace Easy
         /// <summary>
         /// 展示弹窗内部接口
         /// </summary>
-        /// <param name="dialog"></param>
-        /// <param name="callback"></param>
+        /// <param name="dialog">弹窗实例</param>
+        /// <param name="callback">回调函数</param>
         private void ShowDialogInterval(BaseDialogUI dialog, Action callback)
         {
             if(dialog == null)
@@ -258,7 +308,7 @@ namespace Easy
             }
             else
             {
-                dialogs.Push(dialog);
+                dialogs.Add(dialog);
                 dialog.Awake();
                 dialog.Start();
 
@@ -301,8 +351,8 @@ namespace Easy
         /// <summary>
         /// 隐藏弹窗内部接口
         /// </summary>
-        /// <param name="dialog"></param>
-        /// <param name="callback"></param>
+        /// <param name="dialog">弹窗实例</param>
+        /// <param name="callback">回调函数</param>
         private void HideDialogInterval(BaseDialogUI dialog, Action callback)
         {
             if(dialog == null)
@@ -331,6 +381,8 @@ namespace Easy
         /// <summary>
         /// 获得弹窗
         /// </summary>
+        /// <param name="dialogUiName">弹窗名称</param>
+        /// <returns>弹窗实例</returns>
         public BaseDialogUI GetDialog(string dialogUiName)
         {
             for (int i = 0, count = dialogs.Count; i < count; ++i)
