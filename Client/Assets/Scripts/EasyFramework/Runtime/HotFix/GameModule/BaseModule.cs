@@ -2,8 +2,9 @@ using Easy;
 
 public abstract class BaseModule 
 {
-
     public abstract string GetName();
+
+    public abstract IModuleInterface moduleInterface { get; }
 
     public virtual void Start()
     {

@@ -19,6 +19,15 @@ public class GameModules
         this._modules.Remove(moduleName);
     }
 
+    public T GetInterface<T>(string moduleName) where T : IModuleInterface, new()
+    {
+        if (this._modules.ContainsKey(moduleName))
+        {
+            return (T)this._modules[moduleName].moduleInterface;
+        }
+        return default(T);
+    }
+
     public void Start()
     {
         foreach (var kv in this._modules)
