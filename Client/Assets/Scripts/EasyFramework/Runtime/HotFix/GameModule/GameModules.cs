@@ -1,56 +1,59 @@
 using System.Collections.Generic;
-public class GameModules 
+namespace Easy
 {
-
-    private Dictionary<string, BaseModule> _modules = new Dictionary<string, BaseModule>();
-
-    public void Register(BaseModule module)
+    public class GameModules 
     {
-        this._modules.Add(module.GetName(), module);
-    }
 
-    public void UnRegister(BaseModule module)
-    {
-        this._modules.Remove(module.GetName());
-    }
-    
-    public void UnRegister(string moduleName)
-    {
-        this._modules.Remove(moduleName);
-    }
+        private Dictionary<string, BaseModule> _modules = new Dictionary<string, BaseModule>();
 
-    public T GetInterface<T>(string moduleName) where T : IModuleInterface, new()
-    {
-        if (this._modules.ContainsKey(moduleName))
+        public void Register(BaseModule module)
         {
-            return (T)this._modules[moduleName].moduleInterface;
+            this._modules.Add(module.GetName(), module);
         }
-        return default(T);
-    }
 
-    public void Start()
-    {
-        foreach (var kv in this._modules)
+        public void UnRegister(BaseModule module)
         {
-            kv.Value.Start();
+            this._modules.Remove(module.GetName());
         }
-    }
-
-    public void Update(float detailTime)
-    {
-        foreach (var kv in this._modules)
+        
+        public void UnRegister(string moduleName)
         {
-            kv.Value.Update(detailTime);
+            this._modules.Remove(moduleName);
         }
-    }
 
-    public void Destory() 
-    {
-        foreach (var kv in this._modules)
+        public T GetInterface<T>(string moduleName) where T : IModuleInterface, new()
         {
-            kv.Value.Destory();
+            if (this._modules.ContainsKey(moduleName))
+            {
+                return (T)this._modules[moduleName].moduleInterface;
+            }
+            return default(T);
         }
-        _modules.Clear();
-    }
 
+        public void Start()
+        {
+            foreach (var kv in this._modules)
+            {
+                kv.Value.Start();
+            }
+        }
+
+        public void Update(float detailTime)
+        {
+            foreach (var kv in this._modules)
+            {
+                kv.Value.Update(detailTime);
+            }
+        }
+
+        public void Destory() 
+        {
+            foreach (var kv in this._modules)
+            {
+                kv.Value.Destory();
+            }
+            _modules.Clear();
+        }
+
+    }
 }

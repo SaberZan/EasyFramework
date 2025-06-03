@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -32,9 +31,9 @@ namespace Easy
     {
         public string GetPath();
         public T GetResult();
-        public UniTask<T> GetResultAsync(Action<T> action = null);
+        public EasyTask<T> GetResultAsync(Action<T> action = null);
         public T Instantiate();
-        public UniTask<T> InstantiateAsync(Action<T> action = null);
+        public EasyTask<T> InstantiateAsync(Action<T> action = null);
         public void ReleaseInstance(T t);
     }
 
@@ -42,11 +41,11 @@ namespace Easy
     {
         public List<string> GetPaths();
         public List<UnityEngine.Object> GetResult();
-        public UniTask<List<UnityEngine.Object>> GetResultAsync(Action<List<UnityEngine.Object>> action = null);
+        public EasyTask<List<UnityEngine.Object>> GetResultAsync(Action<List<UnityEngine.Object>> action = null);
         public UnityEngine.Object Instantiate(string path);
-        public UniTask<UnityEngine.Object> InstantiateAsync(string path, Action<UnityEngine.Object> action = null);
+        public EasyTask<UnityEngine.Object> InstantiateAsync(string path, Action<UnityEngine.Object> action = null);
         public List<UnityEngine.Object> Instantiates();
-        public UniTask<List<UnityEngine.Object>> InstantiatesAsync(Action<List<UnityEngine.Object>> action = null);
+        public EasyTask<List<UnityEngine.Object>> InstantiatesAsync(Action<List<UnityEngine.Object>> action = null);
         public void ReleaseInstance(UnityEngine.Object t);
         public void ReleaseInstances(List<UnityEngine.Object> t);
     }
@@ -55,13 +54,13 @@ namespace Easy
     {
         public string GetPath();
         public byte[] GetResult();
-        public UniTask<byte[]> GetResultAsync(Action<byte[]> action = null);
+        public EasyTask<byte[]> GetResultAsync(Action<byte[]> action = null);
     }
 
     public interface IMultiRawAssetHandle : IBaseAssetHandle
     {
         public List<string> GetPaths();
         public List<byte[]> GetResult();
-        public UniTask<List<byte[]>> GetResultAsync(Action<List<byte[]>> action = null);
+        public EasyTask<List<byte[]>> GetResultAsync(Action<List<byte[]>> action = null);
     }
 }

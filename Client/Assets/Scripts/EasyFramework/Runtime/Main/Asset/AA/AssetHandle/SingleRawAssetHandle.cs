@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
+
 using UnityEngine;
 
 namespace Easy.AA
@@ -57,7 +57,7 @@ namespace Easy.AA
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async UniTask<byte[]> GetResultAsync(Action<byte[]> action = null)
+        public async EasyTask<byte[]> GetResultAsync(Action<byte[]> action = null)
         {
             if(isInPool)
             {

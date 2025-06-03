@@ -129,6 +129,10 @@ namespace Easy
                 GameObject singletonUpdateNode = new GameObject("SingletonUpdate");
                 _singletonUpdate = singletonUpdateNode.AddComponent<SingletonUpdateMonoBehaviour>();
                 UnityEngine.Object.DontDestroyOnLoad(singletonUpdateNode);
+                _singletonUpdate.updateCallBack += (deltaTime) =>
+                {
+                    EasyTaskRunner.Tick(Timing.Main);
+                };
             }
 
             //优先单例

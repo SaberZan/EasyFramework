@@ -15,7 +15,6 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using Cysharp.Threading.Tasks;
 
 namespace Easy.AA
 {
@@ -82,7 +81,7 @@ namespace Easy.AA
                 {
                     EasyLogger.Log("EasyFrameWork", "No Need Update");
 
-                    await UniTask.Delay(100);
+                    await EasyTaskRunner.Delay(100);
                     _initComplete.Invoke(true);
                 }
             }
@@ -111,13 +110,13 @@ namespace Easy.AA
                 }
                 else
                 {
-                    await UniTask.Delay(100);
+                    await EasyTaskRunner.Delay(100);
                     _initComplete.Invoke(true);
                 }
             }
             else
             {
-                await UniTask.Delay(100);
+                await EasyTaskRunner.Delay(100);
                 _initComplete.Invoke(false);
             }
             Addressables.Release(updateAssetsHandle);
@@ -144,12 +143,12 @@ namespace Easy.AA
             }
             if (allCount == count)
             {
-                await UniTask.Delay(100);
+                await EasyTaskRunner.Delay(100);
                 _initComplete.Invoke(true);
             }
             else
             {
-                await UniTask.Delay(100);
+                await EasyTaskRunner.Delay(100);
                 _initComplete.Invoke(false);
             }
         }

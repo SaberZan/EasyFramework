@@ -1,5 +1,5 @@
 using System;
-using Cysharp.Threading.Tasks;
+
 
 namespace Easy.EasyAsset
 {
@@ -65,7 +65,7 @@ namespace Easy.EasyAsset
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async UniTask<T> GetResultAsync(Action<T> action = null)
+        public async EasyTask<T> GetResultAsync(Action<T> action = null)
         {
             if (isInPool)
             {
@@ -77,12 +77,12 @@ namespace Easy.EasyAsset
                 action?.Invoke(result);
                 return result;
             }
-            UniTaskCompletionSource<bool> taskCompletionSource = new UniTaskCompletionSource<bool>();;
-            taskCompletionSources.Add(taskCompletionSource);
-            var overTimeTask = UniTask.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await UniTask.WhenAny(taskCompletionSource.Task, overTimeTask);
+            EasyTask<bool> loadTask = EasyTask<bool>.Create();;
+            loadTasks.Add(loadTask);
+            var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
+            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
             T t = null;
-            if (taskCompletionSource.Task.Status == UniTaskStatus.Succeeded)
+            if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
                 t = GetResult();
             }
@@ -114,7 +114,7 @@ namespace Easy.EasyAsset
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async UniTask<T> InstantiateAsync(Action<T> action = null)
+        public async EasyTask<T> InstantiateAsync(Action<T> action = null)
         {
             if(isInPool)
             {
@@ -126,12 +126,12 @@ namespace Easy.EasyAsset
                 action?.Invoke(result);
                 return result;
             }
-            UniTaskCompletionSource<bool> taskCompletionSource = new UniTaskCompletionSource<bool>();;
-            taskCompletionSources.Add(taskCompletionSource);
-            var overTimeTask = UniTask.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await UniTask.WhenAny(taskCompletionSource.Task, overTimeTask);
+            EasyTask<bool> loadTask = EasyTask<bool>.Create();
+            loadTasks.Add(loadTask);
+            var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
+            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
             T t = null;
-            if (taskCompletionSource.Task.Status == UniTaskStatus.Succeeded)
+            if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
                 t = Instantiate();
             }

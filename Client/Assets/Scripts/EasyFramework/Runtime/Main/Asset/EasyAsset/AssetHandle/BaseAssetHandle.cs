@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Cysharp.Threading.Tasks;
+
 
 namespace Easy.EasyAsset
 {
@@ -26,7 +26,7 @@ namespace Easy.EasyAsset
         /// 资源加载完成列表
         /// </summary>
         /// <returns></returns>
-        public List<UniTaskCompletionSource<bool>> taskCompletionSources = new List<UniTaskCompletionSource<bool>>();
+        public List<EasyTask<bool>> loadTasks = new List<EasyTask<bool>>();
 
         /// <summary>
         /// 是否已加载完成
@@ -137,7 +137,7 @@ namespace Easy.EasyAsset
             Easy.EventMgr.Instance.UnSubscribe(Const.DOWNLOAD_SUCCESS, this, OnABDownloadSuccess);
             Easy.EventMgr.Instance.UnSubscribe(Const.DOWNLOAD_FAIL, this, OnABDownloadFailed);
             dependAB.Clear();
-            taskCompletionSources.Clear();
+            loadTasks.Clear();
             loader = null;
             isDone = false;
             downloadFail = false;
@@ -154,9 +154,9 @@ namespace Easy.EasyAsset
             {
                 if(IsDone())
                 {
-                    for(int i = taskCompletionSources.Count - 1; i >= 0; ++i)
+                    for(int i = loadTasks.Count - 1; i >= 0; ++i)
                     {
-                        taskCompletionSources[i].TrySetResult(isDone);
+                        loadTasks[i].SetResult(isDone);
                     }
                 }
             }

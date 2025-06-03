@@ -1,4 +1,8 @@
-public interface IModuleInterface
-{
 
+namespace Easy
+{
+    public interface IModuleInterface
+    {
+
+    }
 }

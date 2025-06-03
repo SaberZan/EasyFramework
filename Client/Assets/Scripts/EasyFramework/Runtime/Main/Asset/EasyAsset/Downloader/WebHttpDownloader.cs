@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
+
 
 namespace Easy.EasyAsset
 {
@@ -60,7 +60,7 @@ namespace Easy.EasyAsset
         /// <summary>
         /// 下载线程中断
         /// </summary>
-        public CancellationTokenSource cancellationTokenSource;
+        public EasyCancellationToken token;
 
         public WebHttpDownloader(string fileName, long size, DownloadPriority downloadPriority, long version, string saveDirPath, Action<DownloadCode, string> callback, List<string> urls) :base(fileName, size, downloadPriority, version, saveDirPath, callback)
         {
@@ -74,15 +74,15 @@ namespace Easy.EasyAsset
         public override void Start(int timeout = 10)
         {
             downloadType = DownloadType.Start;
-            cancellationTokenSource = new CancellationTokenSource();
-            StartDownload(timeout, cancellationTokenSource.Token);
+            token = new EasyCancellationToken();
+            StartDownload(timeout, token);
         }
 
         /// <summary>
         /// 线程开始下载
         /// </summary>
         /// <param name="timeout"></param>
-        public async void StartDownload(object timeout, CancellationToken cancellationToken)
+        public async void StartDownload(object timeout, EasyCancellationToken  cancellationToken)
         {
 
             try
@@ -124,7 +124,7 @@ namespace Easy.EasyAsset
                     long downloadedByte = 0;
                     while (downloadedByte < _contentLength)
                     {
-                        if(cancellationToken.IsCancellationRequested)
+                        if(cancellationToken.IsCanceled)
                         {
                             break;
                         }
@@ -135,7 +135,7 @@ namespace Easy.EasyAsset
                         _fileStream.Write(bytes, 0, size);
                         _currLength += size;
                         currentSize = _currLength;
-                        await UniTask.Yield(cancellationToken : cancellationToken);
+                        await EasyTaskRunner.Yeild(cancellationToken : cancellationToken);
                     }
 
                     if(_fileStream != null)
@@ -216,8 +216,8 @@ namespace Easy.EasyAsset
                 OnFinal();
             }
 
-            cancellationTokenSource?.Cancel();
-            cancellationTokenSource = null;
+            token?.Cancel();
+            token = null;
         }
 
         /// <summary>

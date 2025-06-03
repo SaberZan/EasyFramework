@@ -78,7 +78,7 @@ namespace Easy
         /// <summary>
         /// 取消令牌源，用于取消异步操作
         /// </summary>
-        public CancellationTokenSource cancellationTokenSource;
+        public EasyCancellationToken token;
 
         /// <summary>
         /// 获取UI名称，默认为类名
@@ -94,7 +94,7 @@ namespace Easy
         /// </summary>
         public virtual void Awake()
         {
-            cancellationTokenSource = new CancellationTokenSource();
+            token = new EasyCancellationToken();
             EventMgr.Instance.SubscribeByTarget(this);
             AddUIState(UIState.Awake);
             subUIs.ForEach(subUI => { if (!subUI.GetUIState(UIState.Awake)) subUI.Awake(); });
@@ -231,8 +231,8 @@ namespace Easy
 
             TimerMgr.Instance.ClearByTarget(this);
 
-            cancellationTokenSource.Cancel();
-            cancellationTokenSource = null;
+            token.Cancel();
+            token = null;
 
             foreach (var handle in handles)
             {

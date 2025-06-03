@@ -1,5 +1,5 @@
 using System;
-using Cysharp.Threading.Tasks;
+
 
 namespace Easy.EasyAsset
 {
@@ -60,7 +60,7 @@ namespace Easy.EasyAsset
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        public async UniTask<byte[]> GetResultAsync(Action<byte[]> action = null)
+        public async EasyTask<byte[]> GetResultAsync(Action<byte[]> action = null)
         {
             if(isInPool)
             {
@@ -73,13 +73,13 @@ namespace Easy.EasyAsset
                 return result;
             }
 
-            var taskCompletionSource = new UniTaskCompletionSource<bool>();
-            taskCompletionSources.Add(taskCompletionSource);
-            var overTimeTask = UniTask.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await UniTask.WhenAny(taskCompletionSource.Task, overTimeTask);
+            var loadTask = EasyTask<bool>.Create();
+            loadTasks.Add(loadTask);
+            var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
+            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
 
             byte[] t = null;
-            if (taskCompletionSource.Task.Status == UniTaskStatus.Succeeded)
+            if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
                 t = GetResult();
             }

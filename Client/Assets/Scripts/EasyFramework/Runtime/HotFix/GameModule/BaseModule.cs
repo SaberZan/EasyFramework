@@ -1,20 +1,22 @@
 using Easy;
-
-public abstract class BaseModule 
+namespace Easy
 {
-    public abstract string GetName();
-
-    public abstract IModuleInterface moduleInterface { get; }
-
-    public virtual void Start()
+    public abstract class BaseModule 
     {
-        EventMgr.Instance.SubscribeByTarget(this);
-    }
+        public abstract string GetName();
 
-    public abstract void Update(float detailTime);
+        public abstract IModuleInterface moduleInterface { get; }
 
-    public virtual void Destory() 
-    {
-        EventMgr.Instance.UnSubscribeByTarget(this);
+        public virtual void Start()
+        {
+            EventMgr.Instance.SubscribeByTarget(this);
+        }
+
+        public abstract void Update(float detailTime);
+
+        public virtual void Destory() 
+        {
+            EventMgr.Instance.UnSubscribeByTarget(this);
+        }
     }
 }
