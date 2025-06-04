@@ -3,6 +3,7 @@ using System;
 
 public class EasyCancelException : Exception
 {
+    public override string Message { get => "EasyTask Canceled"; }
 }
 
 public class EasyCancellationToken

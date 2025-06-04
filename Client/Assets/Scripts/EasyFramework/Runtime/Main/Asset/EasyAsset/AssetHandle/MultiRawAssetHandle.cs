@@ -83,7 +83,7 @@ namespace Easy.EasyAsset
                 action?.Invoke(result);
                 return result;
             }
-            EasyTask<bool> loadTask = EasyTask<bool>.Create();;
+            EasyTask<bool> loadTask = EasyTask<bool>.Create();
             loadTasks.Add(loadTask);
             var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
             await EasyTaskRunner.WhenAny(loadTask, overTimeTask);

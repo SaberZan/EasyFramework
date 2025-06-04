@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 public class EasyTaskTest : MonoBehaviour
@@ -8,16 +9,28 @@ public class EasyTaskTest : MonoBehaviour
 
     public void Awake()
     {
-        Thread thread = new Thread(ThreadStart);
-        thread.Start();
+        EasyTaskRunner.Log += Debug.LogError;
+
+        EasyTaskRunner.StartThreadTiming();
     }
 
+    // [Sirenix.OdinInspector.Button]
     public void Test()
     {
         token = new EasyCancellationToken();
         RunTest();
     }
 
+    // [Sirenix.OdinInspector.Button]
+    public void TestThread()
+    {
+        Task.Run(() =>
+        {
+            RunTest3();
+        });
+    }
+
+    // [Sirenix.OdinInspector.Button]
     public void Cancel()
     {
         token?.Cancel();
@@ -28,12 +41,6 @@ public class EasyTaskTest : MonoBehaviour
         EasyTaskRunner.Tick(Timing.Main);
     }
 
-    public void ThreadStart()
-    {
-        EasyTaskRunner.Tick(Timing.Thread);
-        Thread.Sleep(15);
-    }
-
     public async void RunTest()
     {
         await RunTest1();
@@ -42,7 +49,7 @@ public class EasyTaskTest : MonoBehaviour
 
     public async EasyVoidTask RunTest1()
     {
-        await EasyYeildTask.Create().SetCancellationToken(token);
+        await EasyYieldTask.Create().SetCancellationToken(token);
         UnityEngine.Debug.Log("RunYeild");
         await EasyDelayTask.Create().SetDelayTime(1).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay1");
@@ -64,21 +71,47 @@ public class EasyTaskTest : MonoBehaviour
             {
                 break;
             }
-            await EasyTaskRunner.Yeild();
+            await EasyTaskRunner.Yield();
             UnityEngine.Debug.Log("RunYeild " + count);
             count--;
             await EasyTaskRunner.Delay(0.5f, token);
         }
 
-        RunTest3();
     }
 
     public async void RunTest3()
     {
-        await EasyTaskRunner.Delay(1f, token).SetTiming(Timing.Thread);
+        await RunTest4();
+
+        await EasyTaskRunner.Delay(1f, token);
         UnityEngine.Debug.Log("RunThreadDelay");
 
-        await EasyTaskRunner.Yeild();
+        await EasyTaskRunner.Yield();
         UnityEngine.Debug.Log("RunYeild ");
+    }
+
+    public async EasyVoidTask RunTest4()
+    {
+        await EasyTaskRunner.Delay(1f, token);
+        UnityEngine.Debug.Log("RunThreadDelay4");
+        transform.position = new Vector3(0, 0, 0);
+        int a = 1;
+        await EasyTaskRunner.Yield();
+        UnityEngine.Debug.Log("RunYeild4 ");
+    }
+
+    public async void RunTest5()
+    {
+        await RunTest6();
+    }
+
+    public async Task RunTest6()
+    {
+        await Task.Delay(1000);
+        UnityEngine.Debug.Log("RunThreadDelay6");
+        transform.position = new Vector3(0, 0, 0);
+        int a = 1;
+        await Task.Yield();
+        UnityEngine.Debug.Log("RunYeild6 ");
     }
 }

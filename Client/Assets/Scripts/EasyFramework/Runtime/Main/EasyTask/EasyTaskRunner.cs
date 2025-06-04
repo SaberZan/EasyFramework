@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 public static class EasyTaskRunner
 {
+    public delegate void EasyTaskLog(string message);
+    public static EasyTaskLog Log = (message) => { };
+    public static bool IsStartThreadTiming = false;
     private static Dictionary<Timing, List<IEasyTaskInterface>> easyTasks = new Dictionary<Timing, List<IEasyTaskInterface>>();
     private static ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>> easyTasksAddTmp = new ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>>();
 
@@ -16,14 +20,28 @@ public static class EasyTaskRunner
         easyTasksAddTmp[task.GetTiming()].Add(task);
     }
 
-    public static async EasyVoidTask Yeild()
+    public static void StartThreadTiming(int tickInterval = 15)
     {
-        await EasyYeildTask.Create(true);
+        Thread thread = new Thread(() =>
+        {
+            while (true)
+            {
+                Tick(Timing.Thread);
+                Thread.Sleep(tickInterval);
+            }
+        });
+        thread.Start();
+        IsStartThreadTiming = true;
     }
 
-    public static async EasyVoidTask Yeild(EasyCancellationToken cancellationToken = null)
+    public static async EasyVoidTask Yield()
     {
-        await EasyYeildTask.Create(true).SetCancellationToken(cancellationToken);
+        await EasyYieldTask.Create(true);
+    }
+
+    public static async EasyVoidTask Yield(EasyCancellationToken cancellationToken = null)
+    {
+        await EasyYieldTask.Create(true).SetCancellationToken(cancellationToken);
     }
 
     public static async EasyVoidTask Delay(float delay, EasyCancellationToken cancellationToken = null)
@@ -37,7 +55,7 @@ public static class EasyTaskRunner
         return true;
     }
 
-    public static async EasyTask<bool> WaitAll(IEasyTaskInterface[] tasks)
+    public static async EasyTask<bool> WaitAll(params IEasyTaskInterface[] tasks)
     {
         await EasyWailAllTask.Create(true).SetWaitTasks(tasks);
         return true;
@@ -49,7 +67,13 @@ public static class EasyTaskRunner
         return true;
     }
     
-        public static async EasyTask<bool> WhenAny(params IEasyTaskInterface[] tasks)
+    public static async EasyTask<bool> WhenAny(Timing timing, params IEasyTaskInterface[] tasks)
+    {
+        await EasyWhenAnyTask.Create(true).SetWaitTasks(tasks);
+        return true;
+    }
+
+    public static async EasyTask<bool> WhenAny(params IEasyTaskInterface[] tasks)
     {
         await EasyWhenAnyTask.Create(true).SetWaitTasks(tasks);
         return true;
@@ -74,8 +98,11 @@ public static class EasyTaskRunner
             var task = timingEasyTasks[i];
             if (task.IsCompleted)
             {
-                task.Recycle();
-                timingEasyTasks.RemoveAt(i);
+                if (task.IsFree())
+                {
+                    task.Unuse();
+                    timingEasyTasks.RemoveAt(i);
+                }
                 continue;
             }
             if (task.EasyCancellationToken?.IsCanceled == true)
@@ -83,10 +110,7 @@ public static class EasyTaskRunner
                 task.SetException(new EasyCancelException());
                 continue;
             }
-            if (task.GetTiming() == timing)
-            {
-                task.MoveNext();
-            }
+            task.MoveNext();
         }
     }
 }

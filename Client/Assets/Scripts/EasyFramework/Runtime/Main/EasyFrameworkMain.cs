@@ -188,7 +188,6 @@ namespace Easy
             }
             else
             {
-
                 initializingSingles = new List<string>();
                 Dictionary<int, List<ISingleton>> dic = OrderIndexAttribute.GetBatchListByInterval<ISingleton>(_initModules.Values.ToList<ISingleton>());
                 List<int> keys = dic.Keys.ToList();
