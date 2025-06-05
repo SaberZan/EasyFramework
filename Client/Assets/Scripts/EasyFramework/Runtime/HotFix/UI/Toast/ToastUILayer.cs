@@ -22,7 +22,7 @@ namespace Easy
             GameObject text = new GameObject("Text");
             text.transform.SetParent(toast.transform, false);
             Text txt = text.AddComponent<Text>();
-            txt.color = new Color(1, 1, 1, 0);
+            txt.color = new Color(1, 1, 1, 1);
             txt.fontStyle = FontStyle.Normal;
             //txt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             txt.alignment = TextAnchor.MiddleCenter;

@@ -36,10 +36,10 @@ public static class EasyTaskRunner
     {
         IsStartThreadTiming = true;
 
-        float interval = tickInterval *1f / 1000;
+
         while (IsStartThreadTiming)
         {
-            await Delay(interval);
+            await Delay(tickInterval);
             ThreadPool.QueueUserWorkItem((obj) =>
             {
                 while (threadAction.Count > 0)
@@ -85,9 +85,9 @@ public static class EasyTaskRunner
         await EasyYieldTask.Create(true).SetCancellationToken(cancellationToken);
     }
 
-    public static async EasyVoidTask Delay(float delay, EasyCancellationToken cancellationToken = null)
+    public static async EasyVoidTask Delay(int milli, EasyCancellationToken cancellationToken = null)
     {
-        await EasyDelayTask.Create(true).SetDelayTime(delay).SetCancellationToken(cancellationToken);
+        await EasyDelayTask.Create(true).SetDelayTime(milli).SetCancellationToken(cancellationToken);
     }
 
     public static async EasyTask<bool> WaitAll(IEasyTaskInterface[] tasks, EasyCancellationToken cancellationToken = null)

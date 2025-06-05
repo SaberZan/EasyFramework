@@ -387,9 +387,9 @@ public class EasyDelayTask : EasyVoidTask
     }
 
     private long overTime;
-    public EasyDelayTask SetDelayTime(float delayTime)
+    public EasyDelayTask SetDelayTime(int milli)
     {
-        overTime = DateTime.UtcNow.Ticks + (long)(TimeSpan.TicksPerSecond * delayTime);
+        overTime = DateTime.UtcNow.Ticks + TimeSpan.TicksPerMillisecond * milli;
         return this;
     }
     public override void MoveNext()

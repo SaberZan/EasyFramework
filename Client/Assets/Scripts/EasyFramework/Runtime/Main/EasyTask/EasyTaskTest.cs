@@ -54,13 +54,13 @@ public class EasyTaskTest : MonoBehaviour
     {
         await EasyYieldTask.Create().SetCancellationToken(token);
         UnityEngine.Debug.Log("RunYeild");
-        await EasyDelayTask.Create().SetDelayTime(1).SetCancellationToken(token);
+        await EasyDelayTask.Create().SetDelayTime(1000).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay1");
-        await EasyDelayTask.Create().SetDelayTime(2).SetCancellationToken(token);
+        await EasyDelayTask.Create().SetDelayTime(2000).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay2");
-        await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5), EasyDelayTask.Create().SetDelayTime(1) });
+        await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
         UnityEngine.Debug.Log("RunDelay3");
-        await EasyTaskRunner.WhenAny(new[] { EasyDelayTask.Create().SetDelayTime(5), EasyDelayTask.Create().SetDelayTime(1) });
+        await EasyTaskRunner.WhenAny(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
         UnityEngine.Debug.Log("RunDelay4");
         RunTest2();
     }
@@ -77,7 +77,7 @@ public class EasyTaskTest : MonoBehaviour
             await EasyTaskRunner.Yield();
             UnityEngine.Debug.Log("RunYeild " + count);
             count--;
-            await EasyTaskRunner.Delay(0.5f, token);
+            await EasyTaskRunner.Delay(500, token);
         }
 
     }
@@ -87,7 +87,7 @@ public class EasyTaskTest : MonoBehaviour
         UnityEngine.Debug.Log("RunTest3_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await RunTest4();
         UnityEngine.Debug.Log("RunTest3_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
-        await EasyTaskRunner.Delay(1f, token);
+        await EasyTaskRunner.Delay(1000, token);
         UnityEngine.Debug.Log("RunTest3_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Yield();
         UnityEngine.Debug.Log("RunTest3_4 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
@@ -96,7 +96,7 @@ public class EasyTaskTest : MonoBehaviour
     public async EasyVoidTask RunTest4()
     {
         UnityEngine.Debug.Log("RunTest4_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
-        await EasyTaskRunner.Delay(1f, token);
+        await EasyTaskRunner.Delay(1000, token);
         UnityEngine.Debug.Log("RunTest4_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Yield();
         UnityEngine.Debug.Log("RunTest4_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
