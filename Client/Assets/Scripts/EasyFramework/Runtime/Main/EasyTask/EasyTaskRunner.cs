@@ -2,12 +2,15 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 public static class EasyTaskRunner
 {
     public delegate void EasyTaskLog(string message);
     public static EasyTaskLog Log = (message) => { };
     public static bool IsStartThreadTiming = false;
+    public static Thread thread;
+    private static ConcurrentQueue<(Action, EasyCancellationToken)> threadAction = new ConcurrentQueue<(Action, EasyCancellationToken)>();
     private static Dictionary<Timing, List<IEasyTaskInterface>> easyTasks = new Dictionary<Timing, List<IEasyTaskInterface>>();
     private static ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>> easyTasksAddTmp = new ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>>();
 
@@ -20,23 +23,61 @@ public static class EasyTaskRunner
         easyTasksAddTmp[task.GetTiming()].Add(task);
     }
 
-    public static void StartThreadTiming(int tickInterval = 15)
+    public static void ResetTask()
     {
-        Thread thread = new Thread(() =>
-        {
-            while (true)
-            {
-                Tick(Timing.Thread);
-                Thread.Sleep(tickInterval);
-            }
-        });
-        thread.Start();
-        IsStartThreadTiming = true;
+        IsStartThreadTiming = false;
+        thread?.Abort();
+        easyTasksAddTmp.Clear();
+        easyTasks.Clear();
+        threadAction.Clear();
     }
 
-    public static async EasyVoidTask Yield()
+    public static async void StartThreadTiming(int tickInterval = 15)
     {
-        await EasyYieldTask.Create(true);
+        IsStartThreadTiming = true;
+
+        float interval = tickInterval *1f / 1000;
+        while (IsStartThreadTiming)
+        {
+            await Delay(interval);
+            ThreadPool.QueueUserWorkItem((obj) =>
+            {
+                while (threadAction.Count > 0)
+                {
+                    if (threadAction.TryDequeue(out var action))
+                    {
+                        if (action.Item2 != null && action.Item2.IsCanceled)
+                        {
+                            continue;
+                        }
+                        action.Item1();
+                    }
+                }
+                Tick(Timing.Thread);
+            });
+        }
+
+        // thread = new Thread(() =>
+        // {
+        //     while (true)
+        //     {
+        //         while (threadAction.Count > 0)
+        //         {
+        //             if (threadAction.TryDequeue(out var action))
+        //             {
+        //                 if (action.Item2 != null && action.Item2.IsCanceled)
+        //                 {
+        //                     continue;
+        //                 }
+        //                 action.Item1();
+        //             }
+        //         }
+
+        //         Tick(Timing.Thread);
+        //         Thread.Sleep(tickInterval);
+        //     }
+        // });
+        // thread.Start();
     }
 
     public static async EasyVoidTask Yield(EasyCancellationToken cancellationToken = null)
@@ -67,16 +108,29 @@ public static class EasyTaskRunner
         return true;
     }
     
-    public static async EasyTask<bool> WhenAny(Timing timing, params IEasyTaskInterface[] tasks)
+    public static async EasyTask<bool> WhenAny(params IEasyTaskInterface[] tasks)
     {
         await EasyWhenAnyTask.Create(true).SetWaitTasks(tasks);
         return true;
     }
 
-    public static async EasyTask<bool> WhenAny(params IEasyTaskInterface[] tasks)
+    public static EasyRunTask<T> Run<T>(Func<T> action, EasyCancellationToken cancellationToken = null)
     {
-        await EasyWhenAnyTask.Create(true).SetWaitTasks(tasks);
-        return true;
+        return (EasyRunTask<T>)EasyRunTask<T>.Create(true).SetFunc(action).SetCancellationToken(cancellationToken);
+    }
+
+    public static EasyRunTask Run(Action action, EasyCancellationToken cancellationToken = null)
+    {
+        return (EasyRunTask)EasyRunTask.Create(true).SetFunc(action).SetCancellationToken(cancellationToken);
+    }
+
+    public static void ExecInThread(Action action, EasyCancellationToken cancellationToken = null)
+    {
+        if (!IsStartThreadTiming)
+        {
+            throw new Exception("线程任务未开启");
+        }
+        threadAction.Enqueue((action, cancellationToken));
     }
 
     public static void Tick(Timing timing)

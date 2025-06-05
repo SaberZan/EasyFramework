@@ -269,6 +269,7 @@ namespace Easy
         /// </summary>
         private void ResetSingleton()
         {
+            EasyTaskRunner.ResetTask();
             //延迟加载的单例
             foreach (var singleton in _initModules)
             {

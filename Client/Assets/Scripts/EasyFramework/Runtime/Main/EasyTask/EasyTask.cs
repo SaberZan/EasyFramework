@@ -195,7 +195,6 @@ public class EasyTask<T> : IEasyTaskInterface, ICriticalNotifyCompletion
     {
 
     }
-
 }
 
 [AsyncMethodBuilder(typeof(EasyAsyncGenericTaskMethodBuider))]
@@ -236,6 +235,142 @@ public class EasyYieldTask : EasyVoidTask
     }
 }
 
+public class EasyExecFunTask : EasyTask<object>
+{
+    protected new static readonly ConcurrentQueue<EasyExecFunTask> queue = new ConcurrentQueue<EasyExecFunTask>();
+    public new static EasyExecFunTask Create(bool autoRecycle = false)
+    {
+        Timing timing = EasyTaskRunner.IsStartThreadTiming && Thread.CurrentThread.ManagedThreadId != 1 ? Timing.Thread : Timing.Main;
+        EasyExecFunTask t;
+        if (!queue.TryDequeue(out t))
+        {
+            t = new EasyExecFunTask();
+        }
+        t.Reuse(timing, autoRecycle);
+        return t;
+    }
+
+    public override void Unuse()
+    {
+        func = null;
+        base.Unuse();
+    }
+
+    private Action func;
+    public EasyExecFunTask SetFunc(Action func)
+    {
+        this.func = func;
+        return this;
+    }
+
+    public override void MoveNext()
+    {
+        func?.Invoke();
+        SetResult(null);       
+    }
+}
+
+public class EasyRunTask<T> : EasyTask<T>
+{
+    protected new static readonly ConcurrentQueue<EasyRunTask<T>> queue = new ConcurrentQueue<EasyRunTask<T>>();
+    public new static EasyRunTask<T> Create(bool autoRecycle = false)
+    {
+        Timing timing = EasyTaskRunner.IsStartThreadTiming && Thread.CurrentThread.ManagedThreadId != 1 ? Timing.Thread : Timing.Main;
+        EasyRunTask<T> t;
+        if (!queue.TryDequeue(out t))
+        {
+            t = new EasyRunTask<T>();
+        }
+        t.Reuse(timing, autoRecycle);
+        return t;
+    }
+
+    public override void Unuse()
+    {
+        func = null;
+        isRunning = false;
+        base.Unuse();
+    }
+
+    private Func<T> func;
+    public EasyRunTask<T> SetFunc(Func<T> func)
+    {
+        this.func = func;
+        return this;
+    }
+
+    private bool isRunning;
+    public override void MoveNext()
+    {
+        if (isRunning)
+            return;
+        if (ThreadPool.QueueUserWorkItem(Run))
+        {
+            isRunning = true;
+        }
+    }
+
+    private void Run(object result)
+    {
+        if (func == null)
+        {
+            SetResult(default);
+        }
+        else
+        {
+            SetResult(func());
+        }
+
+    }
+}
+
+public class EasyRunTask : EasyVoidTask
+{
+    protected new static readonly ConcurrentQueue<EasyRunTask> queue = new ConcurrentQueue<EasyRunTask>();
+    public new static EasyRunTask Create(bool autoRecycle = false)
+    {
+        Timing timing = EasyTaskRunner.IsStartThreadTiming && Thread.CurrentThread.ManagedThreadId != 1 ? Timing.Thread : Timing.Main;
+        EasyRunTask t;
+        if (!queue.TryDequeue(out t))
+        {
+            t = new EasyRunTask();
+        }
+        t.Reuse(timing, autoRecycle);
+        return t;
+    }
+
+    public override void Unuse()
+    {
+        func = null;
+        isRunning = false;
+        base.Unuse();
+    }
+
+    private Action func;
+    public EasyRunTask SetFunc(Action func)
+    {
+        this.func = func;
+        return this;
+    }
+
+    private bool isRunning;
+    public override void MoveNext()
+    {
+        if (isRunning)
+            return;
+        if (ThreadPool.QueueUserWorkItem(Run))
+        {
+            isRunning = true;
+        }
+    }
+
+    private void Run(object result)
+    {
+        func.Invoke();
+        SetResult(null);
+    }
+}
+
 public class EasyDelayTask : EasyVoidTask
 {
     protected new static readonly ConcurrentQueue<EasyDelayTask> queue = new ConcurrentQueue<EasyDelayTask>();
@@ -264,6 +399,51 @@ public class EasyDelayTask : EasyVoidTask
             return;
         }
         if (DateTime.UtcNow.Ticks >= overTime)
+        {
+            SetResult(null);
+        }
+    }
+}
+
+public class EasyWaitUntilTask : EasyVoidTask
+{
+    protected new static readonly ConcurrentQueue<EasyWaitUntilTask> queue = new ConcurrentQueue<EasyWaitUntilTask>();
+    public new static EasyWaitUntilTask Create(bool autoRecycle = false)
+    {
+        Timing timing = EasyTaskRunner.IsStartThreadTiming && Thread.CurrentThread.ManagedThreadId != 1 ? Timing.Thread : Timing.Main;
+        EasyWaitUntilTask t;
+        if (!queue.TryDequeue(out t))
+        {
+            t = new EasyWaitUntilTask();
+        }
+        t.Reuse(timing, autoRecycle);
+        return t;
+    }
+
+    public override void Unuse()
+    {
+        condition = null;
+        base.Unuse();
+    }
+
+    private Func<bool> condition;
+    public EasyWaitUntilTask SetCondition(Func<bool> condition)
+    {
+        this.condition = condition;
+        return this;
+    }
+    public override void MoveNext()
+    {
+        if (IsCompleted)
+        {
+            return;
+        }
+        if (condition == null)
+        {
+            SetResult(null);
+            return;
+        }
+        if (condition())
         {
             SetResult(null);
         }
@@ -301,7 +481,7 @@ public class EasyWailAllTask : EasyVoidTask
         }
         return this;
     }
-    
+
     public override object GetResult()
     {
         Release();
@@ -343,7 +523,6 @@ public class EasyWailAllTask : EasyVoidTask
     }
 }
 
-[AsyncMethodBuilder(typeof(EasyAsyncGenericTaskMethodBuider))]
 public class EasyWhenAnyTask : EasyVoidTask
 {
     protected new static readonly ConcurrentQueue<EasyWhenAnyTask> queue = new ConcurrentQueue<EasyWhenAnyTask>();

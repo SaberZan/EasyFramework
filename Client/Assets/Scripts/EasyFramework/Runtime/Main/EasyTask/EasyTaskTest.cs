@@ -1,6 +1,5 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 public class EasyTaskTest : MonoBehaviour
@@ -12,13 +11,17 @@ public class EasyTaskTest : MonoBehaviour
         EasyTaskRunner.Log += Debug.LogError;
 
         EasyTaskRunner.StartThreadTiming();
+
     }
 
     // [Sirenix.OdinInspector.Button]
     public void Test()
     {
         token = new EasyCancellationToken();
-        RunTest();
+        EasyTaskRunner.ExecInThread(() =>
+        {
+            RunTest3();
+        });
     }
 
     // [Sirenix.OdinInspector.Button]
@@ -81,37 +84,37 @@ public class EasyTaskTest : MonoBehaviour
 
     public async void RunTest3()
     {
+        UnityEngine.Debug.Log("RunTest3_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await RunTest4();
-
+        UnityEngine.Debug.Log("RunTest3_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Delay(1f, token);
-        UnityEngine.Debug.Log("RunThreadDelay");
-
+        UnityEngine.Debug.Log("RunTest3_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Yield();
-        UnityEngine.Debug.Log("RunYeild ");
+        UnityEngine.Debug.Log("RunTest3_4 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }
 
     public async EasyVoidTask RunTest4()
     {
+        UnityEngine.Debug.Log("RunTest4_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Delay(1f, token);
-        UnityEngine.Debug.Log("RunThreadDelay4");
-        transform.position = new Vector3(0, 0, 0);
-        int a = 1;
+        UnityEngine.Debug.Log("RunTest4_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Yield();
-        UnityEngine.Debug.Log("RunYeild4 ");
+        UnityEngine.Debug.Log("RunTest4_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }
 
     public async void RunTest5()
     {
+        UnityEngine.Debug.Log("RunTest5_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await RunTest6();
+        UnityEngine.Debug.Log("RunTest5_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }
 
     public async Task RunTest6()
     {
+        UnityEngine.Debug.Log("RunTest6_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await Task.Delay(1000);
-        UnityEngine.Debug.Log("RunThreadDelay6");
-        transform.position = new Vector3(0, 0, 0);
-        int a = 1;
+        UnityEngine.Debug.Log("RunTest6_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await Task.Yield();
-        UnityEngine.Debug.Log("RunYeild6 ");
+        UnityEngine.Debug.Log("RunTest6_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }
 }
