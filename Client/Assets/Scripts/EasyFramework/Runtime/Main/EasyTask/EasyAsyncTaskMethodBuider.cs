@@ -2,86 +2,89 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-public struct EasyAsyncGenericTaskMethodBuider
+namespace Easy
 {
-    private EasyVoidTask easyTask;
-
-    public EasyVoidTask Task => easyTask;
-
-    public static EasyAsyncGenericTaskMethodBuider Create()
+    public struct EasyAsyncGenericTaskMethodBuider
     {
-        EasyAsyncGenericTaskMethodBuider builder = new EasyAsyncGenericTaskMethodBuider() { easyTask = (EasyVoidTask)EasyVoidTask.Create(true) };
-        return builder;
+        private EasyVoidTask easyTask;
+
+        public EasyVoidTask Task => easyTask;
+
+        public static EasyAsyncGenericTaskMethodBuider Create()
+        {
+            EasyAsyncGenericTaskMethodBuider builder = new EasyAsyncGenericTaskMethodBuider() { easyTask = (EasyVoidTask)EasyVoidTask.Create(true) };
+            return builder;
+        }
+
+        public void SetException(Exception exception)
+        {
+            easyTask.SetException(exception);
+        }
+
+        public void SetResult()
+        {
+            easyTask.SetResult(null);
+        }
+
+        public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
+
+        public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
+
+        public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+        {
+            stateMachine.MoveNext();
+        }
+
+        public void SetStateMachine(IAsyncStateMachine stateMachine)
+        {
+        }
     }
 
-    public void SetException(Exception exception)
+    public class EasyAsyncGenericTaskMethodBuider<T>
     {
-        easyTask.SetException(exception);
-    }
+        private EasyTask<T> easyTask;
 
-    public void SetResult()
-    {
-        easyTask.SetResult(null);
-    }
+        public EasyTask<T> Task => easyTask;
 
-    public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
-    {
-        awaiter.OnCompleted(stateMachine.MoveNext);
-    }
+        public static EasyAsyncGenericTaskMethodBuider<T> Create()
+        {
+            EasyAsyncGenericTaskMethodBuider<T> builder = new EasyAsyncGenericTaskMethodBuider<T>() { easyTask = EasyTask<T>.Create(true) };
+            return builder;
+        }
 
-    public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
-    {
-        awaiter.OnCompleted(stateMachine.MoveNext);
-    }
+        public void SetException(Exception exception)
+        {
+            easyTask.SetException(exception);
+        }
 
-    public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
-    {
-        stateMachine.MoveNext();
-    }
+        public void SetResult(T ret)
+        {
+            easyTask.SetResult(ret);
+        }
 
-    public void SetStateMachine(IAsyncStateMachine stateMachine)
-    {
-    }
-}
+        public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
 
-public class EasyAsyncGenericTaskMethodBuider<T>
-{
-    private EasyTask<T> easyTask;
+        public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
 
-    public EasyTask<T> Task => easyTask;
+        public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+        {
+            stateMachine.MoveNext();
+        }
 
-    public static EasyAsyncGenericTaskMethodBuider<T> Create()
-    {
-        EasyAsyncGenericTaskMethodBuider<T> builder = new EasyAsyncGenericTaskMethodBuider<T>() { easyTask = EasyTask<T>.Create(true) };
-        return builder;
-    }
-
-    public void SetException(Exception exception)
-    {
-        easyTask.SetException(exception);
-    }
-
-    public void SetResult(T ret)
-    {
-        easyTask.SetResult(ret);
-    }
-
-    public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
-    {
-        awaiter.OnCompleted(stateMachine.MoveNext);
-    }
-
-    public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
-    {
-        awaiter.OnCompleted(stateMachine.MoveNext);
-    }
-
-    public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
-    {
-        stateMachine.MoveNext();
-    }
-
-    public void SetStateMachine(IAsyncStateMachine stateMachine)
-    {
+        public void SetStateMachine(IAsyncStateMachine stateMachine)
+        {
+        }
     }
 }

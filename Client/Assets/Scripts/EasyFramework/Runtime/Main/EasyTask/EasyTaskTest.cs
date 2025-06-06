@@ -1,10 +1,23 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Easy;
 using UnityEngine;
 
 public class EasyTaskTest : MonoBehaviour
 {
     private EasyCancellationToken token;
+
+    [EditorButton("Test")]
+    public int a = 0;
+
+    [EditorButton("RunTest")]
+    public int a1 = 0;
+
+    [EditorButton("TestThread")]
+    public int b = 0;
+
+    [EditorButton("Cancel")]
+    public int c = 0;
 
     public void Awake()
     {
@@ -58,10 +71,14 @@ public class EasyTaskTest : MonoBehaviour
         UnityEngine.Debug.Log("RunDelay1");
         await EasyDelayTask.Create().SetDelayTime(2000).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay2");
+        var task = EasyTaskRunner.WaitAny(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
+        task.Retain();
+        await task;
+        await task;
+        UnityEngine.Debug.Log("RunDelay3 " + task.GetResult());
         await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
-        UnityEngine.Debug.Log("RunDelay3");
-        await EasyTaskRunner.WhenAny(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
-        UnityEngine.Debug.Log("RunDelay4");
+        UnityEngine.Debug.Log("RunDelay4 " + task.GetResult());
+        task.Release();
         RunTest2();
     }
 

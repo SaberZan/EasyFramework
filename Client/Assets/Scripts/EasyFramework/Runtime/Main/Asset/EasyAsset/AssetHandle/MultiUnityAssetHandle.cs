@@ -91,7 +91,7 @@ namespace Easy.EasyAsset
             EasyTask<bool> loadTask = EasyTask<bool>.Create();;
             loadTasks.Add(loadTask);
             var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
+            await EasyTaskRunner.WaitAny(loadTask, overTimeTask);
             List<UnityEngine.Object> t = null;
             if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
@@ -152,7 +152,7 @@ namespace Easy.EasyAsset
             EasyTask<bool> loadTask = EasyTask<bool>.Create();
             loadTasks.Add(loadTask);
             var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
+            await EasyTaskRunner.WaitAny(loadTask, overTimeTask);
             List<UnityEngine.Object> t = null;
             if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
@@ -210,7 +210,7 @@ namespace Easy.EasyAsset
             EasyTask<bool> loadTask = EasyTask<bool>.Create();
             loadTasks.Add(loadTask);
             var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
+            await EasyTaskRunner.WaitAny(loadTask, overTimeTask);
             UnityEngine.Object t = null;
             if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {

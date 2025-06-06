@@ -86,7 +86,7 @@ namespace Easy.EasyAsset
             EasyTask<bool> loadTask = EasyTask<bool>.Create();
             loadTasks.Add(loadTask);
             var overTimeTask = EasyTaskRunner.Delay(BaseUnityAssetHandle.instanceOverTime);
-            await EasyTaskRunner.WhenAny(loadTask, overTimeTask);
+            await EasyTaskRunner.WaitAny(loadTask, overTimeTask);
             List<byte[]> t = null;
             if (loadTask.EasyTaskState == EasyTaskState.Completed)
             {
