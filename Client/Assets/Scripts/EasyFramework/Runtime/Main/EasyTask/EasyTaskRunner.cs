@@ -188,6 +188,11 @@ namespace Easy
             return EasyWaitAnyTask.Create(true).SetWaitTasks(tasks);
         }
 
+        public static EasyWaitUntilTask WaitUntil(Func<bool> condition)
+        {
+            return EasyWaitUntilTask.Create(true).SetCondition(condition);
+        }
+
         public static EasyRunTask<T> Run<T>(Func<T> action, EasyCancellationToken cancellationToken = null)
         {
             return (EasyRunTask<T>)EasyRunTask<T>.Create(true).SetFunc(action).SetCancellationToken(cancellationToken);

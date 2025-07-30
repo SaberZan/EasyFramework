@@ -40,7 +40,7 @@ namespace Easy
             }
         }
 
-        public override void Destroy()
+        public override void OnDestroy()
         {
             _uIReference.Clear();
             base.Destroy();

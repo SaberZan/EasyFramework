@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Easy
 {
-    
+
     public class LayerParamsAttribute : Attribute
     {
         public LayerType layerType;
@@ -238,11 +238,10 @@ namespace Easy
         /// </summary>
         public void AddLayer(BaseUILayer baseUI)
         {
-            baseUI.Awake();
-            baseUI.Start();
-            if(baseUI.gameObject == null)
+            baseUI.Show();
+            if(baseUI.baseGameObject == null)
             {
-                throw new Exception("Start 中需要完成 gameObject的初始化");
+                throw new Exception("Layer baseGameObject == null");
             }
 
             Type uiType = baseUI.GetType();
@@ -256,9 +255,9 @@ namespace Easy
                 layerType = layerParamsAttribute.layerType;
                 siblingIndex = layerParamsAttribute.order;
             }
-            baseUI.gameObject.transform.SetParent(SeakLayerNodeByType(layerType).transform, false);
-            baseUI.gameObject.transform.SetSiblingIndex(siblingIndex);
-            AddFullScreenRectTransform(baseUI.gameObject);
+            baseUI.baseGameObject.transform.SetParent(SeakLayerNodeByType(layerType).transform, false);
+            baseUI.baseGameObject.transform.SetSiblingIndex(siblingIndex);
+            AddFullScreenRectTransform(baseUI.baseGameObject);
             baseUI.ShowLayer(this);
         }
 
@@ -270,7 +269,6 @@ namespace Easy
             if (_layers.TryGetValue(layerName, out BaseUILayer layerUIView))
             {
                 layerUIView.Destroy();
-                layerUIView.Destroyed();
                 _layers.Remove(layerName);
             }
         }

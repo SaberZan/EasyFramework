@@ -9,11 +9,14 @@ namespace Easy
     [LayerParams(layerType = LayerType.TOP_LAYER, order = 100)]
     public class ToastUILayer : BaseUILayer
     {
-        private GameObject _toastPrefab;        
-        
-        public override void Start()
+        private GameObject _toastPrefab;
+
+        public override void OnCreate()
         {
-            base.Start();
+            base.OnCreate();
+            gameObject = new GameObject("ToastUILayer");
+            gameObject.AddComponent<RectTransform>();
+            UIMgr.Instance.AddFullScreenRectTransform(gameObject);
 
             GameObject toast = new GameObject("ToastNode");
             Image black = toast.AddComponent<Image>();
@@ -41,7 +44,7 @@ namespace Easy
             toast.GetComponent<RectTransform>().sizeDelta = new Vector2(900, 160);
             toast.GetComponent<RectTransform>().localPosition = new Vector2(0, 160);
             _toastPrefab = toast;
-            
+
             GameObject.DontDestroyOnLoad(_toastPrefab);
         }
         

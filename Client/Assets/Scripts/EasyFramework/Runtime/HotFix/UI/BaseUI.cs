@@ -14,10 +14,9 @@ namespace Easy
     {
         None = 0,
         Awake = 1 << 1,
-        Start = 1 << 2,
-        Show = 1 << 3,
+        Enable = 1 << 2,
+        Disable = 1 << 3,
         Destroy = 1 << 4,
-        Destroyed = 1 << 5,
     }
 
     /// <summary>
@@ -35,6 +34,15 @@ namespace Easy
         /// </summary>
         public ISingleUnityAssetHandle<GameObject> handle;
 
+        /// <summary>
+        /// 是否异步加载
+        /// </summary>
+        public bool loadAsync = false;
+
+        /// <summary>
+        /// 承接所有的gameobject
+        /// </summary>
+        public GameObject baseGameObject;
         /// <summary>
         /// 关联的GameObject实例
         /// </summary>
@@ -66,16 +74,6 @@ namespace Easy
         public List<IBaseAssetHandle> handles = new List<IBaseAssetHandle>();
 
         /// <summary>
-        /// 显示计数器，用于同步显示操作
-        /// </summary>
-        private int showCount;
-
-        /// <summary>
-        /// 隐藏计数器，用于同步隐藏操作
-        /// </summary>
-        private int hideCount;
-
-        /// <summary>
         /// 取消令牌源，用于取消异步操作
         /// </summary>
         public EasyCancellationToken token;
@@ -90,104 +88,144 @@ namespace Easy
         }
 
         /// <summary>
-        /// 初始化UI组件，设置取消令牌并订阅事件
+        /// 打开UI
         /// </summary>
-        public virtual void Awake()
+        public void Show()
         {
-            token = new EasyCancellationToken();
-            EventMgr.Instance.SubscribeByTarget(this);
-            AddUIState(UIState.Awake);
-            subUIs.ForEach(subUI => { if (!subUI.GetUIState(UIState.Awake)) subUI.Awake(); });
+            Awake();
+            Enable();
         }
 
         /// <summary>
-        /// 启动UI组件，实例化GameObject或创建新的GameObject
+        /// 关闭UI
         /// </summary>
-        public virtual void Start()
+        public void Hide()
         {
+            Awake();
+            Disable();
+        }
+
+        /// <summary>
+        /// 初始化UI组件，设置取消令牌并订阅事件
+        /// </summary>
+        public void Awake()
+        {
+            if (GetUIState(UIState.Awake))
+            {
+                return;
+            }
+            AddUIState(UIState.Awake);
+
+            token = new EasyCancellationToken();
+            EventMgr.Instance.SubscribeByTarget(this);
+
+            if (baseGameObject == null)
+            {
+                baseGameObject = new GameObject(GetType().Name);
+            }
+
+            OnCreate();
+
             if (handle != null)
             {
-                gameObject = handle.Instantiate();
+                if (loadAsync)
+                {
+                    var task = handle.InstantiateAsync();
+                    task.OnCompleted(() =>
+                    {
+                        gameObject = task.GetResult();
+                        gameObject.transform.SetParent(baseGameObject.transform, false);
+                        OnStart();
+                        if (GetUIState(UIState.Enable))
+                        {
+                            OnEnable();
+                        }
+                        if (GetUIState(UIState.Disable))
+                        {
+                            OnDisable();
+                        }
+                    });
+                }
+                else
+                {
+                    gameObject = handle.Instantiate();
+                    OnStart();
+                }
+            }
+
+            if (gameObject != null)
+            {
+                gameObject.transform.SetParent(baseGameObject.transform, false);
+                OnStart();
             }
             
-            if (gameObject == null)
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            tmpSubUIs.ForEach(subUI =>
             {
-                gameObject = new GameObject(GetType().Name);
-            }
-
-            AddUIState(UIState.Start);
-
-            subUIs.ForEach(subUI =>
-            { 
-                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start))
-                { 
-                    subUI.Start(); 
-                }
+                if (!subUI.GetUIState(UIState.Awake))
+                    subUI.Awake();
             });
         }
+
 
         /// <summary>
         /// 显示UI组件及其子UI
         /// </summary>
         /// <param name="callback">显示完成后的回调函数</param>
-        public virtual void Show(Action callback = null)
+        public void Enable()
         {
-            if (GetUIState(UIState.Show))
+            if (GetUIState(UIState.Enable) && !GetUIState(UIState.Disable))
             {
-                callback?.Invoke();
                 return;
             }
-            AddUIState(UIState.Show);
+            AddUIState(UIState.Enable);
+            RemoveUIState(UIState.Disable);
+
+            if (gameObject != null)
+            {
+                OnEnable();
+            }
+
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
-            showCount = tmpSubUIs.Count;
-            tmpSubUIs.ForEach(subUI => 
-            { 
-                if (subUI.GetUIState(UIState.Start))
-                { 
-                    subUI.Show(() =>
-                    { 
-                        --showCount; 
-                        if (showCount == 0)
-                        { 
-                            gameObject.SetActive(true); 
-                            callback?.Invoke();
-                        }
-                    }); 
+            tmpSubUIs.ForEach(subUI =>
+            {
+                if (subUI.GetUIState(UIState.Awake))
+                {
+                    subUI.Enable();
                 }
             });
+            baseGameObject.SetActive(true);
         }
 
         /// <summary>
         /// 隐藏UI组件及其子UI
         /// </summary>
         /// <param name="callback">隐藏完成后的回调函数</param>
-        public virtual void Hide(Action callback = null)
+        public void Disable()
         {
-            if (!GetUIState(UIState.Show))
+            if (GetUIState(UIState.Disable))
             {
-                callback?.Invoke(); 
                 return;
             }
-            SubUIState(UIState.Show);
+            AddUIState(UIState.Disable);
+   
+            if (gameObject != null)
+            {
+                OnDisable();
+            }
+
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
-            hideCount = tmpSubUIs.Count;
-            tmpSubUIs.ForEach(subUI => 
-            { 
-                if (subUI.GetUIState(UIState.Start))
-                { 
-                    subUI.Hide(() =>
-                    { 
-                        --hideCount; 
-                        if (hideCount == 0)
-                        { 
-                            gameObject.SetActive(false); 
-                            callback?.Invoke(); 
-                        }
-                    }); 
+            tmpSubUIs.ForEach(subUI =>
+            {
+                if (subUI.GetUIState(UIState.Awake))
+                {
+                    subUI.Disable();
                 }
             });
+            baseGameObject.SetActive(false); 
         }
 
         /// <summary>
@@ -196,7 +234,7 @@ namespace Easy
         /// <param name="deltaTime">时间间隔</param>
         public virtual void Update(float deltaTime)
         {
-            if (GetUIState(UIState.Start))
+            if (GetUIState(UIState.Awake))
             {
                 tmpSubUIs.Clear();
                 tmpSubUIs.AddRange(subUIs);
@@ -210,18 +248,14 @@ namespace Easy
         /// <summary>
         /// 销毁UI组件及其子UI
         /// </summary>
-        public virtual void Destroy()
+        public void Destroy()
         {
+            if (GetUIState(UIState.Destroy))
+            {
+                return;
+            }
             AddUIState(UIState.Destroy);
-            tmpSubUIs.Clear();
-            tmpSubUIs.AddRange(subUIs);
-            tmpSubUIs.ForEach(subUI =>
-            { 
-                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Destroy))
-                { 
-                    subUI.Destroy(); 
-                }
-            });
+
 
             foreach (var routine in coroutines)
             {
@@ -230,9 +264,24 @@ namespace Easy
             coroutines.Clear();
 
             TimerMgr.Instance.ClearByTarget(this);
+            timerObjs.Clear();
 
             token.Cancel();
             token = null;
+
+
+            tmpSubUIs.Clear();
+            tmpSubUIs.AddRange(subUIs);
+            tmpSubUIs.ForEach(subUI =>
+            {
+                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Destroy))
+                {
+                    subUI.Destroy();
+                }
+            });
+            subUIs.Clear();
+
+            EventMgr.Instance.UnSubscribeByTarget(this);
 
             foreach (var handle in handles)
             {
@@ -244,6 +293,7 @@ namespace Easy
             {
                 if (gameObject != null)
                 {
+                    OnDestroy();
                     handle.ReleaseInstance(gameObject);
                     gameObject = null;
                 }
@@ -253,42 +303,26 @@ namespace Easy
             {
                 if (gameObject != null)
                 {
+                    OnDestroy();
                     GameObject.Destroy(gameObject);
                     gameObject = null;
                 }
             }
-        }
-
-        /// <summary>
-        /// 标记UI组件已销毁
-        /// </summary>
-        public void Destroyed()
-        {
-            AddUIState(UIState.Destroyed);
-            tmpSubUIs.Clear();
-            tmpSubUIs.AddRange(subUIs);
-            tmpSubUIs.ForEach(subUI =>
-            { 
-                if (subUI.GetUIState(UIState.Destroy) && !subUI.GetUIState(UIState.Destroyed))
-                { 
-                    subUI.Destroyed(); 
-                }
-            });
-            subUIs.Clear();
-            EventMgr.Instance.UnSubscribeByTarget(this);
+            GameObject.Destroy(baseGameObject);
         }
 
         /// <summary>
         /// 设置预制体路径，用于实例化UI
         /// </summary>
         /// <param name="path">预制体路径</param>
-        public void SetPrefabPath(string path)
+        public void SetPrefabPath(string path, bool async = false)
         {
             if (gameObject != null)
             {
                 throw new System.Exception("UI错误：不能在已有GameObject的情况下设置预制体路径");
             }
             handle = AssetsMgr.Instance.LoadAsset<GameObject>(path);
+            loadAsync = async;
         }
 
         /// <summary>
@@ -319,21 +353,20 @@ namespace Easy
                 }
             }
 
-            if (GetUIState(UIState.Start))
+            if (GetUIState(UIState.Enable))
             {
-                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Start))
+                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Enable))
                 {
-                    subUI.Start();
+                    subUI.Enable();
                 }
             }
 
-            if (GetUIState(UIState.Show))
+            if (GetUIState(UIState.Disable))
             {
-                subUI.Show();
-            }
-            else
-            {
-                subUI.Hide();
+                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Disable))
+                {
+                    subUI.Disable();
+                }
             }
 
             if (GetUIState(UIState.Destroy))
@@ -343,21 +376,13 @@ namespace Easy
                     subUI.Destroy();
                 }
             }
-
-            if (GetUIState(UIState.Destroyed))
-            {
-                if (subUI.GetUIState(UIState.Destroy) && !subUI.GetUIState(UIState.Destroyed))
-                {
-                    subUI.Destroyed();
-                }
-            }
         }
 
         /// <summary>
         /// 移除子UI
         /// </summary>
         /// <param name="subUI">要移除的子UI实例</param>
-        public void RemoveUIWidget(BaseUI subUI)
+        public void RemoveSubUI(BaseUI subUI)
         {
             if (subUIs.Contains(subUI))
             {
@@ -365,12 +390,48 @@ namespace Easy
                 {
                     subUI.Destroy();
                 }
-                if (subUI.GetUIState(UIState.Destroy) && !subUI.GetUIState(UIState.Destroyed))
-                {
-                    subUI.Destroyed();
-                }
                 subUIs.Remove(subUI);
             }
+        }
+
+        /// <summary>
+        /// 刚开始创建
+        /// </summary>
+        public virtual void OnCreate()
+        {
+
+        }
+
+        /// <summary>
+        /// 添加实例节点后调用
+        /// </summary>
+        public virtual void OnStart()
+        {
+
+        }
+
+        /// <summary>
+        /// 有实例节点后进前台调用
+        /// </summary>
+        public virtual void OnEnable()
+        {
+
+        }
+
+        /// <summary>
+        /// 有实例节点后进后台调用
+        /// </summary>
+        public virtual void OnDisable()
+        {
+
+        }
+
+        /// <summary>
+        /// 有实例节点后销毁调用
+        /// </summary>
+        public virtual void OnDestroy()
+        {
+
         }
 
         /// <summary>
@@ -389,7 +450,7 @@ namespace Easy
         /// 移除UI状态
         /// </summary>
         /// <param name="state">要移除的状态</param>
-        public void SubUIState(UIState state)
+        public void RemoveUIState(UIState state)
         {
             if ((uiState & state) != UIState.None)
             {
@@ -440,7 +501,23 @@ namespace Easy
         /// <param name="loopInterval">循环间隔（秒）</param>
         public void RegisterTimer(TimerCallBack timerCallBack, object[] args, int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
         {
-            TimerMgr.Instance.Register(this, timerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond));
+            timerObjs.Add(TimerMgr.Instance.Register(this, timerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond)));
+        }
+
+        /// <summary>
+        /// 反注册定时器
+        /// </summary>
+        /// <param name="timerCallBack"></param>
+        public void UnregisterTimer(TimerCallBack timerCallBack)
+        {
+            for (int i = timerObjs.Count - 1; i >= 0; --i)
+            {
+                if (timerObjs[i].callback == timerCallBack)
+                {
+                    TimerMgr.Instance.UnRegister(timerObjs[i]);
+                    timerObjs.RemoveAt(i);
+                }
+            }
         }
 
         /// <summary>
