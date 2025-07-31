@@ -6,6 +6,134 @@ using UnityEngine;
 
 namespace Easy
 {
+
+    public class UIData : IPoolObject
+    {
+
+        public static UIData Get()
+        {
+            return ObjectPoolMgr.Instance.GetObject<UIData>();
+        }
+
+        public static void Put(UIData data)
+        {
+            ObjectPoolMgr.Instance.PutObject(data);
+        }
+
+        public Dictionary<string, object> objData;
+        public Dictionary<Type, object> structData;
+
+        public UIData()
+        {
+            objData = new Dictionary<string, object>();
+            structData = new Dictionary<Type, object>();
+        }
+
+        public void Reset()
+        {
+            objData.Clear();
+            foreach (var item in structData)
+            {
+                var dic = item.Value as IDictionary;
+                dic.Clear();
+            }
+        }
+
+        public void SetField<T>(string key, T value)
+        {
+            var type = typeof(T);
+            if (type.IsValueType)
+            {
+                if (!structData.ContainsKey(type))
+                {
+                    structData.Add(type, new Dictionary<string, T>());
+                }
+                var dic = structData[type] as Dictionary<string, T>;
+                dic[key] = value;
+            }
+            else
+            {
+                objData[key] = value;
+            }
+        }
+
+        public bool TryGetField<T>(string key, out T value)
+        {
+            var type = typeof(T);
+            if (type.IsValueType)
+            {
+                if (!structData.ContainsKey(type))
+                {
+                    structData.Add(type, new Dictionary<string, T>());
+                }
+                var dic = structData[type] as Dictionary<string, T>;
+                return dic.TryGetValue(key, out value);
+            }
+            else
+            {
+                bool result = objData.TryGetValue(key, out object val);
+                value = (T)val;
+                return result;
+            }
+        }
+
+        public T GetField<T>(string key)
+        {
+            var type = typeof(T);
+            if (type.IsValueType)
+            {
+                if (!structData.ContainsKey(type))
+                {
+                    structData.Add(type, new Dictionary<string, T>());
+                }
+                var dic = structData[type] as Dictionary<string, T>;
+                return dic[key];
+            }
+            else
+            {
+                return (T)objData[key];
+            }
+        }
+
+        public void SetObjectField(string key, object value)
+        {
+            if (objData == null)
+            {
+                objData = new Dictionary<string, object>();
+            }
+            objData[key] = value;
+        }
+
+        public bool TryGetObjectField(string key, out object value)
+        {
+            if (objData == null)
+            {
+                value = null;
+                return false;
+            }
+            return objData.TryGetValue(key, out value);
+        }
+
+        public T GetObjectField<T>(string key)
+        {
+            if (!TryGetObjectField(key, out var value))
+            {
+                return default;
+            }
+
+            T t;
+            try
+            {
+                t = (T)value;
+            }
+            catch (Exception)
+            {
+                t = default;
+            }
+            return t;
+        }
+    }
+
     /// <summary>
     /// UI状态枚举，用于标记UI组件的生命周期状态
     /// </summary>
@@ -77,6 +205,11 @@ namespace Easy
         /// 取消令牌源，用于取消异步操作
         /// </summary>
         public EasyCancellationToken token;
+
+        /// <summary>
+        /// 数据接口，用于传递数据
+        /// </summary>
+        public UIData dataInterface;
 
         /// <summary>
         /// 获取UI名称，默认为类名
@@ -175,6 +308,10 @@ namespace Easy
         /// <param name="callback">显示完成后的回调函数</param>
         public void Enable()
         {
+            if (!GetUIState(UIState.Awake))
+            {
+                return;
+            }
             if (GetUIState(UIState.Enable) && !GetUIState(UIState.Disable))
             {
                 return;
@@ -189,13 +326,7 @@ namespace Easy
 
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
-            tmpSubUIs.ForEach(subUI =>
-            {
-                if (subUI.GetUIState(UIState.Awake))
-                {
-                    subUI.Enable();
-                }
-            });
+            tmpSubUIs.ForEach(subUI => subUI.Enable());
             baseGameObject.SetActive(true);
         }
 
@@ -205,6 +336,10 @@ namespace Easy
         /// <param name="callback">隐藏完成后的回调函数</param>
         public void Disable()
         {
+            if (!GetUIState(UIState.Awake))
+            {
+                return;
+            }
             if (GetUIState(UIState.Disable))
             {
                 return;
@@ -218,13 +353,7 @@ namespace Easy
 
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
-            tmpSubUIs.ForEach(subUI =>
-            {
-                if (subUI.GetUIState(UIState.Awake))
-                {
-                    subUI.Disable();
-                }
-            });
+            tmpSubUIs.ForEach(subUI => subUI.Disable());
             baseGameObject.SetActive(false); 
         }
 
@@ -238,10 +367,7 @@ namespace Easy
             {
                 tmpSubUIs.Clear();
                 tmpSubUIs.AddRange(subUIs);
-                tmpSubUIs.ForEach(subUI => 
-                { 
-                    subUI.Update(deltaTime);
-                });
+                tmpSubUIs.ForEach(subUI => subUI.Update(deltaTime));
             }
         }
 
@@ -250,6 +376,10 @@ namespace Easy
         /// </summary>
         public void Destroy()
         {
+            if (!GetUIState(UIState.Awake))
+            {
+                return;
+            }
             if (GetUIState(UIState.Destroy))
             {
                 return;
@@ -272,13 +402,7 @@ namespace Easy
 
             tmpSubUIs.Clear();
             tmpSubUIs.AddRange(subUIs);
-            tmpSubUIs.ForEach(subUI =>
-            {
-                if (subUI.GetUIState(UIState.Awake) && !subUI.GetUIState(UIState.Destroy))
-                {
-                    subUI.Destroy();
-                }
-            });
+            tmpSubUIs.ForEach(subUI => subUI.Destroy());
             subUIs.Clear();
 
             EventMgr.Instance.UnSubscribeByTarget(this);
@@ -309,6 +433,12 @@ namespace Easy
                 }
             }
             GameObject.Destroy(baseGameObject);
+
+            if (dataInterface != null)
+            {
+                UIData.Put(dataInterface);
+                dataInterface = null;
+            }
         }
 
         /// <summary>
@@ -336,6 +466,16 @@ namespace Easy
                 throw new System.Exception("UI错误：不能在已有资源句柄的情况下设置GameObject");
             }
             gameObject = gObj;
+        }
+
+        /// <summary>
+        /// 设置数据接口
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dataInterface"></param>
+        public void SetUIDataInterface(UIData dataInterface)
+        {
+            this.dataInterface = dataInterface;
         }
 
         /// <summary>

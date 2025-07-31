@@ -11,11 +11,11 @@ namespace Easy
         public virtual void ShowLayer(object reference)
         {
             _uIReference.Add(reference);
-            if(_uIReference.Count == 1)
+            if (_uIReference.Count == 1)
             {
-                if(gameObject != null)
+                if (baseGameObject != null)
                 {
-                    CanvasGroup canvasGroup = gameObject.GetOrAddComponent<CanvasGroup>();
+                    CanvasGroup canvasGroup = baseGameObject.GetOrAddComponent<CanvasGroup>();
                     canvasGroup.alpha = 1;
                     canvasGroup.interactable = true;
                     canvasGroup.blocksRaycasts = true;
@@ -27,11 +27,11 @@ namespace Easy
         public virtual void HideLayer(object reference)
         {
             _uIReference.Remove(reference);
-            if(_uIReference.Count == 0)
+            if (_uIReference.Count == 0)
             {
-                if(gameObject != null)
+                if (baseGameObject != null)
                 {
-                    CanvasGroup canvasGroup = gameObject.GetOrAddComponent<CanvasGroup>();
+                    CanvasGroup canvasGroup = baseGameObject.GetOrAddComponent<CanvasGroup>();
                     canvasGroup.alpha = 0;
                     canvasGroup.interactable = false;
                     canvasGroup.blocksRaycasts = false;

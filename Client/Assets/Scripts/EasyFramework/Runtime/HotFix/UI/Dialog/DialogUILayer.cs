@@ -25,36 +25,6 @@ namespace Easy
     }
 
     /// <summary>
-    /// 弹窗执行枚举
-    /// </summary>
-    public enum DialogExecEnum
-    {
-        Open,
-        Close,
-    }
-
-    /// <summary>
-    /// 弹窗执行参数
-    /// </summary>
-    public class DialogExecParam
-    {
-        /// <summary>
-        /// 执行类型
-        /// </summary>
-        public DialogExecEnum execEnum;
-        
-        /// <summary>
-        /// 弹窗UI实例
-        /// </summary>
-        public BaseDialogUI dialogUI;
-        
-        /// <summary>
-        /// 弹窗UI名称
-        /// </summary>
-        public string dialogUIName;
-    }
-    
-    /// <summary>
     /// 对话框UI层
     /// </summary>
     [LayerParams(layerType = LayerType.DIALOG, order = 1)]
@@ -121,12 +91,13 @@ namespace Easy
         /// </summary>
         /// <param name="dialogUIName">弹窗名称</param>
         /// <param name="prefabPath">预制路径</param>
-        public void ShowDialog(string dialogUIName, string prefabPath)
+        public void ShowDialog(string dialogUIName, string prefabPath, bool loadAsync = false, UIData uiData = null)
         {
             if(_allDialogTypes.ContainsKey(dialogUIName))
             {
                 BaseDialogUI obj = (BaseDialogUI)Activator.CreateInstance(_allDialogTypes[dialogUIName]);
-                obj.SetPrefabPath(prefabPath);
+                obj.SetPrefabPath(prefabPath, loadAsync);
+                obj.SetUIDataInterface(uiData);
                 ShowDialog(obj);
             }
         }
@@ -136,12 +107,13 @@ namespace Easy
         /// </summary>
         /// <param name="dialogUIName">弹窗名称</param>
         /// <param name="dialogGameObject">显示对象</param>
-        public void ShowDialog(string dialogUIName, GameObject dialogGameObject)
+        public void ShowDialog(string dialogUIName, GameObject dialogGameObject, UIData uiData = null)
         {
             if(_allDialogTypes.ContainsKey(dialogUIName))
             {
                 BaseDialogUI obj = (BaseDialogUI)Activator.CreateInstance(_allDialogTypes[dialogUIName]);
                 obj.SetGameObject(dialogGameObject);
+                obj.SetUIDataInterface(uiData);
                 ShowDialog(obj);
             }
         }
@@ -212,11 +184,7 @@ namespace Easy
                 return;
             }
 
-            if (dialogs.Contains(dialog))
-            {
-                dialog.gameObject.transform.parent.gameObject.SetActive(true);
-            }
-            else
+            if (!dialogs.Contains(dialog))
             {
                 dialogs.Add(dialog);
                 bool isShowMask = true;
@@ -246,11 +214,11 @@ namespace Easy
                 }
                 UIMgr.Instance.AddFullScreenRectTransform(blackMask);
                 //blackMask.GetComponent<RectTransform>().offsetMax = new Vector2(0.0f, 200);
-                dialog.gameObject.transform.SetParent(blackMask.transform);
+                dialog.baseGameObject.transform.SetParent(blackMask.transform);
                 blackMask.transform.SetParent(gameObject.transform, false);
-                dialog.gameObject.transform.localPosition = Vector3.zero;
-                dialog.gameObject.transform.localScale = Vector3.one;
-                UIMgr.Instance.AddFullScreenRectTransform(dialog.gameObject);
+                dialog.baseGameObject.transform.localPosition = Vector3.zero;
+                dialog.baseGameObject.transform.localScale = Vector3.one;
+                UIMgr.Instance.AddFullScreenRectTransform(dialog.baseGameObject);
             }
             dialog.Show();
         }
