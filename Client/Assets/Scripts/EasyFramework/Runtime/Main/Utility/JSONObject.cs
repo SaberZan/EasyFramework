@@ -45,8 +45,8 @@ namespace Easy
     public class JSONObject
     {
 #if POOLING
-	const int MAX_POOL_SIZE = 10000;
-	public static Queue<JSONObject> releaseQueue = new Queue<JSONObject>();
+        const int MAX_POOL_SIZE = 10000;
+        public static Queue<JSONObject> releaseQueue = new Queue<JSONObject>();
 #endif
 
         const int MAX_DEPTH = 100;
@@ -94,12 +94,12 @@ namespace Easy
             get { return n; }
         }
 #else
-	public double n;
-	public float f {
-		get {
-			return (float)n;
-		}
-	}
+        public double n;
+        public float f {
+            get {
+                return (float)n;
+            }
+        }
 #endif
         public bool useInt;
         public long i;
@@ -477,7 +477,7 @@ namespace Easy
 #if USEFLOAT
                                     n = System.Convert.ToSingle(str);
 #else
-								n = System.Convert.ToDouble(str);
+								    n = System.Convert.ToDouble(str);
 #endif
                                     if (!str.Contains("."))
                                     {
@@ -776,7 +776,8 @@ namespace Easy
         public bool GetField(out float field, string name, float fallback)
         {
 #else
-	public bool GetField(out double field, string name, double fallback) {
+	    public bool GetField(out double field, string name, double fallback) 
+        {
 #endif
             field = fallback;
             return GetField(ref field, name);
@@ -785,7 +786,8 @@ namespace Easy
         public bool GetField(ref float field, string name, FieldNotFound fail = null)
         {
 #else
-	public bool GetField(ref double field, string name, FieldNotFound fail = null) {
+	    public bool GetField(ref double field, string name, FieldNotFound fail = null) 
+        {
 #endif
             if (type == Type.OBJECT)
             {
@@ -997,7 +999,7 @@ namespace Easy
                 if (right.Count > left.Count)
                 {
 #if UNITY_2 || UNITY_3 || UNITY_4 || UNITY_5
-				Debug.LogError
+				    Debug.LogError
 #else
                     Debug.WriteLine
 #endif
@@ -1248,7 +1250,7 @@ namespace Easy
             if (depth++ > MAX_DEPTH)
             {
 #if UNITY_2 || UNITY_3 || UNITY_4 || UNITY_5
-			Debug.Log
+			    Debug.Log
 #else
                 Debug.WriteLine
 #endif
@@ -1279,12 +1281,12 @@ namespace Easy
                         else if (float.IsNaN(n))
                             builder.Append(NaN);
 #else
-				if(double.IsInfinity(n))
-					builder.Append(INFINITY);
-				else if(double.IsNegativeInfinity(n))
-					builder.Append(NEGINFINITY);
-				else if(double.IsNaN(n))
-					builder.Append(NaN);
+                        if(double.IsInfinity(n))
+                            builder.Append(INFINITY);
+                        else if(double.IsNegativeInfinity(n))
+                            builder.Append(NEGINFINITY);
+                        else if(double.IsNaN(n))
+                            builder.Append(NaN);
 #endif
                         else
                             builder.Append(n.ToString());
@@ -1395,19 +1397,19 @@ namespace Easy
         #endregion
 
 #if UNITY_2 || UNITY_3 || UNITY_4 || UNITY_5
-	public static implicit operator WWWForm(JSONObject obj) {
-		WWWForm form = new WWWForm();
-		for(int i = 0; i < obj.list.Count; i++) {
-			string key = i + "";
-			if(obj.type == Type.OBJECT)
-				key = obj.keys[i];
-			string val = obj.list[i].ToString();
-			if(obj.list[i].type == Type.STRING)
-				val = val.Replace("\"", "");
-			form.AddField(key, val);
-		}
-		return form;
-	}
+        public static implicit operator WWWForm(JSONObject obj) {
+            WWWForm form = new WWWForm();
+            for(int i = 0; i < obj.list.Count; i++) {
+                string key = i + "";
+                if(obj.type == Type.OBJECT)
+                    key = obj.keys[i];
+                string val = obj.list[i].ToString();
+                if(obj.list[i].type == Type.STRING)
+                    val = val.Replace("\"", "");
+                form.AddField(key, val);
+            }
+            return form;
+        }
 #endif
         public JSONObject this[int index]
         {
@@ -1472,7 +1474,7 @@ namespace Easy
                 return result;
             }
 #if UNITY_2 || UNITY_3 || UNITY_4 || UNITY_5
-		Debug.Log
+		    Debug.Log
 #else
             Debug.WriteLine
 #endif
@@ -1485,24 +1487,24 @@ namespace Easy
             return o != null;
         }
 #if POOLING
-	static bool pool = true;
-	public static void ClearPool() {
-		pool = false;
-		releaseQueue.Clear();
-		pool = true;
-	}
+        static bool pool = true;
+        public static void ClearPool() {
+            pool = false;
+            releaseQueue.Clear();
+            pool = true;
+        }
 
-	~JSONObject() {
-		if(pool && releaseQueue.Count < MAX_POOL_SIZE) {
-			type = Type.NULL;
-			list = null;
-			keys = null;
-			str = "";
-			n = 0;
-			b = false;
-			releaseQueue.Enqueue(this);
-		}
-	}
+        ~JSONObject() {
+            if(pool && releaseQueue.Count < MAX_POOL_SIZE) {
+                type = Type.NULL;
+                list = null;
+                keys = null;
+                str = "";
+                n = 0;
+                b = false;
+                releaseQueue.Enqueue(this);
+            }
+        }
 #endif
     }
 

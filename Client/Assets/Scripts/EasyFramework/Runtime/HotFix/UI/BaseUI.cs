@@ -67,7 +67,13 @@ namespace Easy
                     structData.Add(type, new Dictionary<string, T>());
                 }
                 var dic = structData[type] as Dictionary<string, T>;
-                return dic.TryGetValue(key, out value);
+                if(!dic.TryGetValue(key, out value))
+                {
+                    bool result = objData.TryGetValue(key, out object val);
+                    value = (T)val;
+                    return result;
+                }
+                return true;
             }
             else
             {
@@ -87,7 +93,13 @@ namespace Easy
                     structData.Add(type, new Dictionary<string, T>());
                 }
                 var dic = structData[type] as Dictionary<string, T>;
-                return dic[key];
+                if(!dic.TryGetValue(key, out T value))
+                {
+                    bool result = objData.TryGetValue(key, out object val);
+                    value = (T)val;
+                    return value;
+                }
+                return value;
             }
             else
             {
