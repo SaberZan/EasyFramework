@@ -7,6 +7,7 @@ namespace Easy.EasyAsset
 {
     public class EasyAssetConfigInfo
     {
+        public string key;
         public string asset;
         public Type type;
         public long changeTag;

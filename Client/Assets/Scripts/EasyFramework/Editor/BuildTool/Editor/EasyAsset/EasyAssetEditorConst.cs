@@ -19,6 +19,8 @@ namespace Easy.EasyAsset
 
         public static string EasyAssetConfigPath = "Assets/AssetsBundleConfig/EasyAssetConfig.asset";
 
+        public static string KeyToAssetPath = "Assets/AssetsBundleConfig/KeyToAsset.asset";
+
         public static string EasyAssetBuildTaskPipleLinePath = "Assets/AssetsBundleConfig/BuildTaskPipleLine.asset";
         
         public static string HybridCLRBuildCacheDir => "Assets/HybridCLRBuildCache";

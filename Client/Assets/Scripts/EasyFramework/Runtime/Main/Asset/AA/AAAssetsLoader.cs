@@ -333,6 +333,12 @@ namespace Easy.AA
             return handle;
         }
 
+        public override List<string> KeyToAssetPaths(string key)
+        {
+            AsyncOperationHandle<IList<IResourceLocation>> asyncOperationHandle = Addressables.LoadResourceLocationsAsync(key, null);
+            return null;
+        }
+
         /// <summary>
         /// 释放资源
         /// </summary>

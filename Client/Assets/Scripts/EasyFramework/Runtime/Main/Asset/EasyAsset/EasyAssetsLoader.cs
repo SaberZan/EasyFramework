@@ -493,30 +493,17 @@ namespace Easy.EasyAsset
             MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
             handle.loader = this;
             List<int> depends = new List<int>(); 
-
-            int keyLen = key.Length;
-            foreach (var dicKv in catalogs.allActiveEasyAssetInfoDic)
+            foreach (var dicKv in catalogs.allActiveKeyToAssetPaths)
             {
-                if(dicKv.Key < keyLen)
+                if(dicKv.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
-                }
-                Dictionary<string, EasyAssetInfo> dic = dicKv.Value;
-                foreach (var assetInfoKv in dic)
-                {
-                    if(assetInfoKv.Key.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0)
-                    {
-                        continue;
-                    }
-                    var easyAssetInfo = assetInfoKv.Value;
-                    var tempType = catalogs.GetTypeByAssetTypeIndex(easyAssetInfo.typeIndex);
-                    if(!tempType.IsAssignableFrom(type))
-                    {
-                        continue;
-                    }
-                    handle.paths.Add(easyAssetInfo.asset);
-                    depends.AddRange(easyAssetInfo.needABIndexes);       
-                }
+                    handle.paths.AddRange(dicKv.Value);
+                    break;
+                }           
+            }
+            foreach (var path in handle.paths)
+            {
+                depends.AddRange(catalogs.GetDependEasyAssetBundleIndexesByAssetName(path));
             }
             handle.dependAB = depends.Distinct<int>().ToList();
             _handles.Add(handle);
@@ -600,25 +587,17 @@ namespace Easy.EasyAsset
             MultiRawAssetHandle handle = GetHandleFromCache<MultiRawAssetHandle>();
             handle.loader = this;
             List<int> depends = new List<int>();
-
-            int keyLen = key.Length;
-            foreach (var dicKv in catalogs.allActiveEasyAssetInfoDic)
+            foreach (var dicKv in catalogs.allActiveKeyToAssetPaths)
             {
-                if(dicKv.Key < keyLen)
+                if(dicKv.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
-                }
-                Dictionary<string, EasyAssetInfo> dic = dicKv.Value;
-                foreach (var assetInfoKv in dic)
-                {
-                    if(assetInfoKv.Key.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0)
-                    {
-                        continue;
-                    }
-                    var easyAssetInfo = assetInfoKv.Value;
-                    handle.paths.Add(easyAssetInfo.asset);
-                    depends.AddRange(easyAssetInfo.needABIndexes);       
-                }
+                    handle.paths.AddRange(dicKv.Value);
+                    break;
+                }           
+            }
+            foreach (var path in handle.paths)
+            {
+                depends.AddRange(catalogs.GetDependEasyAssetBundleIndexesByAssetName(path));
             }
             handle.dependAB = depends.Distinct<int>().ToList();
             _handles.Add(handle);
@@ -647,6 +626,24 @@ namespace Easy.EasyAsset
             RetainHandle(handle);
             handle.Start();
             return handle;
+        }
+
+        /// <summary>
+        /// 通过key转资源路径
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public override List<string> KeyToAssetPaths(string key)
+        {
+            foreach (var assetInfoKv in catalogs.allActiveKeyToAssetPaths)
+            {
+                if (assetInfoKv.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return assetInfoKv.Value;
+                }
+            }
+            
+            return null;
         }
 
         #endregion
@@ -803,7 +800,6 @@ namespace Easy.EasyAsset
         {
             return _abDownloadCtrl?.NeedForeUpdate() == true;
         }
-
 
     }
 }

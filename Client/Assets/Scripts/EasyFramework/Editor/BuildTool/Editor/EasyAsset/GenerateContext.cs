@@ -11,6 +11,8 @@ namespace Easy.EasyAsset
     {
         public PackageConfig packageConfig;
 
+        public KeyToAsset keyToAsset;
+
         public GenerateInfo generateInfo;
 
         public Version version;
@@ -38,6 +40,7 @@ namespace Easy.EasyAsset
         public void Reset()
         {
             packageConfig = AssetDatabase.LoadAssetAtPath<PackageConfig>(EasyAssetEditorConst.EasyAssetConfigPath);
+            keyToAsset = AssetDatabase.LoadAssetAtPath<KeyToAsset>(EasyAssetEditorConst.KeyToAssetPath);
             generateInfo = AssetDatabase.LoadAssetAtPath<GenerateInfo>(EasyAssetEditorConst.GenerateInfoPath);
             allAssets = new Dictionary<string, EasyAssetConfigInfo>();
             easyAssetBundleConfigInfos = new Dictionary<string, EasyAssetBundleConfigInfo>();

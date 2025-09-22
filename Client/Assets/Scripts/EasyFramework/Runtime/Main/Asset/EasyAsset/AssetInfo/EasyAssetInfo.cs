@@ -11,6 +11,11 @@ namespace Easy.EasyAsset
     public class EasyAssetInfo
     {
         /// <summary>
+        /// 资源key
+        /// </summary>
+        public string key;
+        
+        /// <summary>
         /// 资源名
         /// </summary>
         public string asset;

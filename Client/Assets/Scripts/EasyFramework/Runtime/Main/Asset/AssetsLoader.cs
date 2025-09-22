@@ -40,6 +40,8 @@ namespace Easy
 
         public abstract IMultiRawAssetHandle LoadRawAssetsByPath(IEnumerable<string> paths);
 
+        public abstract List<string> KeyToAssetPaths(string key);
+
         public abstract void Release(IBaseAssetHandle handle);
         
     }

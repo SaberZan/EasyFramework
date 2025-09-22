@@ -34,12 +34,12 @@ namespace Easy.EasyAsset
         /// 主动调用的资源信息列表
         /// </summary>
         public List<EasyAssetInfo> allActiveEasyAssetInfos = new List<EasyAssetInfo>();
-        
+
         /// <summary>
         /// 被动依赖的资源信息列表
         /// </summary>
         public List<EasyAssetInfo> allPassiveEasyAssetInfos = new List<EasyAssetInfo>();
-        
+
         /// <summary>
         /// 资源类型列表
         /// </summary>
@@ -59,13 +59,15 @@ namespace Easy.EasyAsset
 
         public Dictionary<int, List<EasyAssetInfo>> ab2EasyAssetInfoDic = new Dictionary<int, List<EasyAssetInfo>>();
 
+        public Dictionary<string, List<string>> allActiveKeyToAssetPaths = new Dictionary<string,  List<string>>();
+
         public void Init()
         {
             for (int i = 0; i < allActiveEasyAssetInfos.Count; i++)
             {
                 EasyAssetInfo easyAssetInfo = allActiveEasyAssetInfos[i];
                 int assetNameLength = easyAssetInfo.asset.Length;
-                if(!allActiveEasyAssetInfoDic.ContainsKey(assetNameLength))
+                if (!allActiveEasyAssetInfoDic.ContainsKey(assetNameLength))
                 {
                     allActiveEasyAssetInfoDic.Add(assetNameLength, new Dictionary<string, EasyAssetInfo>(StringComparer.OrdinalIgnoreCase));
                 }
@@ -75,6 +77,16 @@ namespace Easy.EasyAsset
                     ab2EasyAssetInfoDic.Add(easyAssetInfo.abIndex, new List<EasyAssetInfo>());
                 }
                 ab2EasyAssetInfoDic[easyAssetInfo.abIndex].Add(easyAssetInfo);
+
+                if (!string.IsNullOrEmpty(easyAssetInfo.key))
+                {
+                    if (!allActiveKeyToAssetPaths.ContainsKey(easyAssetInfo.key))
+                    {
+                        allActiveKeyToAssetPaths.Add(easyAssetInfo.key, new List<string>());
+                    }
+                    allActiveKeyToAssetPaths[easyAssetInfo.key].Add(easyAssetInfo.asset);
+                }
+                
             }
         }
 
@@ -126,7 +138,7 @@ namespace Easy.EasyAsset
         /// <returns>信息对象</returns>
         public EasyAssetBundleInfo GetEasyAssetBundleInfoByIndex(int index)
         {
-            if(allEasyAssetBundleInfos.Count > index)
+            if (allEasyAssetBundleInfos.Count > index)
             {
                 return allEasyAssetBundleInfos[index];
             }
@@ -142,7 +154,7 @@ namespace Easy.EasyAsset
         public EasyAssetBundleInfo GetEasyAssetBundleInfoByAsset(string assetName)
         {
             EasyAssetInfo easyAssetInfo = GetEasyAssetInfoByAsset(assetName);
-            if(easyAssetInfo != null)
+            if (easyAssetInfo != null)
             {
                 return GetEasyAssetBundleInfoByIndex(easyAssetInfo.abIndex);
             }
@@ -157,13 +169,13 @@ namespace Easy.EasyAsset
         public EasyAssetInfo GetEasyAssetInfoByAsset(string assetName)
         {
             int assetNameLength = assetName.Length;
-            if(allActiveEasyAssetInfoDic.ContainsKey(assetNameLength) && allActiveEasyAssetInfoDic[assetNameLength].TryGetValue(assetName, out EasyAssetInfo easyAssetInfo))
+            if (allActiveEasyAssetInfoDic.ContainsKey(assetNameLength) && allActiveEasyAssetInfoDic[assetNameLength].TryGetValue(assetName, out EasyAssetInfo easyAssetInfo))
             {
                 return easyAssetInfo;
             }
             return null;
         }
-        
+
         /// <summary>
         /// 获取所有资源名，通过AB名称
         /// </summary>
@@ -194,7 +206,7 @@ namespace Easy.EasyAsset
         public Type GetTypeByAssetName(string assetName)
         {
             var easyAssetInfo = GetEasyAssetInfoByAsset(assetName);
-            if(easyAssetInfo != null)
+            if (easyAssetInfo != null)
             {
                 return GetTypeByAssetTypeIndex(easyAssetInfo.typeIndex);
             }
@@ -212,7 +224,7 @@ namespace Easy.EasyAsset
             {
                 return null;
             }
-            if(!types.ContainsKey(index))
+            if (!types.ContainsKey(index))
             {
                 var type = Type.GetType(assemblyQualifiedNames[index]);
                 types.Add(index, type);
@@ -228,7 +240,7 @@ namespace Easy.EasyAsset
         public List<int> GetDependEasyAssetBundleIndexesByAssetName(string assetName)
         {
             var easyAssetInfo = GetEasyAssetInfoByAsset(assetName);
-            if(easyAssetInfo != null)
+            if (easyAssetInfo != null)
             {
                 return easyAssetInfo.needABIndexes;
             }

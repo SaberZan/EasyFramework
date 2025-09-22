@@ -23,6 +23,11 @@ namespace Easy.EasyAsset
         public PackageConfig packageConfig;
 
         [SpaceArea]
+        [Label("资源键值")]
+        [InLineEditorAttribute(true, false, HideScript = true, DrawPropertyField = false)]
+        public KeyToAsset keyToAsset;
+
+        [SpaceArea]
         [Label("资源构建目标信息")]
         [InLineEditorAttribute(true, false, HideScript = true, DrawPropertyField = false)]
         public GenerateInfo generateInfo;
@@ -58,6 +63,14 @@ namespace Easy.EasyAsset
                 AssetDatabase.CreateAsset(packageConfig, EasyAssetEditorConst.EasyAssetConfigPath);
             }
             window.packageConfig = packageConfig;
+
+            var keyToAsset = AssetDatabase.LoadAssetAtPath<KeyToAsset>(EasyAssetEditorConst.KeyToAssetPath);
+            if (keyToAsset == null)
+            {
+                keyToAsset = ScriptableObject.CreateInstance<KeyToAsset>();
+                AssetDatabase.CreateAsset(keyToAsset, EasyAssetEditorConst.KeyToAssetPath);
+            }
+            window.keyToAsset = keyToAsset;
 
             var generateInfo = AssetDatabase.LoadAssetAtPath<GenerateInfo>(EasyAssetEditorConst.GenerateInfoPath);
             if (generateInfo == null)

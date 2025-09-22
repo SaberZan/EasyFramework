@@ -15,6 +15,9 @@ namespace Easy.EasyAsset
         private Dictionary<string, EasyAssetConfigInfo> allAssets; 
 
         private PackageConfig _packageConfig;
+
+        private KeyToAsset _keyToAsset;
+
         public string BuildName()
         {
             return "分析资源";
@@ -100,7 +103,8 @@ namespace Easy.EasyAsset
             if(!allAssets.ContainsKey(assetPath))
             {
                 EasyAssetConfigInfo abAssetConfigInfo = new EasyAssetConfigInfo() 
-                { 
+                {
+                    key = _keyToAsset.GetKey(assetPath),
                     asset = assetPath, 
                     type = GetAssetType(assetPath),
                     changeTag = File.GetLastWriteTimeUtc(assetPath).Ticks
