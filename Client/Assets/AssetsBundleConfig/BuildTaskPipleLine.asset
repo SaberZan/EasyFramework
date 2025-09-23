@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: BuildTaskPipleLine
   m_EditorClassIdentifier: 
   buildTasks:
-  - rid: 863422349781499912
   - rid: 863422349781499913
   - rid: 863422349781499914
   - rid: 863422349781499915
@@ -21,13 +20,11 @@ MonoBehaviour:
   - rid: 863422349781499917
   - rid: 863422349781499918
   - rid: 863422349781499919
-  tag: 0
+  reset: 0
+  start: 0
   references:
     version: 2
     RefIds:
-    - rid: 863422349781499912
-      type: {class: HyBridCLRTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
-      data: 
     - rid: 863422349781499913
       type: {class: AnalyseAssetsTask, ns: Easy.EasyAsset, asm: Assembly-CSharp-Editor}
       data: 

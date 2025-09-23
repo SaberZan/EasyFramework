@@ -13,7 +13,5 @@ MonoBehaviour:
   m_Name: KeyToAsset
   m_EditorClassIdentifier: 
   Data:
-  - Name: UI
-    Object: {fileID: 4343727234628468602, guid: 6e3c5f76a76744644b1f406514b965dc, type: 2}
-  - Name: Levels
-    Object: {fileID: 102900000, guid: 598c3c6a4e756ee4783b0a7f68a562f3, type: 3}
+  - Name: HotFix
+    Object: {fileID: 102900000, guid: b83a6b73b14be754a8b2335f5c832ae6, type: 3}

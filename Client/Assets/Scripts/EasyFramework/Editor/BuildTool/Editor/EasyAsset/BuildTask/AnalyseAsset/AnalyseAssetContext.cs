@@ -28,7 +28,7 @@ namespace Easy.EasyAsset
 
         static AnalyseAssetContext()
         {
-            if(allAnalyseAssets != null)
+            if (allAnalyseAssets != null)
             {
                 allAnalyseAssets.Clear();
             }
@@ -48,7 +48,7 @@ namespace Easy.EasyAsset
         public static List<string> GetDependencies(string assetPath)
         {
             string extension = Path.GetExtension(assetPath);
-            if(allAnalyseAssets.ContainsKey(extension))
+            if (allAnalyseAssets.ContainsKey(extension))
             {
                 return allAnalyseAssets[extension].GetDependencies(assetPath);
             }

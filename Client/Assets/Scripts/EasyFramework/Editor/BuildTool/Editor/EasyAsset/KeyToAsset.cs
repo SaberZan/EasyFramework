@@ -10,7 +10,7 @@ public class KeyToAsset : ScriptableObject
 {
     [Serializable]
 
-    public class ExtraData
+    public class KeyData
     {
         [SerializeField]
         public string Name;
@@ -22,7 +22,7 @@ public class KeyToAsset : ScriptableObject
 
     [SerializeField]
     [ReorderableList(ListStyle.Round, elementLabel: "键2路径", Foldable = true)]
-    public List<ExtraData> Data = new List<ExtraData>();
+    public List<KeyData> Data = new List<KeyData>();
 
 
     public List<String> GetKeys(string path)
@@ -36,16 +36,23 @@ public class KeyToAsset : ScriptableObject
             }
         }
 
-        var dirPath = Path.GetDirectoryName(path);
-        foreach (var item in Data)
+        var dir = Directory.GetParent(path);
+        while (dir != null)
         {
-            var assetPath = AssetDatabase.GetAssetPath(item.Object);
-            if (AssetDatabase.IsValidFolder(assetPath) && assetPath == dirPath)
+            foreach (var item in Data)
             {
-                keys.Add(item.Name);
+                var assetPath = AssetDatabase.GetAssetPath(item.Object);
+                if (AssetDatabase.IsValidFolder(assetPath))
+                {
+                    var assetDir = new DirectoryInfo(assetPath);
+                    if (dir.FullName == assetDir.FullName)
+                    {
+                        keys.Add(item.Name);
+                    }
+                }
             }
+            dir = dir.Parent; 
         }
-
         return keys;
     }
 

@@ -25,6 +25,7 @@ namespace Easy.EasyAsset
 
         public async Task<BuildResult> Run(GenerateContext context)
         {
+            _keyToAsset = context.keyToAsset;
             _packageConfig = context.packageConfig;
             if (_packageConfig == null || _packageConfig.packageInfos.Count == 0)
             {

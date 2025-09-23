@@ -30,9 +30,9 @@ namespace Easy.EasyAsset
                     (
                         inDirFiles.Where
                         (
-                            inDirfile => 
-                            AssetDatabase.GetMainAssetTypeAtPath(inDirfile) == typeof(UnityEngine.Texture2D) 
-                            && !assetPaths.Contains(inDirfile) 
+                            inDirfile =>
+                            AssetDatabase.GetMainAssetTypeAtPath(inDirfile) == typeof(UnityEngine.Texture2D)
+                            && !assetPaths.Contains(inDirfile)
                             && inDirfile != assetPath
                         )
                     );
