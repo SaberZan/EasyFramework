@@ -187,12 +187,12 @@ namespace Easy
 
         public ISingleUnityAssetHandle<UnityEngine.Object> LoadAsset(string path, Type type)
         {
-            return _assetsLoader.LoadUnityAsset(path, type);
+            return _assetsLoader.LoadUnityAssetByPath(path, type);
         }
         
         public ISingleUnityAssetHandle<T> LoadAsset<T>(string path) where T : UnityEngine.Object
         {
-            return _assetsLoader.LoadUnityAsset<T>(path);
+            return _assetsLoader.LoadUnityAssetByPath<T>(path);
         }
         
         public IMultiUnityAssetHandle LoadAssetsByKey(string key, Type type)
@@ -207,12 +207,12 @@ namespace Easy
 
         public IMultiUnityAssetHandle LoadAssetsByPath(IEnumerable<string> paths, Type type)
         {
-            return _assetsLoader.LoadUnityAssetsByPath(paths, type);
+            return _assetsLoader.LoadUnityAssetsByPaths(paths, type);
         }
 
         public IMultiUnityAssetHandle LoadAssetsByPath<T>(IEnumerable<string> paths) where T : Object
         {
-            return _assetsLoader.LoadUnityAssetsByPath<T>(paths);
+            return _assetsLoader.LoadUnityAssetsByPaths<T>(paths);
         }
 
         /// <summary>

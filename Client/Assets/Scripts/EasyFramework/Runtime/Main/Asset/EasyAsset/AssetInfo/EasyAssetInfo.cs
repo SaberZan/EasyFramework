@@ -13,7 +13,7 @@ namespace Easy.EasyAsset
         /// <summary>
         /// 资源key
         /// </summary>
-        public string key;
+        public List<string> keys;
         
         /// <summary>
         /// 资源名

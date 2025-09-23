@@ -452,7 +452,7 @@ namespace Easy.EasyAsset
         /// <param name="path"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAsset(string path, Type type)
+        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByPath(string path, Type type)
         {
             SingleUnityAssetHandle<UnityEngine.Object> handle = GetHandleFromCache<SingleUnityAssetHandle<UnityEngine.Object>>();
             handle.loader = this;
@@ -470,7 +470,7 @@ namespace Easy.EasyAsset
         /// <param name="path"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override ISingleUnityAssetHandle<T> LoadUnityAsset<T>(string path)
+        public override ISingleUnityAssetHandle<T> LoadUnityAssetByPath<T>(string path)
         {
             SingleUnityAssetHandle<T> handle = GetHandleFromCache<SingleUnityAssetHandle<T>>();
             handle.loader = this;
@@ -483,44 +483,42 @@ namespace Easy.EasyAsset
         }
         
         /// <summary>
-        /// 加载多资源
+        /// 加载单资源
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="path"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public override IMultiUnityAssetHandle LoadUnityAssetsByKey(string key, Type type)
+        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByKey(string key, Type type)
         {
-            MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
-            handle.loader = this;
-            List<int> depends = new List<int>(); 
-            foreach (var dicKv in catalogs.allActiveKeyToAssetPaths)
+            var assets = KeyToAssetPaths(key);
+            foreach (var asset in assets)
             {
-                if(dicKv.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+                if (catalogs.GetTypeByAssetName(asset).IsAssignableFrom(type))
                 {
-                    handle.paths.AddRange(dicKv.Value);
-                    break;
-                }           
+                    return LoadUnityAssetByPath(asset, type);
+                }
             }
-            foreach (var path in handle.paths)
-            {
-                depends.AddRange(catalogs.GetDependEasyAssetBundleIndexesByAssetName(path));
-            }
-            handle.dependAB = depends.Distinct<int>().ToList();
-            _handles.Add(handle);
-            RetainHandle(handle);
-            handle.Start();
-            return handle;
+            return null;
         }
-
+        
         /// <summary>
-        /// 加载多资源
+        /// 加载单资源
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="path"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override IMultiUnityAssetHandle LoadUnityAssetsByKey<T>(string key)
+        public override ISingleUnityAssetHandle<T> LoadUnityAssetByKey<T>(string key)
         {
-            return LoadUnityAssetsByKey(key, typeof(T));
+            var assets = KeyToAssetPaths(key);
+            var type = typeof(T);
+            foreach (var asset in assets)
+            {
+                if (catalogs.GetTypeByAssetName(asset).IsAssignableFrom(type))
+                {
+                    return LoadUnityAssetByPath<T>(asset);
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -529,7 +527,7 @@ namespace Easy.EasyAsset
         /// <param name="paths"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public override IMultiUnityAssetHandle LoadUnityAssetsByPath(IEnumerable<string> paths, Type type)
+        public override IMultiUnityAssetHandle LoadUnityAssetsByPaths(IEnumerable<string> paths, Type type)
         {
             MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
             handle.loader = this;
@@ -555,10 +553,53 @@ namespace Easy.EasyAsset
         /// <param name="paths"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override IMultiUnityAssetHandle LoadUnityAssetsByPath<T>(IEnumerable<string> paths)
+        public override IMultiUnityAssetHandle LoadUnityAssetsByPaths<T>(IEnumerable<string> paths)
         {
-            return LoadUnityAssetsByPath(paths, typeof(T));
+            return LoadUnityAssetsByPaths(paths, typeof(T));
         }
+
+        /// <summary>
+        /// 加载多资源
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public override IMultiUnityAssetHandle LoadUnityAssetsByKey(string key, Type type)
+        {
+            MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
+            handle.loader = this;
+            List<int> depends = new List<int>();
+            foreach (var dicKv in catalogs.allActiveKeyToAssetPaths)
+            {
+                if (dicKv.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+                {
+                    handle.paths.AddRange(dicKv.Value);
+                    break;
+                }
+            }
+            foreach (var path in handle.paths)
+            {
+                depends.AddRange(catalogs.GetDependEasyAssetBundleIndexesByAssetName(path));
+            }
+            handle.dependAB = depends.Distinct<int>().ToList();
+            _handles.Add(handle);
+            RetainHandle(handle);
+            handle.Start();
+            return handle;
+        }
+
+        /// <summary>
+        /// 加载多资源
+        /// </summary>
+        /// <param name="key"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public override IMultiUnityAssetHandle LoadUnityAssetsByKey<T>(string key)
+        {
+            return LoadUnityAssetsByKey(key, typeof(T));
+        }
+
+
 
         /// <summary>
         /// 加载原始资源

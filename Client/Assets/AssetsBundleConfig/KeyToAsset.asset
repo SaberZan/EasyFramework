@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cd32e92bccfd474f8d9d7115f1249ca, type: 3}
+  m_Name: KeyToAsset
+  m_EditorClassIdentifier: 
+  Data:
+  - Name: UI
+    Object: {fileID: 4343727234628468602, guid: 6e3c5f76a76744644b1f406514b965dc, type: 2}
+  - Name: Levels
+    Object: {fileID: 102900000, guid: 598c3c6a4e756ee4783b0a7f68a562f3, type: 3}

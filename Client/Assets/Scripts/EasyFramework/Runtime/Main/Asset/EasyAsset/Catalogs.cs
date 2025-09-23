@@ -78,13 +78,16 @@ namespace Easy.EasyAsset
                 }
                 ab2EasyAssetInfoDic[easyAssetInfo.abIndex].Add(easyAssetInfo);
 
-                if (!string.IsNullOrEmpty(easyAssetInfo.key))
+                if (easyAssetInfo.keys != null)
                 {
-                    if (!allActiveKeyToAssetPaths.ContainsKey(easyAssetInfo.key))
+                    foreach (string key in easyAssetInfo.keys)
                     {
-                        allActiveKeyToAssetPaths.Add(easyAssetInfo.key, new List<string>());
+                        if (!allActiveKeyToAssetPaths.ContainsKey(key))
+                        {
+                            allActiveKeyToAssetPaths.Add(key, new List<string>());
+                        }
+                        allActiveKeyToAssetPaths[key].Add(easyAssetInfo.asset);
                     }
-                    allActiveKeyToAssetPaths[easyAssetInfo.key].Add(easyAssetInfo.asset);
                 }
                 
             }

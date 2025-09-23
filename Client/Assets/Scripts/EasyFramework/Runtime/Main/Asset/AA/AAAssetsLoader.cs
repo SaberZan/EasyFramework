@@ -217,7 +217,7 @@ namespace Easy.AA
         /// <param name="path"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAsset(string path, Type type)
+        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByPath(string path, Type type)
         {
             SingleUnityAssetHandle<UnityEngine.Object> handle = GetHandleFromCache<SingleUnityAssetHandle<UnityEngine.Object>>();
             AsyncOperationHandle<UnityEngine.Object> asyncOperationHandle = Addressables.LoadAssetAsync<UnityEngine.Object>(path);
@@ -233,7 +233,7 @@ namespace Easy.AA
         /// <param name="path"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override ISingleUnityAssetHandle<T> LoadUnityAsset<T>(string path)
+        public override ISingleUnityAssetHandle<T> LoadUnityAssetByPath<T>(string path)
         {
             SingleUnityAssetHandle<T> handle = GetHandleFromCache<SingleUnityAssetHandle<T>>();
             AsyncOperationHandle<T> asyncOperationHandle = Addressables.LoadAssetAsync<T>(path);
@@ -242,7 +242,52 @@ namespace Easy.AA
             _handles.Add(handle);
             return handle;
         }
-        
+
+        /// <summary>
+        /// 加载单资源
+        /// </summary>
+        public override ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByKey(string key, Type type)
+        {
+            return LoadUnityAssetByPath(key, type);
+        }
+
+        /// <summary>
+        /// 加载单资源
+        /// </summary>
+        public override ISingleUnityAssetHandle<T> LoadUnityAssetByKey<T>(string key)
+        {
+            return LoadUnityAssetByPath<T>(key);
+        }
+
+
+        /// <summary>
+        /// 加载多资源
+        /// </summary>
+        /// <param name="paths"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>        
+        public override IMultiUnityAssetHandle LoadUnityAssetsByPaths(IEnumerable<string> paths, Type type)
+        {
+            MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
+            handle.paths = paths.ToList();
+            AsyncOperationHandle<IList<UnityEngine.Object>> asyncOperationHandle = Addressables.LoadAssetsAsync<UnityEngine.Object>(paths, null);
+            handle.other = default(AsyncOperationHandle);
+            handle.result = asyncOperationHandle;
+            _handles.Add(handle);
+            return handle;
+        }
+
+        /// <summary>
+        /// 加载多资源
+        /// </summary>
+        /// <param name="paths"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public override IMultiUnityAssetHandle LoadUnityAssetsByPaths<T>(IEnumerable<string> paths)
+        {
+            return LoadUnityAssetsByPaths(paths, typeof(T));
+        }
+
         /// <summary>
         /// 加载多资源
         /// </summary>
@@ -270,34 +315,6 @@ namespace Easy.AA
         public override IMultiUnityAssetHandle LoadUnityAssetsByKey<T>(string key)
         {
             return LoadUnityAssetsByKey(key,typeof(T));
-        }
-
-        /// <summary>
-        /// 加载多资源
-        /// </summary>
-        /// <param name="paths"></param>
-        /// <param name="type"></param>
-        /// <returns></returns>        
-        public override IMultiUnityAssetHandle LoadUnityAssetsByPath(IEnumerable<string> paths, Type type)
-        {
-            MultiUnityAssetHandle handle = GetHandleFromCache<MultiUnityAssetHandle>();
-            handle.paths = paths.ToList();
-            AsyncOperationHandle<IList<UnityEngine.Object>> asyncOperationHandle = Addressables.LoadAssetsAsync<UnityEngine.Object>(paths, null);
-            handle.other = default(AsyncOperationHandle);
-            handle.result = asyncOperationHandle;
-            _handles.Add(handle);
-            return handle;
-        }
-
-        /// <summary>
-        /// 加载多资源
-        /// </summary>
-        /// <param name="paths"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public override IMultiUnityAssetHandle LoadUnityAssetsByPath<T>(IEnumerable<string> paths)
-        {
-            return LoadUnityAssetsByPath(paths, typeof(T));
         }
 
         public override ISingleRawAssetHandle LoadRawAsset(string path)
@@ -379,8 +396,6 @@ namespace Easy.AA
         {
             return false;
         }
-
-
     }
 
 }

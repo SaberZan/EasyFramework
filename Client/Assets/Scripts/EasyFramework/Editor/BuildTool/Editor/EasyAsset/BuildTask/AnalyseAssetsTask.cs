@@ -104,7 +104,7 @@ namespace Easy.EasyAsset
             {
                 EasyAssetConfigInfo abAssetConfigInfo = new EasyAssetConfigInfo() 
                 {
-                    key = _keyToAsset.GetKey(assetPath),
+                    keys = _keyToAsset.GetKeys(assetPath),
                     asset = assetPath, 
                     type = GetAssetType(assetPath),
                     changeTag = File.GetLastWriteTimeUtc(assetPath).Ticks

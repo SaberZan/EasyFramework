@@ -25,13 +25,14 @@ public class KeyToAsset : ScriptableObject
     public List<ExtraData> Data = new List<ExtraData>();
 
 
-    public String GetKey(string path)
+    public List<String> GetKeys(string path)
     {
+        List<String> keys = new List<string>();
         foreach (var item in Data)
         {
             if (AssetDatabase.GetAssetPath(item.Object) == path)
             {
-                return item.Name;
+                keys.Add(item.Name);
             }
         }
 
@@ -39,13 +40,13 @@ public class KeyToAsset : ScriptableObject
         foreach (var item in Data)
         {
             var assetPath = AssetDatabase.GetAssetPath(item.Object);
-            if (AssetDatabase.IsValidFolder(assetPath) && assetPath == path)
+            if (AssetDatabase.IsValidFolder(assetPath) && assetPath == dirPath)
             {
-                return item.Name;
+                keys.Add(item.Name);
             }
         }
 
-        return null;
+        return keys;
     }
 
 }

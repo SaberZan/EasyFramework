@@ -32,7 +32,7 @@ namespace Easy.EasyAsset
                 EasyAssetConfigInfo easyAssetConfigInfo = kv.Value;
 
                 EasyAssetInfo easyAssetInfo = new EasyAssetInfo();
-                easyAssetInfo.key = easyAssetConfigInfo.key;
+                easyAssetInfo.keys = new List<string>(easyAssetConfigInfo.keys);
                 easyAssetInfo.asset = easyAssetConfigInfo.asset;
                 easyAssetInfo.abIndex  = abNames.IndexOf(easyAssetConfigInfo.abName);
                 easyAssetInfo.needABIndexes = new List<int>() { easyAssetInfo.abIndex };

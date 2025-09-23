@@ -22,17 +22,21 @@ namespace Easy
         
         public abstract void UnloadUnusedAssets();
         
-        public abstract ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAsset(string path, Type type);
+        public abstract ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByPath(string path, Type type);
 
-        public abstract ISingleUnityAssetHandle<T> LoadUnityAsset<T>(string path) where T : UnityEngine.Object;
+        public abstract ISingleUnityAssetHandle<T> LoadUnityAssetByPath<T>(string path) where T : UnityEngine.Object;
         
+        public abstract ISingleUnityAssetHandle<UnityEngine.Object> LoadUnityAssetByKey(string key, Type type);
+
+        public abstract ISingleUnityAssetHandle<T> LoadUnityAssetByKey<T>(string key) where T : UnityEngine.Object;
+
+        public abstract IMultiUnityAssetHandle LoadUnityAssetsByPaths(IEnumerable<string> paths, Type type);
+
+        public abstract IMultiUnityAssetHandle LoadUnityAssetsByPaths<T>(IEnumerable<string> paths) where T : UnityEngine.Object;
+
         public abstract IMultiUnityAssetHandle LoadUnityAssetsByKey(string key, Type type);
 
         public abstract IMultiUnityAssetHandle LoadUnityAssetsByKey<T>(string key) where T : UnityEngine.Object;
-
-        public abstract IMultiUnityAssetHandle LoadUnityAssetsByPath(IEnumerable<string> paths, Type type);
-
-        public abstract IMultiUnityAssetHandle LoadUnityAssetsByPath<T>(IEnumerable<string> paths) where T : UnityEngine.Object;
 
         public abstract ISingleRawAssetHandle LoadRawAsset(string path);
 
