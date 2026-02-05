@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Easy;
 
@@ -6,7 +7,7 @@ using Easy;
 public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
 {
 
-    private Queue<EasyTask<object>> _taskQueue = new Queue<EasyTask<object>>();
+    private Queue<Func<EasyTask<object>>> _taskQueue = new Queue<Func<EasyTask<object>>>();
 
     private int pause = 0;
 
@@ -60,7 +61,7 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
             if (_taskQueue.Count > 0)
             {
                 var task = _taskQueue.Dequeue();
-                await task;
+                await task().SetCancellationToken(token);
             }
             else
             {
@@ -74,9 +75,8 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
         }
     }
 
-    public void AddTask(EasyTask<object> task)
+    public void AddTask(Func<EasyTask<object>> task)
     {
-        task.SetCancellationToken(easyCancellationToken);
         _taskQueue.Enqueue(task);
     }
 

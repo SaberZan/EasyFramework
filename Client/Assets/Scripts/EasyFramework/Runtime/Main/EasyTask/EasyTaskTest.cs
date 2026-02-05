@@ -23,10 +23,9 @@ public class EasyTaskTest : MonoBehaviour
     {
         EasyTaskRunner.Log += Debug.LogError;
 
-        EasyTaskRunner.StartThreadTiming();
+        // EasyTaskRunner.StartThreadTiming();
 
-        EasyTaskExecQueueMgr.Instance.AddTask(RunTest1());
-        EasyTaskExecQueueMgr.Instance.AddTask(RunTest4());
+
 
     }
 
@@ -34,10 +33,13 @@ public class EasyTaskTest : MonoBehaviour
     public void Test()
     {
         token = new EasyCancellationToken();
-        EasyTaskRunner.ExecInThread(() =>
-        {
-            RunTest3();
-        });
+        // EasyTaskRunner.ExecInThread(() =>
+        // {
+        //     RunTest3();
+        // });
+
+        EasyTaskExecQueueMgr.Instance.AddTask(RunTest1);
+        EasyTaskExecQueueMgr.Instance.AddTask(RunTest4);
     }
 
     // [Sirenix.OdinInspector.Button]
@@ -53,6 +55,7 @@ public class EasyTaskTest : MonoBehaviour
     public void Cancel()
     {
         token?.Cancel();
+        UnityEngine.Debug.Log("Cancel");
     }
 
     public void Update()
@@ -74,12 +77,12 @@ public class EasyTaskTest : MonoBehaviour
         UnityEngine.Debug.Log("RunDelay1");
         await EasyDelayTask.Create().SetDelayTime(2000).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay2");
-        var task = EasyTaskRunner.WaitAny(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
+        var task = EasyTaskRunner.WaitAny(new[] { EasyDelayTask.Create().SetDelayTime(5000).SetCancellationToken(token), EasyDelayTask.Create().SetDelayTime(6000).SetCancellationToken(token) });
         task.Retain();
         await task;
         await task;
         UnityEngine.Debug.Log("RunDelay3 " + task.GetResult());
-        await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(1000) });
+        await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(6000) });
         UnityEngine.Debug.Log("RunDelay4 " + task.GetResult());
         task.Release();
         RunTest2();

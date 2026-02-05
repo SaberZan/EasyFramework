@@ -46,7 +46,7 @@ namespace Easy
             set
             {
                 easyTaskState = value;
-                if (easyTaskState == EasyTaskState.Completed)
+                if (IsCompleted)
                 {
                     callback?.Invoke();
                 }
