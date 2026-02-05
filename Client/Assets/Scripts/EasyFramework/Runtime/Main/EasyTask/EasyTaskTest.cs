@@ -25,6 +25,9 @@ public class EasyTaskTest : MonoBehaviour
 
         EasyTaskRunner.StartThreadTiming();
 
+        EasyTaskExecQueueMgr.Instance.AddTask(RunTest1());
+        EasyTaskExecQueueMgr.Instance.AddTask(RunTest4());
+
     }
 
     // [Sirenix.OdinInspector.Button]
