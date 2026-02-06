@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Easy;
 
 [PreInit]
@@ -27,7 +28,7 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
     public async void Start()
     {
         easyCancellationToken = new EasyCancellationToken();
-        await Exec(easyCancellationToken);
+        await Exec(easyCancellationToken).SetTag("ExecQueue");
     }
 
     public void Exit()

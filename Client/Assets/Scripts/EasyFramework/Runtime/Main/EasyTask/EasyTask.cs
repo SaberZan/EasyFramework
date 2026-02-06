@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -35,6 +36,7 @@ namespace Easy
             return t;
         }
 
+        private string tag;
         private EasyTaskState easyTaskState;
 
         public EasyTaskState EasyTaskState
@@ -49,6 +51,11 @@ namespace Easy
                 if (IsCompleted)
                 {
                     callback?.Invoke();
+                    if (!released)
+                    {
+                        released = true;
+                        Release();
+                    }
                 }
             }
         }
@@ -61,7 +68,7 @@ namespace Easy
         protected Timing timing = Timing.Main;
         protected int reference = 0;
         protected bool isInPool = false; 
-        protected bool getResultCalled = false;
+        protected bool released = false;
 
         protected EasyTask()
         {
@@ -73,7 +80,8 @@ namespace Easy
             this.timing = CheckTiming(timing);
             this.autoRecycle = autoRecycle;
             isInPool = false;
-            getResultCalled = false;
+            released = false;
+            tag = "";
             EasyTaskRunner.AddTask(this);
             Retain();
         }
@@ -85,7 +93,7 @@ namespace Easy
                 return;
             }
             isInPool = true;
-            getResultCalled = false;
+            released = false;
             autoRecycle = false;
             this.callback = null;
             result = default;
@@ -94,12 +102,12 @@ namespace Easy
             queue.Enqueue(this);
         }
 
-        public void Retain()
+        public virtual void Retain()
         {
             Interlocked.Increment(ref reference);
         }
 
-        public void Release()
+        public virtual void Release()
         {
             Interlocked.Decrement(ref reference);
         }
@@ -122,11 +130,6 @@ namespace Easy
             if (isInPool)
             {
                 throw new EasyTaskPoolException();
-            }
-            if (!getResultCalled)
-            {
-                getResultCalled = true;
-                Release();
             }
             T tmp = result;
             return tmp;
@@ -154,6 +157,12 @@ namespace Easy
         public EasyTask<T> SetCancellationToken(EasyCancellationToken cancellationToken)
         {
             this.cancellationToken = cancellationToken;
+            return this;
+        }
+
+        public EasyTask<T> SetTag(string tag)
+        {
+            this.tag = tag;
             return this;
         }
 
@@ -507,23 +516,13 @@ namespace Easy
             return this;
         }
 
-        public override object GetResult()
+        public override void Release()
         {
-            if (isInPool)
+            base.Release();
+            for (int i = 0; i < easyTasks.Length; i++)
             {
-                throw new EasyTaskPoolException();
+                easyTasks[i].Release();
             }
-            if (!getResultCalled)
-            {
-                getResultCalled = true;
-                Release();
-                for (int i = 0; i < easyTasks.Length; i++)
-                {
-                    easyTasks[i].Release();
-                }
-            }
-            object tmp = result;
-            return tmp;
         }
 
         public override void MoveNext()
@@ -602,23 +601,13 @@ namespace Easy
             return this;
         }
 
-        public override int GetResult()
+        public override void Release()
         {
-            if (isInPool)
+            base.Release();
+            for (int i = 0; i < easyTasks.Length; i++)
             {
-                throw new EasyTaskPoolException();
+                easyTasks[i].Release();
             }
-            if (!getResultCalled)
-            {
-                getResultCalled = true;
-                Release();
-                for (int i = 0; i < easyTasks.Length; i++)
-                {
-                    easyTasks[i].Release();
-                }
-            }
-            int tmp = result;
-            return tmp;
         }
 
         public override void MoveNext()

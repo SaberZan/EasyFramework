@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using UnityEngine;
 
 namespace Easy
 {
@@ -74,8 +75,8 @@ namespace Easy
         public static Thread thread;
         private static ConcurrentQueue<(Action, EasyCancellationToken)> threadAction = new ConcurrentQueue<(Action, EasyCancellationToken)>();
         private static Dictionary<Timing, List<IEasyTaskInterface>> easyTasks = new Dictionary<Timing, List<IEasyTaskInterface>>();
+        private static Dictionary<Timing, int> easyTasksCountRecord = new Dictionary<Timing, int>();
         private static ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>> easyTasksAddTmp = new ConcurrentDictionary<Timing, ConcurrentBag<IEasyTaskInterface>>();
-
         public static void AddTask(IEasyTaskInterface task)
         {
             while (true)
@@ -225,6 +226,7 @@ namespace Easy
             easyTasks[timing].AddRange(addTmp);
             addTmp.Clear();
 
+
             var timingEasyTasks = easyTasks[timing];
             for (int i = timingEasyTasks.Count - 1; i >= 0; --i)
             {
@@ -244,6 +246,18 @@ namespace Easy
                     continue;
                 }
                 task.MoveNext();
+            }
+
+            int preTaskCount = 0;
+            if (!easyTasksCountRecord.TryGetValue(timing, out preTaskCount))
+            {
+                easyTasksCountRecord.TryAdd(timing, preTaskCount);
+            }
+            int nowCount = timingEasyTasks.Count;
+            if (preTaskCount != nowCount)
+            {
+                easyTasksCountRecord[timing] = nowCount;
+                Debug.Log($"{timing}  timingEasyTasks count  {nowCount}");
             }
         }
     }

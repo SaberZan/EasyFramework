@@ -77,7 +77,7 @@ public class EasyTaskTest : MonoBehaviour
         UnityEngine.Debug.Log("RunDelay1");
         await EasyDelayTask.Create().SetDelayTime(2000).SetCancellationToken(token);
         UnityEngine.Debug.Log("RunDelay2");
-        var task = EasyTaskRunner.WaitAny(new[] { EasyDelayTask.Create().SetDelayTime(5000).SetCancellationToken(token), EasyDelayTask.Create().SetDelayTime(6000).SetCancellationToken(token) });
+        var task = EasyTaskRunner.WaitAny(new[] { EasyDelayTask.Create().SetDelayTime(5000).SetCancellationToken(token), EasyDelayTask.Create().SetDelayTime(6000) });
         task.Retain();
         await task;
         await task;
@@ -85,7 +85,7 @@ public class EasyTaskTest : MonoBehaviour
         await EasyTaskRunner.WaitAll(new[] { EasyDelayTask.Create().SetDelayTime(5000), EasyDelayTask.Create().SetDelayTime(6000) });
         UnityEngine.Debug.Log("RunDelay4 " + task.GetResult());
         task.Release();
-        RunTest2();
+        // RunTest2();
     }
 
     public async void RunTest2()
