@@ -8,6 +8,27 @@ using System.Threading;
 
 namespace Easy
 {
+
+    [AsyncMethodBuilder(typeof(EasyAsyncVoidMethodBuider))]
+    public struct EasyVoidTask : ICriticalNotifyCompletion
+    {
+        public void Trigger()
+        {
+
+        }
+
+        public void OnCompleted(Action continuation)
+        {
+
+        }
+
+        public void UnsafeOnCompleted(Action continuation)
+        {
+            
+        }
+    }
+
+
     [AsyncMethodBuilder(typeof(EasyAsyncGenericTaskMethodBuider<>))]
     public class EasyTask<T> : IEasyTaskInterface, ICriticalNotifyCompletion
     {
@@ -51,6 +72,7 @@ namespace Easy
                 if (IsCompleted)
                 {
                     callback?.Invoke();
+                    callback = null;
                     if (!released)
                     {
                         released = true;
@@ -69,6 +91,7 @@ namespace Easy
         protected int reference = 0;
         protected bool isInPool = false; 
         protected bool released = false;
+        protected bool isStarted = false;
 
         protected EasyTask()
         {
@@ -81,8 +104,8 @@ namespace Easy
             this.autoRecycle = autoRecycle;
             isInPool = false;
             released = false;
+            isStarted = false;
             tag = "";
-            EasyTaskRunner.AddTask(this);
             Retain();
         }
 
@@ -94,6 +117,7 @@ namespace Easy
             }
             isInPool = true;
             released = false;
+            isStarted = false;
             autoRecycle = false;
             this.callback = null;
             result = default;
@@ -186,34 +210,49 @@ namespace Easy
             return timing;
         }
 
+        public virtual void Trigger()
+        {
+            if (isStarted)
+            {
+                return;
+            }
+            isStarted = true;
+            EasyTaskRunner.AddTask(this);
+        }
+
+        public virtual bool IsStarted()
+        {
+            return isStarted;
+        }
+
         public virtual void MoveNext()
         {
 
         }
     }
 
-    [AsyncMethodBuilder(typeof(EasyAsyncGenericTaskMethodBuider))]
-    public class EasyVoidTask : EasyTask<object>
+    [AsyncMethodBuilder(typeof(EasyAsyncEmptyTaskMethodBuider))]
+    public class EasyEmptyTask : EasyTask<object>
     {
-        protected new static readonly ConcurrentQueue<EasyVoidTask> queue = new ConcurrentQueue<EasyVoidTask>();
-        public new static EasyVoidTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
+        protected new static readonly ConcurrentQueue<EasyEmptyTask> queue = new ConcurrentQueue<EasyEmptyTask>();
+        public new static EasyEmptyTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
         {
-            EasyVoidTask t;
+            EasyEmptyTask t;
             if (!queue.TryDequeue(out t))
             {
-                t = new EasyVoidTask();
+                t = new EasyEmptyTask();
             }
             t.Reuse(timing, autoRecycle);
             return t;
         }
 
-        protected EasyVoidTask()
+        protected EasyEmptyTask()
         {
 
         }
     }
 
-    public class EasyYieldTask : EasyVoidTask
+    public class EasyYieldTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyYieldTask> queue = new ConcurrentQueue<EasyYieldTask>();
         public new static EasyYieldTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -238,7 +277,7 @@ namespace Easy
         }
     }
 
-    public class EasyExecFunTask : EasyVoidTask
+    public class EasyExecFunTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyExecFunTask> queue = new ConcurrentQueue<EasyExecFunTask>();
         public new static EasyExecFunTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -338,7 +377,7 @@ namespace Easy
         }
     }
 
-    public class EasyRunTask : EasyVoidTask
+    public class EasyRunTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyRunTask> queue = new ConcurrentQueue<EasyRunTask>();
         public new static EasyRunTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -390,7 +429,7 @@ namespace Easy
         }
     }
 
-    public class EasyDelayTask : EasyVoidTask
+    public class EasyDelayTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyDelayTask> queue = new ConcurrentQueue<EasyDelayTask>();
         public new static EasyDelayTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -404,6 +443,7 @@ namespace Easy
             return t;
         }
 
+        private long intervalTime;
         private long overTime;
 
         protected EasyDelayTask()
@@ -413,7 +453,8 @@ namespace Easy
 
         public EasyDelayTask SetDelayTime(int milli)
         {
-            overTime = DateTime.UtcNow.Ticks + TimeSpan.TicksPerMillisecond * milli;
+            overTime = -1;
+            intervalTime = TimeSpan.TicksPerMillisecond * milli;
             return this;
         }
         public override void MoveNext()
@@ -422,6 +463,10 @@ namespace Easy
             {
                 return;
             }
+            if (overTime == -1)
+            {
+                overTime = DateTime.UtcNow.Ticks + intervalTime;
+            }
             if (DateTime.UtcNow.Ticks >= overTime)
             {
                 SetResult(null);
@@ -429,7 +474,7 @@ namespace Easy
         }
     }
 
-    public class EasyWaitUntilTask : EasyVoidTask
+    public class EasyWaitUntilTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyWaitUntilTask> queue = new ConcurrentQueue<EasyWaitUntilTask>();
         public new static EasyWaitUntilTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -479,7 +524,7 @@ namespace Easy
         }
     }
 
-    public class EasyWailAllTask : EasyVoidTask
+    public class EasyWailAllTask : EasyEmptyTask
     {
         protected new static readonly ConcurrentQueue<EasyWailAllTask> queue = new ConcurrentQueue<EasyWailAllTask>();
         public new static EasyWailAllTask Create(bool autoRecycle = false, Timing timing = Timing.Auto)
@@ -512,6 +557,7 @@ namespace Easy
             for (int i = 0; i < easyTasks.Length; i++)
             {
                 easyTasks[i].Retain();
+                easyTasks[i].Trigger();
             }
             return this;
         }
@@ -597,6 +643,7 @@ namespace Easy
             for (int i = 0; i < easyTasks.Length; i++)
             {
                 easyTasks[i].Retain();
+                easyTasks[i].Trigger();
             }
             return this;
         }

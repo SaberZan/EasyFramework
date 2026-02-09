@@ -25,10 +25,10 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
         complete?.Invoke(true);
     }
 
-    public async void Start()
+    public void Start()
     {
         easyCancellationToken = new EasyCancellationToken();
-        await Exec(easyCancellationToken).SetTag("ExecQueue");
+        Exec(easyCancellationToken).Trigger();
     }
 
     public void Exit()
@@ -62,7 +62,7 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
             if (_taskQueue.Count > 0)
             {
                 var task = _taskQueue.Dequeue();
-                await task().SetCancellationToken(token);
+                await WaitComplete(task).SetCancellationToken(token);
             }
             else
             {
@@ -74,6 +74,11 @@ public class EasyTaskExecQueueMgr : Singleton<EasyTaskExecQueueMgr>
                 break;
             }
         }
+    }
+
+    public async EasyEmptyTask WaitComplete(Func<EasyTask<object>> taskFunc)
+    {
+        await taskFunc();
     }
 
     public void AddTask(Func<EasyTask<object>> task)

@@ -4,15 +4,64 @@ using System.Threading;
 
 namespace Easy
 {
-    public struct EasyAsyncGenericTaskMethodBuider
+
+    public struct EasyAsyncVoidMethodBuider
     {
-        private EasyVoidTask easyTask;
+        public EasyVoidTask Task => default;
 
-        public EasyVoidTask Task => easyTask;
-
-        public static EasyAsyncGenericTaskMethodBuider Create()
+        public static EasyAsyncVoidMethodBuider Create()
         {
-            EasyAsyncGenericTaskMethodBuider builder = new EasyAsyncGenericTaskMethodBuider() { easyTask = (EasyVoidTask)EasyVoidTask.Create(true) };
+            EasyAsyncVoidMethodBuider builder = new EasyAsyncVoidMethodBuider() { };
+            return builder;
+        }
+
+        public void SetException(Exception exception)
+        {
+ 
+        }
+
+        public void SetResult()
+        {
+   
+        }
+
+        public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            if (awaiter is IEasyTaskInterface task)
+            {
+                task.Trigger();
+            }
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
+
+        public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
+        {
+            if (awaiter is IEasyTaskInterface task)
+            {
+                task.Trigger();
+            }
+            awaiter.OnCompleted(stateMachine.MoveNext);
+        }
+
+        public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+        {
+            stateMachine.MoveNext();
+        }
+
+        public void SetStateMachine(IAsyncStateMachine stateMachine)
+        {
+        }
+    }
+
+    public struct EasyAsyncEmptyTaskMethodBuider
+    {
+        private EasyEmptyTask easyTask;
+
+        public EasyEmptyTask Task => easyTask;
+
+        public static EasyAsyncEmptyTaskMethodBuider Create()
+        {
+            EasyAsyncEmptyTaskMethodBuider builder = new EasyAsyncEmptyTaskMethodBuider() { easyTask = (EasyEmptyTask)EasyEmptyTask.Create(true) };
             return builder;
         }
 
@@ -28,17 +77,53 @@ namespace Easy
 
         public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
         {
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.SetException(new EasyCancelException());
+                }
+            }
+            else
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.Trigger();
+                }
+            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
         public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
         {
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.SetException(new EasyCancelException());
+                }
+            }
+            else
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.Trigger();
+                }
+            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
         public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
         {
-            stateMachine.MoveNext();
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+
+            }
+            else
+            {
+                Task.Trigger();
+                stateMachine.MoveNext();
+            }
         }
 
         public void SetStateMachine(IAsyncStateMachine stateMachine)
@@ -70,17 +155,53 @@ namespace Easy
 
         public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
         {
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.SetException(new EasyCancelException());
+                }
+            }
+            else
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.Trigger();
+                }
+            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
         public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
         {
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.SetException(new EasyCancelException());
+                }
+            }
+            else
+            {
+                if (awaiter is IEasyTaskInterface task)
+                {
+                    task.Trigger();
+                }
+            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
         public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
         {
-            stateMachine.MoveNext();
+            if (Task.EasyCancellationToken?.IsCanceled == true)
+            {
+
+            }
+            else
+            {
+                Task.Trigger();
+                stateMachine.MoveNext();
+            }
         }
 
         public void SetStateMachine(IAsyncStateMachine stateMachine)

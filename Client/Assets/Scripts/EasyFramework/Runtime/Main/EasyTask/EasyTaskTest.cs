@@ -7,6 +7,10 @@ public class EasyTaskTest : MonoBehaviour
 {
     private EasyCancellationToken token;
 
+    private CancellationTokenSource cancellationTokenSource;
+
+    private CancellationTokenSource cancellationTokenSource1;
+
     [EditorButton("Test")]
     public int a = 0;
 
@@ -40,6 +44,12 @@ public class EasyTaskTest : MonoBehaviour
 
         EasyTaskExecQueueMgr.Instance.AddTask(RunTest1);
         EasyTaskExecQueueMgr.Instance.AddTask(RunTest4);
+
+        // RunTest().Trigger();
+
+        // cancellationTokenSource = new CancellationTokenSource();
+        // cancellationTokenSource1 = new CancellationTokenSource();
+        // RunTest5();
     }
 
     // [Sirenix.OdinInspector.Button]
@@ -55,6 +65,15 @@ public class EasyTaskTest : MonoBehaviour
     public void Cancel()
     {
         token?.Cancel();
+
+        if (!cancellationTokenSource.IsCancellationRequested)
+        {
+            cancellationTokenSource.Cancel();
+        }
+        else if (!cancellationTokenSource1.IsCancellationRequested)
+        {
+            cancellationTokenSource1.Cancel();
+        }
         UnityEngine.Debug.Log("Cancel");
     }
 
@@ -63,13 +82,25 @@ public class EasyTaskTest : MonoBehaviour
         EasyTaskRunner.Tick(Timing.Main);
     }
 
-    public async void RunTest()
+    public async EasyVoidTask RunTest()
     {
-        await RunTest1();
-        UnityEngine.Debug.Log("RunTest");
+        var task1 = EasyDelayTask.Create().SetDelayTime(1000).SetCancellationToken(token);
+        var task2 = EasyDelayTask.Create().SetDelayTime(1000).SetCancellationToken(token);
+        var task3 = EasyDelayTask.Create().SetDelayTime(1000).SetCancellationToken(token);
+        var task4 = EasyDelayTask.Create().SetDelayTime(1000).SetCancellationToken(token);
+
+        await task1;
+        UnityEngine.Debug.Log("task1");
+        await task2;
+        UnityEngine.Debug.Log("task2");
+        await task3;
+        UnityEngine.Debug.Log("task3");
+        await task4;
+        UnityEngine.Debug.Log("task4");
+
     }
 
-    public async EasyVoidTask RunTest1()
+    public async EasyEmptyTask RunTest1()
     {
         await EasyYieldTask.Create().SetCancellationToken(token);
         UnityEngine.Debug.Log("RunYeild");
@@ -116,7 +147,7 @@ public class EasyTaskTest : MonoBehaviour
         UnityEngine.Debug.Log("RunTest3_4 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }
 
-    public async EasyVoidTask RunTest4()
+    public async EasyEmptyTask RunTest4()
     {
         UnityEngine.Debug.Log("RunTest4_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
         await EasyTaskRunner.Delay(1000, token);
@@ -135,8 +166,13 @@ public class EasyTaskTest : MonoBehaviour
     public async Task RunTest6()
     {
         UnityEngine.Debug.Log("RunTest6_1 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
-        await Task.Delay(1000);
+        var task1 = Task.Delay(1000, cancellationTokenSource.Token);
+        var task2 = Task.Delay(10000, cancellationTokenSource1.Token);
+
+        await task1;
         UnityEngine.Debug.Log("RunTest6_2 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
+        await task2;
+        
         await Task.Yield();
         UnityEngine.Debug.Log("RunTest6_3 ThreadId == " + Thread.CurrentThread.ManagedThreadId);
     }

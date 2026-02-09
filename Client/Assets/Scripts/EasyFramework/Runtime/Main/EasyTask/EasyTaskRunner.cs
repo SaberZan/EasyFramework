@@ -41,6 +41,8 @@ namespace Easy
         public void Retain();
         public void Release();
         public bool IsFree();
+        public void Trigger();
+        public bool IsStarted();
     }
 
     public class EasyCancelException : Exception
@@ -164,7 +166,7 @@ namespace Easy
             return (EasyYieldTask)EasyYieldTask.Create(true).SetCancellationToken(cancellationToken);
         }
 
-        public static EasyVoidTask Delay(int milli, EasyCancellationToken cancellationToken = null)
+        public static EasyEmptyTask Delay(int milli, EasyCancellationToken cancellationToken = null)
         {
             return (EasyDelayTask)EasyDelayTask.Create(true).SetDelayTime(milli).SetCancellationToken(cancellationToken);
         }
@@ -245,7 +247,10 @@ namespace Easy
                     task.SetException(new EasyCancelException());
                     continue;
                 }
-                task.MoveNext();
+                if (task.IsStarted())
+                {
+                    task.MoveNext();
+                }
             }
 
             int preTaskCount = 0;
