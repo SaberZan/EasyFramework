@@ -26,7 +26,8 @@ namespace Easy
         ABOVE_DIALOG,
         TOP_LAYER,
         TOAST,
-        TUTORIAL
+        TUTORIAL,
+        TOUCH_MASK,
     }
     public enum DialogType
     {
@@ -57,6 +58,8 @@ namespace Easy
         private GameObject _dialogLayerRootNode;
         private GameObject _tutorialRooNode;
         private GameObject _toastRootNode;
+
+        private GameObject _touchMaskNode;
 
         private CanvasScaler _staticCanvasScaler;
         private CanvasScaler _dynamicCanvasScaler;
@@ -167,6 +170,7 @@ namespace Easy
                 case LayerType.TOP_LAYER: return this._topLayerRootNode;
                 case LayerType.TOAST: return this._toastRootNode;
                 case LayerType.TUTORIAL: return this._tutorialRooNode;
+                case LayerType.TOUCH_MASK: return this._touchMaskNode;
                 default: return null;
             }
         }
@@ -216,6 +220,15 @@ namespace Easy
             _toastRootNode = new GameObject("Toast");
             _toastRootNode.transform.SetParent(this._dynamicCanvasNode.transform, false);
             AddFullScreenRectTransform(_toastRootNode, true);
+
+            //触摸遮罩 放在动态Canvas上
+            _touchMaskNode = new GameObject("TouchMask");
+            _touchMaskNode.transform.SetParent(this._dynamicCanvasNode.transform, false);
+            AddFullScreenRectTransform(_touchMaskNode, true);
+            _touchMaskNode.AddComponent<CanvasGroup>().blocksRaycasts = true;
+            var img = _touchMaskNode.AddComponent<Image>();
+            img.raycastTarget = false;
+            img.color = new Color(0, 0, 0, 0);
         }
 
         /// <summary>
@@ -223,14 +236,16 @@ namespace Easy
         /// </summary>
         public void StopTouches()
         {
-            if (_eventSystem != null) _eventSystem.gameObject.SetActive(false);
+            // if (_eventSystem != null) _eventSystem.gameObject.SetActive(false);
+            _touchMaskNode.GetComponent<Image>().raycastTarget = true;
         }
         /// <summary>
         /// 恢复触摸
         /// </summary>
         public void ResumeTouches()
         {
-            if (_eventSystem != null) _eventSystem.gameObject.SetActive(true);
+            // if (_eventSystem != null) _eventSystem.gameObject.SetActive(true);
+            _touchMaskNode.GetComponent<Image>().raycastTarget = false;
         }
 
         /// <summary>

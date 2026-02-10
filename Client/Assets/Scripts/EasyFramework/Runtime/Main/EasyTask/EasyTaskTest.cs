@@ -66,14 +66,14 @@ public class EasyTaskTest : MonoBehaviour
     {
         token?.Cancel();
 
-        if (!cancellationTokenSource.IsCancellationRequested)
-        {
-            cancellationTokenSource.Cancel();
-        }
-        else if (!cancellationTokenSource1.IsCancellationRequested)
-        {
-            cancellationTokenSource1.Cancel();
-        }
+        // if (!cancellationTokenSource.IsCancellationRequested)
+        // {
+        //     cancellationTokenSource.Cancel();
+        // }
+        // else if (!cancellationTokenSource1.IsCancellationRequested)
+        // {
+        //     cancellationTokenSource1.Cancel();
+        // }
         UnityEngine.Debug.Log("Cancel");
     }
 

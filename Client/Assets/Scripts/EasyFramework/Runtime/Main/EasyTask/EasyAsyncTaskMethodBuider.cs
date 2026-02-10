@@ -27,19 +27,11 @@ namespace Easy
 
         public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : INotifyCompletion where TStateMachine : IAsyncStateMachine
         {
-            if (awaiter is IEasyTaskInterface task)
-            {
-                task.Trigger();
-            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
         public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine) where TAwaiter : ICriticalNotifyCompletion where TStateMachine : IAsyncStateMachine
         {
-            if (awaiter is IEasyTaskInterface task)
-            {
-                task.Trigger();
-            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
@@ -84,13 +76,6 @@ namespace Easy
                     task.SetException(new EasyCancelException());
                 }
             }
-            else
-            {
-                if (awaiter is IEasyTaskInterface task)
-                {
-                    task.Trigger();
-                }
-            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
@@ -101,13 +86,6 @@ namespace Easy
                 if (awaiter is IEasyTaskInterface task)
                 {
                     task.SetException(new EasyCancelException());
-                }
-            }
-            else
-            {
-                if (awaiter is IEasyTaskInterface task)
-                {
-                    task.Trigger();
                 }
             }
             awaiter.OnCompleted(stateMachine.MoveNext);
@@ -121,7 +99,6 @@ namespace Easy
             }
             else
             {
-                Task.Trigger();
                 stateMachine.MoveNext();
             }
         }
@@ -162,13 +139,6 @@ namespace Easy
                     task.SetException(new EasyCancelException());
                 }
             }
-            else
-            {
-                if (awaiter is IEasyTaskInterface task)
-                {
-                    task.Trigger();
-                }
-            }
             awaiter.OnCompleted(stateMachine.MoveNext);
         }
 
@@ -179,13 +149,6 @@ namespace Easy
                 if (awaiter is IEasyTaskInterface task)
                 {
                     task.SetException(new EasyCancelException());
-                }
-            }
-            else
-            {
-                if (awaiter is IEasyTaskInterface task)
-                {
-                    task.Trigger();
                 }
             }
             awaiter.OnCompleted(stateMachine.MoveNext);
@@ -199,7 +162,6 @@ namespace Easy
             }
             else
             {
-                Task.Trigger();
                 stateMachine.MoveNext();
             }
         }

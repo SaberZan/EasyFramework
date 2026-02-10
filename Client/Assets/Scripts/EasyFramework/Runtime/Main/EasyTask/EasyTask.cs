@@ -202,6 +202,7 @@ namespace Easy
                 continuation?.Invoke();
                 return;
             }
+            Trigger();
             callback = continuation;
         }
 
