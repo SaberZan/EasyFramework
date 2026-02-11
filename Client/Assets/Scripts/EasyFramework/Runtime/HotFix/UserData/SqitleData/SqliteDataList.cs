@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Easy
 {
@@ -11,6 +12,11 @@ namespace Easy
         public void InitComplete()
         {
             initComplete = true;
+        }
+
+        public virtual void SyncData()
+        {
+
         }
     }
 
@@ -48,8 +54,22 @@ namespace Easy
         {
             list.Clear();
         }
-        
-        public void SyncData()
+
+        public T GetFrist()
+        {
+            if (list.Count > 0)
+            {
+                return list[0];
+            }
+            return null;
+        }
+
+        public T GetData(Predicate<T> match)
+        {
+            return list.Find(match);
+        }
+
+        public override void SyncData()
         {
             for (int i = list.Count - 1; i >= 0; --i)
             {

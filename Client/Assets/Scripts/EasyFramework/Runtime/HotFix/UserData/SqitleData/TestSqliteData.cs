@@ -1,9 +1,11 @@
 using SQLite;
-
-public class TestSqliteData
+namespace Easy
 {
-    [PrimaryKey, AutoIncrement]
-    public int Id { get; set; }
+    public class TestSqliteData : SqliteData
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
 
-    public string Name { get; set; }
+        public string Name { get; set; }
+    }
 }

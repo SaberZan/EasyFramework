@@ -13,8 +13,24 @@
     /// </summary>
     public abstract class SqliteData
     {
+        public DataStage _dataStage = DataStage.Normal;
+
         [SQLite.Ignore]
-        public DataStage dataStage { set; get; } = DataStage.Normal;
+        public DataStage dataStage
+        {
+            set
+            {
+                _dataStage = value;
+                if (_dataStage != DataStage.Normal)
+                {
+                    SqliteMgr.Instance.TriggerSync();
+                }
+            }
+            get
+            {
+                return _dataStage;
+            }
+        }
     }
 
 }
