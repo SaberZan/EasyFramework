@@ -19,7 +19,7 @@
 
         public override void CopyValue(SaveData data)
         {
-            if(data is PrimaryData primaryData)
+            if (data is PrimaryData primaryData)
             {
                 version = primaryData.version;
                 deviceId = primaryData.deviceId;

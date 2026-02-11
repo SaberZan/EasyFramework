@@ -555,10 +555,13 @@ namespace Easy
         public EasyWailAllTask SetWaitTasks(params IEasyTaskInterface[] tasks)
         {
             easyTasks = tasks;
-            for (int i = 0; i < easyTasks.Length; i++)
+            if (easyTasks != null)
             {
-                easyTasks[i].Retain();
-                easyTasks[i].Trigger();
+                for (int i = 0; i < easyTasks.Length; i++)
+                {
+                    easyTasks[i].Retain();
+                    easyTasks[i].Trigger();
+                }
             }
             return this;
         }
@@ -566,9 +569,13 @@ namespace Easy
         public override void Release()
         {
             base.Release();
-            for (int i = 0; i < easyTasks.Length; i++)
+            if (easyTasks != null)
             {
-                easyTasks[i].Release();
+                for (int i = 0; i < easyTasks.Length; i++)
+                {
+                    easyTasks[i].Release();
+                }
+                easyTasks = null;
             }
         }
 
@@ -578,6 +585,12 @@ namespace Easy
             {
                 return;
             }
+            if (easyTasks == null)
+            {
+                SetResult(null);
+                return;
+            }
+
             int completedNum = 0;
             int faultedNum = 0;
             int cancelNum = 0;
@@ -641,10 +654,13 @@ namespace Easy
         public EasyWaitAnyTask SetWaitTasks(params IEasyTaskInterface[] tasks)
         {
             easyTasks = tasks;
-            for (int i = 0; i < easyTasks.Length; i++)
+            if (easyTasks != null)
             {
-                easyTasks[i].Retain();
-                easyTasks[i].Trigger();
+                for (int i = 0; i < easyTasks.Length; i++)
+                {
+                    easyTasks[i].Retain();
+                    easyTasks[i].Trigger();
+                }
             }
             return this;
         }
@@ -652,9 +668,13 @@ namespace Easy
         public override void Release()
         {
             base.Release();
-            for (int i = 0; i < easyTasks.Length; i++)
+            if (easyTasks != null)
             {
-                easyTasks[i].Release();
+                for (int i = 0; i < easyTasks.Length; i++)
+                {
+                    easyTasks[i].Release();
+                }
+                easyTasks = null;
             }
         }
 
@@ -662,6 +682,11 @@ namespace Easy
         {
             if (IsCompleted)
             {
+                return;
+            }
+            if (easyTasks == null)
+            {
+                SetResult(-1);
                 return;
             }
             int completedIndex = -1;
