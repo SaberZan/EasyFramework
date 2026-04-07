@@ -10,10 +10,17 @@ public class TestScene : MonoBehaviour
     private GameModules gameModules;
     void Start()
     {
+
+
         Easy.UIMgr.Instance.GetLayer<ToastUILayer>().Toast("???????777777!!!");
         
         gameModules = new GameModules();
         gameModules.Start();
+    }
+
+    public async void TestSqite()
+    {
+        var testData = await SqliteMgr.Instance.GetTable<TestSqliteData>();
     }
 
     // Update is called once per frame
