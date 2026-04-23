@@ -24,8 +24,8 @@ public delegate Sprite GetSprite(string spriteName);
 [RequireComponent(typeof(TextPro))]
 public class TextProQuad : MonoBehaviour
 {
-    public char tagStartChar = '[';
-    public char tagEndChar = ']';
+    public string tagStart = "<tag>";
+    public string tagEnd = "</tag>";
     public char tagSplitChar = ',';
     [Tooltip("Sprite scale by fontSze / baseFontSize.")]
     public int baseFontSize = 60;
@@ -58,6 +58,37 @@ public class TextProQuad : MonoBehaviour
         this.SetTextProText(this.TextPro.text);
     }
 
+    public bool IsMatchStart(string text, int index)
+    {
+        if(text.Length - index < tagStart.Length)
+        {
+            return false;
+        }
+        for (var i = 0; i < tagStart.Length; ++i)
+        {
+            if (text[index + i] != tagStart[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public bool IsMatchEnd(string text, int index)
+    {
+        if(text.Length - index < tagEnd.Length)
+        {
+            return false;
+        }
+        for (var i = 0; i < tagEnd.Length; ++i)
+        {
+            if (text[index + i] != tagEnd[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /// <summary>
     /// Replace tags in text and set new text to TextPro.
@@ -70,13 +101,11 @@ public class TextProQuad : MonoBehaviour
 
         for (var i = 0; i < len; ++i)
         {
-            var c = text[i];
-
-            if (c == tagStartChar)
+            if (IsMatchStart(text, i))
             {
                 pos = i;
             }
-            else if (c == tagEndChar)
+            else if (IsMatchEnd(text, i))
             {
                 var values = text.Substring(pos + 1, i - pos - 1).Split(this.tagSplitChar);
                 var vLen = values.Length;
