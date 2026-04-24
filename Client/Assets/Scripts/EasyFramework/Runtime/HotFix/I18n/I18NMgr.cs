@@ -122,6 +122,13 @@ namespace Easy
             }
             return content;
         }
+
+        public string GetShowSpritePath(string key)
+        {
+            string content = key;
+            content = content.Replace("\\n", "\n");
+            return content;
+        }
     }
 
 }

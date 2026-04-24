@@ -38,7 +38,7 @@ namespace Easy
         [BindEvent(EventName.Event_Change_Language)]
         private void ChangeSprite()
         {
-            string context = I18NMgr.Instance.GetShowContextString(key);
+            string context = I18NMgr.Instance.GetShowSpritePath(key);
             _handle = AssetsMgr.Instance.LoadAsset<Sprite>(context);
             ImageContext.sprite = _handle.GetResult() as Sprite;
             ImageContext.SetNativeSize();
