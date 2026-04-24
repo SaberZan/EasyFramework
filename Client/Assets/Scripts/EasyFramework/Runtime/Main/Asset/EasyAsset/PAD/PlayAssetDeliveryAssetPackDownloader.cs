@@ -32,14 +32,14 @@ namespace Easy.EasyAsset
         /// 超时时间（秒）
         public override void Start(int timeout = 10)
         {
-            StartDownload(timeout);
+            StartDownload(timeout).Trigger();
         }
 
         /// <summary>
         /// 线程开始下载
         /// </summary>
         /// <param name="timeout"></param>
-        public async void StartDownload(object timeout)
+        public async EasyVoidTask StartDownload(object timeout)
         {
             _request = PlayAssetDelivery.RetrieveAssetPackAsync(fileName, true);
             while(!_request.IsDone)
@@ -49,7 +49,7 @@ namespace Easy.EasyAsset
                     var asyncOperation = PlayAssetDelivery.ShowCellularDataConfirmation();
                     while(!asyncOperation.IsDone)
                     {
-                        await UniTask.Yield();
+                        await EasyTaskRunner.Yield();
                     }
 
                     if (asyncOperation.Error != AssetDeliveryErrorCode.NoError || asyncOperation.GetResult() != ConfirmationDialogResult.Accepted)
@@ -63,12 +63,12 @@ namespace Easy.EasyAsset
                     {
                         while (_request.Status == AssetDeliveryStatus.WaitingForWifi)
                         {
-                            await UniTask.Yield();
+                            await EasyTaskRunner.Yield();
                         }
                     }
                 }
                 currentSize = (long)(size * _request.DownloadProgress);
-                await UniTask.Yield();
+                await EasyTaskRunner.Yield();
             }
 
             if (_request.Error != AssetDeliveryErrorCode.NoError)
