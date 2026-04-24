@@ -11,9 +11,17 @@ namespace Easy
     {
         public SystemLanguage currentLanguage;
 
+        public override void BeforeRestart()
+        {
+
+        }
+
         public override void Init(InitCompleteCallback complete)
         {
-            //初始化仅支持英语
+            ProxyMgr.Instance.Get<I18NProxy>().Init(() =>
+            {
+                return GetLanguageCode(Application.systemLanguage);
+            });
             currentLanguage = GetLanguageByCode(ProxyMgr.Instance.Get<I18NProxy>().GetLanguageCode());
             complete.Invoke(true);
         }
@@ -95,22 +103,24 @@ namespace Easy
                     return "ru";
                 case SystemLanguage.Spanish:
                     return "es";
+                case SystemLanguage.Arabic:
+                    return "ar";
                 case SystemLanguage.English:
                 default:
                     return "en";
             }
         }
 
-        public string GetShowContextString(string key)
+        public string GetShowContextString(string key, params object[] args)
         {
             string content = key;
             content = content.Replace("\\n", "\n");
+            content = args.Length == 0 ? content : string.Format(content, args);
+            if(currentLanguage == SystemLanguage.Arabic)
+            {
+                content = ArabicSupport.ArabicFixer.ArabicWithRow(content);
+            }
             return content;
-        }
-
-        public override void BeforeRestart()
-        {
-
         }
     }
 

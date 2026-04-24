@@ -3,31 +3,84 @@ using System.Globalization;
 
 namespace Easy
 {
-    public static class DateUtility
+    public delegate void ChangeDay();
+
+    [Update]
+    [OrderIndex((int) NormalInitOrderIndexEnum.DateManager)]
+    public class DateManager : Singleton<DateManager>
     {
-        public const string LogTag = "DateUtility";
-        public readonly static DateTime UnixStartDate = new(1970, 1, 1, 0, 0, 0);
+        public readonly DateTime UnixStartDate = new(1970, 1, 1, 0, 0, 0);
 
         public const int OneDaySeconds = 86400;
         public const int OneHourSeconds = 3600;
         public const int OneMinuteSeconds = 60;
 
 
-        public static Func<long> getCurTimeCallback;
+        private long _syncTime;
+        private long _recordTime = 0;
+        private float _timeAdd = 0;
+        private DateTimeOffset? _lastTime;
 
-        public static long GetCurTime()
+        private ChangeDay _changeDay;
+
+        public override void BeforeRestart()
         {
-            return getCurTimeCallback?.Invoke()?? DateTimeOffset.Now.ToUnixTimeSeconds();
+            _timeAdd = 0;
+            _lastTime = null;
+            _syncTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+            _recordTime = _syncTime;
+            _changeDay = null;
         }
 
-        public static DateTimeOffset GetCurrentUtcTime()
+        public override void Init(InitCompleteCallback complete)
         {
-            return DateTimeOffset.FromUnixTimeSeconds(GetCurTime());
+            _timeAdd = 0;
+            _syncTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+            _recordTime = _syncTime;
+            _changeDay = null;
         }
 
-        public static long GetRemainTimeSec(long expireTimeUnixSec)
+        public override void Update(float deltaTime)
         {
-            long currentTimeSec = GetCurTime();
+            base.Update(deltaTime);
+            _timeAdd += deltaTime;
+            if (_timeAdd > 1)
+            {
+                --_timeAdd;
+                var curTime = DateTimeOffset.FromUnixTimeSeconds(GetCurSecTime());
+                if (_lastTime == null)
+                {
+                    _lastTime = curTime;
+                    return;
+                }
+                if (curTime.UtcDateTime.Date != _lastTime.Value.UtcDateTime.Date)
+                {
+                    _lastTime = curTime;
+                    _changeDay?.Invoke();
+                }
+            }
+        }
+
+        public void SetSyncTime(long time)
+        {
+            _syncTime = time;
+            _recordTime = _syncTime;
+        }
+
+        public long GetCurSecTime()
+        {
+            var nowTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+            return _syncTime + nowTime - _recordTime;
+        }
+
+        public DateTimeOffset GetCurrentUtcTime()
+        {
+            return DateTimeOffset.FromUnixTimeSeconds(GetCurSecTime());
+        }
+
+        public long GetRemainTimeSec(long expireTimeUnixSec)
+        {
+            long currentTimeSec = GetCurSecTime();
             long remainTimeSec = expireTimeUnixSec - currentTimeSec;
             return remainTimeSec;
         }
@@ -35,7 +88,7 @@ namespace Easy
         /// <summary>
         /// 去除日期的时、分、秒，只保留年、月、日（即当日0点）
         /// </summary>
-        public static DateTime GetCurDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
+        public DateTime GetCurDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
         {
             var nowDateUtc = DateTimeOffset.FromUnixTimeSeconds(nowSecondsUnix).UtcDateTime;
             var nowDateForRefresh = nowDateUtc.AddHours(hourOffset);
@@ -49,7 +102,7 @@ namespace Easy
         /// <param name="nowSecondsUnix">现在Unix时间戳</param>
         /// <param name="hourOffset">偏移 UTC 0, 北京 8, 日本 9</param>
         /// <returns>明天0点的时间戳</returns>
-        public static long GetNextDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
+        public long GetNextDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
         {
             var nowDateUtc = DateTimeOffset.FromUnixTimeSeconds(nowSecondsUnix).UtcDateTime;
 
@@ -73,7 +126,7 @@ namespace Easy
         /// <param name="nowSecondsUnix">现在Unix时间戳</param>
         /// <param name="hourOffset">偏移 UTC 0, 北京 8, 日本 9</param>
         /// <returns>下个月1号0点的时间戳</returns>
-        public static long GetNextMonth1stDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
+        public long GetNextMonth1stDayZeroTime(long nowSecondsUnix, long hourOffset = 0)
         {
             var nowDateUtc = DateTimeOffset.FromUnixTimeSeconds(nowSecondsUnix).UtcDateTime;
 
@@ -93,7 +146,7 @@ namespace Easy
         /// <summary>
         /// 获取是周几
         /// </summary>
-        public static int GetDayOfWeek(DateTime dateTime)
+        public int GetDayOfWeek(DateTime dateTime)
         {
             var day = dateTime.DayOfWeek;
             return day == DayOfWeek.Sunday ? 7 : (int)day;
@@ -102,9 +155,9 @@ namespace Easy
         /// <summary>
         /// 获取本周日最后一刻的秒级时间戳
         /// </summary>
-        public static long GetWeekEndSecondTimestampOptimized()
+        public long GetWeekEndSecondTimestampOptimized()
         {
-            long currentSeconds = GetCurTime();
+            long currentSeconds = GetCurSecTime();
         
             // 计算当前时间在周中的位置
             DateTime currentTime = DateTimeOffset.FromUnixTimeSeconds(currentSeconds).UtcDateTime;
@@ -125,7 +178,7 @@ namespace Easy
         /// <summary>
         /// 获取本周开始秒级时间戳
         /// </summary>
-        public static long GetWeekStartTimestampOptimized()
+        public long GetWeekStartTimestampOptimized()
         {
             long mondayTimestamp = new DateTimeOffset(
                 DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek - 1 + 7) % 7))
@@ -139,7 +192,7 @@ namespace Easy
         /// </summary>
         /// <param name="expireTimeSec"></param>
         /// <returns></returns>
-        public static string GetRemainTimeTextByEndUnixSec(long expireTimeSec)
+        public string GetRemainTimeTextByEndUnixSec(long expireTimeSec)
         {
             if (expireTimeSec < 0)
             {
@@ -153,7 +206,7 @@ namespace Easy
         /// </summary>
         /// <param name="remainTimeSec"></param>
         /// <returns></returns>
-        public static string GetRemainTimeTextByRemainUnixSec(long remainTimeSec)
+        public string GetRemainTimeTextByRemainUnixSec(long remainTimeSec)
         {
             if (remainTimeSec < 0)
             {
@@ -182,19 +235,19 @@ namespace Easy
             }
         }
 
-        public static string ConvertSeconds2StrHHMMSS(long seconds)
+        public string ConvertSeconds2StrHHMMSS(long seconds)
         {
             var timeSpan = TimeSpan.FromSeconds(seconds);
             return string.Format("{0:D2}:{1:D2}:{2:D2}", (int)timeSpan.TotalHours, timeSpan.Minutes, timeSpan.Seconds);
         }
 
-        public static DateTimeOffset ConvertUnixSecToDateTimeOffset(long unixSec)
+        public DateTimeOffset ConvertUnixSecToDateTimeOffset(long unixSec)
         {
             var nowDateUtc = DateTimeOffset.FromUnixTimeSeconds(unixSec);
             return nowDateUtc;
         }
 
-        public static DateTime ConvertUnixSecToUtcDateTime(long unixSec)
+        public DateTime ConvertUnixSecToUtcDateTime(long unixSec)
         {
             var dateTimeOffset = ConvertUnixSecToDateTimeOffset(unixSec);
             return dateTimeOffset.UtcDateTime;
@@ -206,7 +259,7 @@ namespace Easy
         /// <param name="unixSec1"></param>
         /// <param name="unixSec2"></param>
         /// <returns></returns>
-        public static bool IsSameDay(long unixSec1, long unixSec2)
+        public bool IsSameDay(long unixSec1, long unixSec2)
         {
             var utcDateTime1 = ConvertUnixSecToUtcDateTime(unixSec1);
             var utcDateTime2 = ConvertUnixSecToUtcDateTime(unixSec2);
@@ -214,10 +267,28 @@ namespace Easy
         }
 
         /// <summary>
+        /// 检查是否同一周
+        /// </summary>
+        public bool IsSameWeek(DateTime time1, DateTime time2)
+        {
+            // 使用ISO 8601标准：每周从周一开始
+            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+        
+            int week1 = cal.GetWeekOfYear(time1, 
+                System.Globalization.CalendarWeekRule.FirstFourDayWeek, 
+                DayOfWeek.Monday);
+            int week2 = cal.GetWeekOfYear(time2, 
+                System.Globalization.CalendarWeekRule.FirstFourDayWeek, 
+                DayOfWeek.Monday);
+        
+            return week1 == week2 && time1.Year == time2.Year;
+        }
+        
+        /// <summary>
         /// 获取时间对应时间显示
         /// </summary>
         /// <returns></returns>
-        public static string GetUnixTimeString(long unixSecondsTimestamp, bool includeTimestamp = false)
+        public string GetUnixTimeString(long unixSecondsTimestamp, bool includeTimestamp = false)
         {
             var unixDateTime = ConvertUnixSecToDateTimeOffset(unixSecondsTimestamp);
             return GetUnixTimeString(unixDateTime, includeTimestamp);
@@ -226,11 +297,22 @@ namespace Easy
         /// <summary>
         /// 获取UTC时间戳对应时间显示
         /// </summary>
-        public static string GetUnixTimeString(DateTimeOffset dateTimeOffset, bool includeTimestamp = false)
+        public string GetUnixTimeString(DateTimeOffset dateTimeOffset, bool includeTimestamp = false)
         {
             if (includeTimestamp)
                 return $"{dateTimeOffset:yyyy-MM-dd HH:mm:ss}({dateTimeOffset.ToUnixTimeSeconds()})";
             return $"{dateTimeOffset:yyyy-MM-dd HH:mm:ss}";
+        }
+
+
+        public void AddChangeDayListener(ChangeDay changeDay)
+        {
+            _changeDay += changeDay;
+        }
+
+        public void RemoveChangeDayListener(ChangeDay changeDay)
+        {
+            _changeDay -= changeDay;
         }
     }
 }

@@ -5,6 +5,7 @@ namespace Easy
         QualityMgr = 1 * 100 + 1,
         ProxyMgr = 1 * 100 + 2,
         ConfigMgr = 1 * 100 + 3,
+        DateManager = 1 * 100 + 4,
         SaveDataMgr = 2 * 100 + 1,
         DataPatchMgr = 3 * 100 + 1,
         CacheDataMgr = 4 * 100 + 1,

@@ -10,6 +10,8 @@ namespace Easy
     {
         public string Key;
 
+        public object[] Args;
+
         private Text textContext;
 
         protected override void Awake()
@@ -22,11 +24,18 @@ namespace Easy
         {
             ChangeText();
         }
-
+        
         [BindEvent(EventName.Event_Change_Language)]
         private void ChangeText()
         {
-            textContext.text = I18NMgr.Instance.GetShowContextString(Key);
+            textContext.text = I18NMgr.Instance.GetShowContextString(Key, Args);
+        }
+
+        public void SetText(string key, params object[] args)
+        {
+            Key = key;
+            Args = args;
+            ChangeText();
         }
     }
 
