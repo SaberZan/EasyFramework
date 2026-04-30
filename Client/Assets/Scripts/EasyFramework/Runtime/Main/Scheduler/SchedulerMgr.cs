@@ -8,12 +8,12 @@ namespace Easy
     /// 定时回调
     /// </summary>
     /// <param name="objs"></param>
-    public delegate void TimerCallBack(params object[] objs);
+    public delegate void SchedulerCallBack(params object[] objs);
 
     /// <summary>
     /// 定时器对象
     /// </summary>
-    public class TimerObj : IPoolObject, IComparable<TimerObj>
+    public class SchedulerObj : IPoolObject, IComparable<SchedulerObj>
     {
         /// <summary>
         /// 触发事件点
@@ -38,13 +38,13 @@ namespace Easy
         /// <summary>
         /// 回调方法
         /// </summary>
-        public TimerCallBack callback;
+        public SchedulerCallBack callback;
         /// <summary>
         /// 方法对象
         /// </summary>
         public object target;
 
-        public int CompareTo(TimerObj other)
+        public int CompareTo(SchedulerObj other)
         {
             if (tickTime == other.tickTime)
             {
@@ -68,9 +68,9 @@ namespace Easy
     /// <summary>
     /// 定时器管理类
     /// </summary>
-    public class TimerMgr : Singleton<TimerMgr>
+    public class SchedulerMgr : Singleton<SchedulerMgr>
     {
-        private List<TimerObj> _timerObjs = new List<TimerObj>();
+        private List<SchedulerObj> _timerObjs = new List<SchedulerObj>();
 
         private bool _changed = false;
 
@@ -89,7 +89,7 @@ namespace Easy
         /// </summary>
         /// <param name="timerObj"></param>
         /// <returns></returns>
-        public TimerObj Register(TimerObj timerObj)
+        public SchedulerObj Register(SchedulerObj timerObj)
         {
             timerObj.tickTime += DateTime.Now.Ticks;
             _timerObjs.Add(timerObj);
@@ -101,18 +101,18 @@ namespace Easy
         /// 注册定时器
         /// </summary>
         /// <param name="target"></param>
-        /// <param name="timerCallBack"></param>
+        /// <param name="schedulerCallBack"></param>
         /// <param name="args"></param>
         /// <param name="priority"></param>
         /// <param name="tickTime"></param>
         /// <param name="loop"></param>
         /// <param name="loopInterval"></param>
         /// <returns></returns>
-        public TimerObj Register(object target, TimerCallBack timerCallBack, object[] args , int priority = 1, long tickTime = 0, int loop = 0, long loopInterval = TimeSpan.TicksPerSecond)
+        public SchedulerObj Register(object target, SchedulerCallBack schedulerCallBack, object[] args , int priority = 1, long tickTime = 0, int loop = 0, long loopInterval = TimeSpan.TicksPerSecond)
         {
-            TimerObj timerObj = Get();
+            SchedulerObj timerObj = Get();
             timerObj.target = target;
-            timerObj.callback = timerCallBack;
+            timerObj.callback = schedulerCallBack;
             timerObj.args = args;
             timerObj.tickTime = tickTime;
             timerObj.loop = loop;
@@ -124,7 +124,7 @@ namespace Easy
         /// 注销定时器
         /// </summary>
         /// <param name="timerObj"></param>
-        public void UnRegister(TimerObj timerObj)
+        public void UnRegister(SchedulerObj timerObj)
         {
             for (int i = _timerObjs.Count - 1; i >= 0; --i)
             {
@@ -164,7 +164,7 @@ namespace Easy
             }
             for (int i = 0; i < _timerObjs.Count; ++i)
             {
-                TimerObj timerObj = _timerObjs[i];
+                SchedulerObj timerObj = _timerObjs[i];
                 if (timerObj.tickTime <= now)
                 {
                     timerObj.callback(timerObj.args);
@@ -205,16 +205,16 @@ namespace Easy
         /// 缓存中获得定时器
         /// </summary>
         /// <returns></returns>
-        public TimerObj Get()
+        public SchedulerObj Get()
         {
-            return ObjectPoolMgr.Instance.GetObject<TimerObj>();
+            return ObjectPoolMgr.Instance.GetObject<SchedulerObj>();
         }
 
         /// <summary>
         /// 回收定时器
         /// </summary>
         /// <param name="timerObj"></param>
-        public void Put(TimerObj timerObj)
+        public void Put(SchedulerObj timerObj)
         {
             ObjectPoolMgr.Instance.PutObject(timerObj);
         }

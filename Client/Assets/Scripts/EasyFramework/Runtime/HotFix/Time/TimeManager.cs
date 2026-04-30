@@ -6,8 +6,8 @@ namespace Easy
     public delegate void ChangeDay();
 
     [Update]
-    [OrderIndex((int) NormalInitOrderIndexEnum.DateManager)]
-    public class DateManager : Singleton<DateManager>
+    [OrderIndex((int) NormalInitOrderIndexEnum.TimeManager)]
+    public class TimeManager : Singleton<TimeManager>
     {
         public readonly DateTime UnixStartDate = new(1970, 1, 1, 0, 0, 0);
 
