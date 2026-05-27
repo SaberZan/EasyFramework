@@ -101,7 +101,7 @@ namespace Easy
         /// <param name="afterTime">延迟时间（秒）</param>
         /// <param name="loop">循环次数（0表示无限循环）</param>
         /// <param name="loopInterval">循环间隔（秒）</param>
-        public void RegisterTimer(SchedulerCallBack schedulerCallBack, object[] args, int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
+        public void RegisterScheduler(SchedulerCallBack schedulerCallBack, object[] args, int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
         {
             SchedulerMgr.Instance.Register(this, schedulerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond));
         }
