@@ -17,7 +17,7 @@ namespace Easy
         /// <summary>
         /// 定时器对象列表，用于管理定时器
         /// </summary>
-        public List<TimerObj> timerObjs = new List<TimerObj>();
+        public List<SchedulerObj> timerObjs = new List<SchedulerObj>();
 
         /// <summary>
         /// 资源句柄列表，用于管理所有加载的资源
@@ -56,7 +56,7 @@ namespace Easy
             }
             coroutines.Clear();
 
-            TimerMgr.Instance.ClearByTarget(this);
+            SchedulerMgr.Instance.ClearByTarget(this);
 
             token.Cancel();
             token = null;
@@ -95,15 +95,15 @@ namespace Easy
         /// <summary>
         /// 注册定时器
         /// </summary>
-        /// <param name="timerCallBack">定时器回调函数</param>
+        /// <param name="schedulerCallBack">定时器回调函数</param>
         /// <param name="args">回调参数</param>
         /// <param name="priority">优先级</param>
         /// <param name="afterTime">延迟时间（秒）</param>
         /// <param name="loop">循环次数（0表示无限循环）</param>
         /// <param name="loopInterval">循环间隔（秒）</param>
-        public void RegisterTimer(TimerCallBack timerCallBack, object[] args, int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
+        public void RegisterTimer(SchedulerCallBack schedulerCallBack, object[] args, int priority = 1, float afterTime = 0, int loop = 0, float loopInterval = 1)
         {
-            TimerMgr.Instance.Register(this, timerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond));
+            SchedulerMgr.Instance.Register(this, schedulerCallBack, args, priority, DateTime.Now.Ticks + (long)(afterTime * TimeSpan.TicksPerSecond), loop, (long)(loopInterval * TimeSpan.TicksPerSecond));
         }
 
         /// <summary>
