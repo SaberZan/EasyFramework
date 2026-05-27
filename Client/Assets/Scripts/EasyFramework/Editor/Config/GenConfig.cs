@@ -4,9 +4,9 @@
     using UnityEngine;
     public class GenConfig: EditorWindow
     {
-        private const string Match3_GenConfig = "Easy/GenConfig";
+        private const string GenConfigTag = "Easy/GenConfig";
 
-        [MenuItem(Match3_GenConfig, false)]
+        [MenuItem(GenConfigTag, false)]
         public static void GenExcel()
         {
             CommandRunner commandRunner = new CommandRunner(Application.dataPath + "/../../ExcelTool/gen.bat", Application.dataPath + "/../../Mod/", true, true, false);

@@ -63,7 +63,15 @@ namespace Easy
             }
             foreach (var kv in _needLoadConfig)
             {
-                LoadConfigCacheAsync(configPath + kv.Key + ".bin", kv.Value, LoadConfigCallBack);
+                string filePath = configPath + kv.Key + ".bin";
+                if(AssetsMgr.Instance.Exists(filePath))
+                {
+                    LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack);
+                }
+                else
+                {
+                    LoadConfigCallBack(null);
+                }
             }
 
         }

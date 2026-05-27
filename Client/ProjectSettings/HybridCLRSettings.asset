@@ -32,10 +32,7 @@ MonoBehaviour:
   - Game.Main
   - protobuf-net
   - Newtonsoft.Json
-  - UniTask
   outputLinkFile: HybridCLRData/Generated/link.xml
   outputAOTGenericReferenceFile: HybridCLRData/Generated/AOTGenericReferences.cs
   maxGenericReferenceIteration: 10
   maxMethodBridgeGenericIteration: 10
-  enableProfilerInReleaseBuild: 0
-  enableStraceTraceInWebGLReleaseBuild: 0

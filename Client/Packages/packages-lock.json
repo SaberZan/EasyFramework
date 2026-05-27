@@ -5,7 +5,7 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "64a6d26fa33466c864de9cb0ed90481873cd6250"
+      "hash": "4feac30cb2e105992986c737f7f54992b8300e1a"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
@@ -28,7 +28,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ai.navigation": {
-      "version": "1.1.5",
+      "version": "1.1.7",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -37,8 +37,8 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
-      "version": "1.8.18",
-      "depth": 0,
+      "version": "1.8.15",
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.mathematics": "1.2.1",
@@ -54,7 +54,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.editorcoroutines": {
-      "version": "1.0.0",
+      "version": "1.0.1",
       "depth": 0,
       "source": "registry",
       "dependencies": {},
@@ -68,11 +68,11 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
-      "version": "2.0.22",
+      "version": "2.0.27",
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.unity.test-framework": "1.1.9"
+        "com.unity.test-framework": "1.1.33"
       },
       "url": "https://packages.unity.com"
     },
@@ -84,7 +84,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.nuget.newtonsoft-json": {
-      "version": "3.2.1",
+      "version": "3.2.2",
       "depth": 0,
       "source": "registry",
       "dependencies": {},
@@ -165,7 +165,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.timeline": {
-      "version": "1.7.6",
+      "version": "1.7.7",
       "depth": 0,
       "source": "registry",
       "dependencies": {

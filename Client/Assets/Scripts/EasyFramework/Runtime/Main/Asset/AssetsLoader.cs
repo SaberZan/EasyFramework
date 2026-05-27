@@ -46,6 +46,10 @@ namespace Easy
 
         public abstract List<string> KeyToAssetPaths(string key);
 
+        public abstract bool ExistAssetPath(string path);
+
+        public abstract bool ExistKey(string key);
+
         public abstract void Release(IBaseAssetHandle handle);
         
     }

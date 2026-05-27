@@ -15,3 +15,7 @@ MonoBehaviour:
   Data:
   - Name: HotFix
     Object: {fileID: 102900000, guid: b83a6b73b14be754a8b2335f5c832ae6, type: 3}
+  - Name: AOT
+    Object: {fileID: 102900000, guid: 14e995e5f499b074fb4caab6b64d63a2, type: 3}
+  - Name: HotUpdate
+    Object: {fileID: 102900000, guid: 0ef8aaf08d866f741ad9151ca42bd2ca, type: 3}

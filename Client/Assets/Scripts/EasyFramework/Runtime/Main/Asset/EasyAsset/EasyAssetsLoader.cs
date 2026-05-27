@@ -687,6 +687,26 @@ namespace Easy.EasyAsset
             return null;
         }
 
+        /// <summary>
+        /// 资源是否存在
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public override bool ExistAssetPath(string path)
+        {
+            return catalogs.GetEasyAssetInfoByAsset(path) != null;
+        }
+
+        /// <summary>
+        /// 键是否存在
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public override bool ExistKey(string key)
+        {
+            return KeyToAssetPaths(key) != null;
+        }
+
         #endregion
 
         #region handle

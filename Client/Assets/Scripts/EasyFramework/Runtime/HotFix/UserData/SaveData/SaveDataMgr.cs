@@ -79,13 +79,16 @@ namespace Easy
             foreach (var kv in stringPrefs)
             {
                 string typeName = GetTypeNameFromKeyName(kv.Key);
-                Type t = _allTypes[typeName];
-                SaveData data = ReadSaveData(t, kv.Value);
-                if (data == null)
+                if(_allTypes.ContainsKey(typeName))
                 {
-                    data = (SaveData) t.GetConstructor(Type.EmptyTypes)?.Invoke(null);
+                    Type t = _allTypes[typeName];
+                    SaveData data = ReadSaveData(t, kv.Value);
+                    if (data == null)
+                    {
+                        data = (SaveData) t.GetConstructor(Type.EmptyTypes)?.Invoke(null);
+                    }
+                    _allDatas.Add(kv.Key, data);
                 }
-                _allDatas.Add(kv.Key, data);
             }
 
             _stringPrefs = stringPrefs;

@@ -65,8 +65,16 @@ namespace Easy
             }
             foreach (var kv in _needLoadConfig)
             {
-                LoadConfigCacheAsync(configPath + kv.Key + ".json", kv.Value, LoadConfigCallBack);
-                // LoadConfigCallBack(configPath + kv.Key + ".json", kv.Value));
+                string filePath = configPath + kv.Key + ".json";
+                if(AssetsMgr.Instance.Exists(filePath))
+                {
+                    LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack);
+                    // LoadConfigCallBack(filePath, kv.Value));
+                }
+                else
+                {
+                    LoadConfigCallBack(null);
+                }
             }
 
         }

@@ -356,6 +356,16 @@ namespace Easy.AA
             return null;
         }
 
+        public override bool ExistAssetPath(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool ExistKey(string key)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// 释放资源
         /// </summary>
