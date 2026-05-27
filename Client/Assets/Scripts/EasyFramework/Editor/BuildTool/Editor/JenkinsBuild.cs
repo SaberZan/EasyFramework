@@ -112,7 +112,7 @@ namespace Easy
             //是否开发模式
             EditorUserBuildSettings.development =  args.ContainsKey("development") ? bool.Parse(args["development"]) : false;
             //包名
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, args.ContainsKey("applicationIdentifier") ? args["applicationIdentifier"] : PlayerSettings.applicationIdentifier);
+            PlayerSettings.SetApplicationIdentifier(opt.targetGroup, args.ContainsKey("applicationIdentifier") ? args["applicationIdentifier"] : PlayerSettings.applicationIdentifier);
             //版本号
             PlayerSettings.bundleVersion = args.ContainsKey("version") ? args["version"] : PlayerSettings.bundleVersion;
         }
@@ -179,12 +179,6 @@ namespace Easy
                     }
                 }
 
-                CopyType copyType = CopyType.CopyVersionAndCatalog;
-                if( args.ContainsKey("copyType") )
-                {
-                    Enum.TryParse(args["copyType"],true, out copyType);
-                }
-
                 try
                 {
 #if AA
@@ -193,7 +187,10 @@ namespace Easy
                     GenerateContext.Instance.Reset();
                     GenerateContext.Instance.generateInfo.build_target = buildTarget;
                     GenerateContext.Instance.generateInfo.buildAssetBuildOptions = buildAssetBuildOptions;
-                    GenerateContext.Instance.generateInfo.copyType = copyType;
+                    if( args.ContainsKey("copyType") )
+                    {
+                        Enum.TryParse(args["copyType"],true, out GenerateContext.Instance.generateInfo.copyType);
+                    }
 
                     var buildTaskPipeLine = AssetDatabase.LoadAssetAtPath<BuildTaskPipeLine>(EasyAssetEditorConst.EasyAssetBuildTaskPipleLinePath);
                     if (buildTaskPipeLine == null)
@@ -299,13 +296,12 @@ namespace Easy
         {
             Dictionary<string, string> args = GetCommandParams("Easy.JenkinsBuild.BuildAndroidProject");
             BuildPlayerOptions opt = new BuildPlayerOptions();
+            opt.target = BuildTarget.Android;
+            opt.targetGroup = BuildTargetGroup.Android;
             SetCommonBuildSettings(args, ref opt);
             SetAndroidCustomBuildSettings(args, ref opt);
             BuildAsset(args,BuildTargetGroup.Android, BuildTarget.Android);
             opt.scenes = GetScenes();
-            opt.target = BuildTarget.Android;
-            opt.targetGroup = BuildTargetGroup.Android;
-
 #if UNITY_ANDROID
             if (args.TryGetValue("PAD", out string value) && value.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
@@ -354,11 +350,12 @@ namespace Easy
         {
             Dictionary<string, string> args = GetCommandParams("Easy.JenkinsBuild.BuildIosProject");
             BuildPlayerOptions opt = new BuildPlayerOptions();
+            opt.target = BuildTarget.iOS;
+            opt.targetGroup = BuildTargetGroup.iOS;
             SetCommonBuildSettings(args, ref opt);
             SetIOSCustomBuildSettings(args, ref opt);
             BuildAsset(args,BuildTargetGroup.iOS, BuildTarget.iOS);
             opt.scenes = GetScenes();
-            opt.target = BuildTarget.iOS;
             BuildPipeline.BuildPlayer(opt);
         }
 
@@ -398,11 +395,12 @@ namespace Easy
         {
             Dictionary<string, string> args = GetCommandParams("Easy.JenkinsBuild.BuildWinProject");
             BuildPlayerOptions opt = new BuildPlayerOptions();
+            opt.target = BuildTarget.StandaloneWindows64;
+            opt.targetGroup = BuildTargetGroup.Standalone;
             SetCommonBuildSettings(args, ref opt);
             SetWinCustomBuildSettings(args, ref opt);
             BuildAsset(args,BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
             opt.scenes = GetScenes();
-            opt.target = BuildTarget.StandaloneWindows64;
             BuildPipeline.BuildPlayer(opt);
         }
     }
