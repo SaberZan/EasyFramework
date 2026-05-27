@@ -7,9 +7,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using Debug = UnityEngine.Debug;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Logical;
 using System.Threading.Tasks;
-using Unity.Mathematics;
 
 namespace Easy.EasyAsset
 {
@@ -191,7 +189,7 @@ namespace Easy.EasyAsset
                 _elapsedTime.Stop();
                 _elapsedTime.Reset();
                 DestroyAllSpheres();
-                List<Material> execMaterials = materials.GetRange(0, math.min(1000, materials.Count));
+                List<Material> execMaterials = materials.GetRange(0, Mathf.Min(1000, materials.Count));
                 materials.RemoveRange(0, execMaterials.Count);
                 ProcessMaterials(execMaterials);
             }
