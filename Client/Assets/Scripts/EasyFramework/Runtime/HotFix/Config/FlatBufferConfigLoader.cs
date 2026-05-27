@@ -64,7 +64,7 @@ namespace Easy
             foreach (var kv in _needLoadConfig)
             {
                 string filePath = configPath + kv.Key + ".bin";
-                if(AssetsMgr.Instance.Exists(filePath))
+                if(AssetsMgr.Instance.ExistAssetPath(filePath))
                 {
                     LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack);
                 }

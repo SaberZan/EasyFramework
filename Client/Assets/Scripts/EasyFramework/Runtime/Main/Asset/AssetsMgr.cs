@@ -245,9 +245,14 @@ namespace Easy
             return _assetsLoader.LoadRawAssetsByPath(paths);
         }
 
-        public bool Exists(string path)
+        public bool ExistAssetPath(string path)
         {
-            return _assetsLoader.KeyToAssetPaths(path) != null;
+            return _assetsLoader.ExistAssetPath(path);
+        }
+
+        public bool ExistKey(string key)
+        {
+            return _assetsLoader.ExistKey(key);
         }
 
         /// <summary>

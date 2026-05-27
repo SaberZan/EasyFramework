@@ -66,7 +66,7 @@ namespace Easy
             foreach (var kv in _needLoadConfig)
             {
                 string filePath = configPath + kv.Key + ".json";
-                if(AssetsMgr.Instance.Exists(filePath))
+                if(AssetsMgr.Instance.ExistAssetPath(filePath))
                 {
                     LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack);
                     // LoadConfigCallBack(filePath, kv.Value));
