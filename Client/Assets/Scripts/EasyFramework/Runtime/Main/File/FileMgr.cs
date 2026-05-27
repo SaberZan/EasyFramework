@@ -125,20 +125,20 @@ namespace Easy
         /// <returns></returns>
         public byte[] LoadStreamingAssetFileSync(string filePath)
         {
-            EasyLogger.Log("EasyFrameWork", $"LoadStreamingAssetFileSync : Loading file name is {filePath}");
+            Debug.Log("EasyFrameWork" + $"LoadStreamingAssetFileSync : Loading file name is {filePath}");
 
             byte[] databuffer;
 
 
 #if UNITY_ANDROID
-            //UnityWebRequest request = new UnityWebRequest(new Uri(filePath));
-            //request.downloadHandler = new DownloadHandlerBuffer();
-            //UnityWebRequestAsyncOperation ao = request.SendWebRequest();
-            //while (!request.isDone || !ao.isDone)
-            //{
+            // UnityWebRequest request = new UnityWebRequest(new Uri(filePath));
+            // request.downloadHandler = new DownloadHandlerBuffer();
+            // UnityWebRequestAsyncOperation ao = request.SendWebRequest();
+            // while (!request.isDone || !ao.isDone)
+            // {
 
-            //}
-            //databuffer = request.downloadHandler.data;
+            // }
+            // databuffer = request.downloadHandler.data;
 
             AndroidFileStream androidFileStream = new AndroidFileStream(filePath);
             databuffer = new byte[androidFileStream.Length];
@@ -147,6 +147,74 @@ namespace Easy
             databuffer = File.ReadAllBytes(filePath);
 #endif
             return databuffer;
+        }
+
+        /// <summary>
+        /// 判断文件是否存在
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="isStreamingAsset"></param>
+        /// <returns></returns>
+        public bool IsFileExist(string filePath, bool isStreamingAsset = false)
+        {
+            if(isStreamingAsset)
+            {
+                return AndroidFileStream.IsFileExist(filePath);
+            }
+            return File.Exists(filePath);
+        }
+
+        /// <summary>
+        /// 删除文件
+        /// </summary>
+        /// <param name="filePath"></param>
+        public void Delete(string filePath)
+        {
+            File.Delete(filePath);
+        }
+
+        /// <summary>
+        /// 移动文件
+        /// </summary>
+        /// <param name="oldPath"></param>
+        /// <param name="newPath"></param>
+        public void Move(string oldPath, string newPath)
+        {
+            File.Move(oldPath, newPath);
+        }
+
+        /// <summary>
+        /// 复制文件
+        /// </summary>
+
+        public void Copy(string oldPath, string newPath, bool overwrite = false)
+        {
+            File.Copy(oldPath, newPath, overwrite);
+        }
+
+        /// <summary>
+        /// 写入文件
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="bytes"></param>
+        public void WriteAllBytes(string path, byte[] bytes)
+        {
+            File.WriteAllBytes(path, bytes);
+        }
+
+        /// <summary>
+        /// 读取文件
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public string ReadAllText(string path)
+        {
+            return File.ReadAllText(path);
+        }
+
+        public static byte[] ReadAllBytes(string path)
+        {
+            return File.ReadAllBytes(path);
         }
     }
 }

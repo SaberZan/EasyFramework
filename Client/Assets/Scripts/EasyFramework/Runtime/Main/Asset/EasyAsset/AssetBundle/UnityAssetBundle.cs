@@ -45,7 +45,7 @@ namespace Easy.EasyAsset
         private static AssetBundle LoadFromPersistentDataPath(string md5, bool isEncrypt)
         {
             string fullPath = Const.localAssetBundleFolder + md5;
-            if (!File.Exists(fullPath))
+            if (!FileMgr.Instance.IsFileExist(fullPath))
             {
                 EasyLogger.LogError("EasyFrameWork", $"***** Need Load File Lost {fullPath}*****");
                 return null;
@@ -53,7 +53,7 @@ namespace Easy.EasyAsset
             AssetBundle assetBundle = null;
             if(isEncrypt)
             {
-                // byte[] bytes = File.ReadAllBytes(fullPath);
+                // byte[] bytes = FileMgr.Instance.ReadAllBytes(fullPath);
                 // XOREncryption.DecryptData(bytes,0,-1, XOREncryption.DEFAULT_ENCRYPT_KEY, bytes.Length);
                 // assetBundle = AssetBundle.LoadFromMemory(bytes);
                 XOREncryptFileStream abFileStream = new XOREncryptFileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 4, false);

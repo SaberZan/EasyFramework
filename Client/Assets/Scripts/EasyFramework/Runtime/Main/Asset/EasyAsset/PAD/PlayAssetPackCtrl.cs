@@ -14,7 +14,10 @@ public class PlayAssetPackCtrl
 
     public PlayAssetPackCtrl()
     {
-        PlayAssetPackConfig assetPackConfig = JsonUtility.FromJson<PlayAssetPackConfig>(Const.originalPlayAssetPackPath);
+        if (FileMgr.Instance.IsFileExist(Const.originalPlayAssetPackPath))
+        {
+            config = FileMgr.Instance.GetTargetClassObject<PlayAssetPackConfig>(Const.originalPlayAssetPackPath, false);
+        }
     }
 
     public bool IsAssetBundleDownloaded(string md5)
@@ -29,6 +32,10 @@ public class PlayAssetPackCtrl
     public bool IsPlayerAssetContains(string md5, out PlayAssetPackConfigInfo configInfo)
     {
         configInfo = null;
+        if(config  == null)
+        {
+            return false;
+        }
         for (int i = 0; i < config.configInfos.Count; i++)
         {
             PlayAssetPackConfigInfo playAssetPackConfigInfo = config.configInfos[i];
@@ -83,7 +90,7 @@ public class PlayAssetPackCtrl
             string fullPath = assetLocation.Path;
             if (isEncrypt)
             {
-                // byte[] bytes = File.ReadAllBytes(fullPath);
+                // byte[] bytes = FileMgr.Instance.ReadAllBytes(fullPath);
                 // XOREncryption.DecryptData(bytes,0,-1, XOREncryption.DEFAULT_ENCRYPT_KEY, bytes.Length);
                 // assetBundle = AssetBundle.LoadFromMemory(bytes);
                 // ABFileStream abFileStream = new ABFileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 4, false);

@@ -55,7 +55,7 @@ namespace Easy
         /// <param name="time"></param>
         public void Toast(string content, float time = 2)
         {
-            ShowToast(content, time);
+            ShowToast(content, time).Trigger();
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace Easy
         /// </summary>
         /// <param name="content"></param>
         /// <param name="time"></param>
-        private async void ShowToast(string content, float time = 2)
+        private async EasyVoidTask ShowToast(string content, float time = 2)
         {
             GameObject toast = GameObjectPoolMgr.Instance.GetGameObject("ToastNode", _toastPrefab);
             toast.transform.SetParent(gameObject.transform, false);

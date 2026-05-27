@@ -154,8 +154,15 @@ namespace Easy.EasyAsset
         {
 #if UNITY_EDITOR && !AB_LOAD_BUNDLE
 #else
-            if (!File.Exists(Const.originalVersionPath))
+            Debug.Log($"CopyStreamingAssetsToPersistent originalVersionPath {Const.originalVersionPath}");
+            if (!FileMgr.Instance.IsFileExist(Const.originalVersionPath, true))
+            {
                 complete.Invoke(false);
+                return;
+            }
+            
+
+            Debug.Log($"CopyStreamingAssetsToPersistent start");
 
             Catalogs originTable = FileMgr.Instance.GetTargetClassObject<Catalogs>(Const.originalVersionPath, true);
             Catalogs localTable = FileMgr.Instance.GetTargetClassObject<Catalogs>(Const.localVersionPath, false);
@@ -170,6 +177,7 @@ namespace Easy.EasyAsset
                 List<string> allFiles = new List<string>(originTable.allEasyAssetBundleInfos.Count);
                 for (int i = 0, count = originTable.allEasyAssetBundleInfos.Count; i < count; i++)
                 {
+                    Debug.Log($"CopyStreamingAssetsToPersistent NeedCopy {originTable.allEasyAssetBundleInfos[i].md5}");
                     allFiles.Add(originTable.allEasyAssetBundleInfos[i].md5);
                 }
                 
@@ -177,15 +185,20 @@ namespace Easy.EasyAsset
                 {
                     string originFile = Const.originAssetBundleFolder + allFiles[i];
                     string localFile = Const.localAssetBundleFolder + allFiles[i];
-                    if (!File.Exists(originFile))
+                    Debug.Log($"CopyStreamingAssetsToPersistent Copy {originFile} to {localFile}");
+                    if (!FileMgr.Instance.IsFileExist(originFile, true))
                     {
+                        Debug.Log($"CopyStreamingAssetsToPersistent Copy NoExist {originFile}");
                         continue;
                     }
+                    Debug.Log($"CopyStreamingAssetsToPersistent Copy Exist {originFile}");
 #if UNITY_ANDROID
+                    Debug.Log($"CopyStreamingAssetsToPersistent Start Copy {originFile} to {localFile}");
                     byte[] content_buffer = FileMgr.Instance.LoadStreamingAssetFileSync(originFile);
-                    File.WriteAllBytes(localFile, content_buffer);
+                    FileMgr.Instance.WriteAllBytes(localFile, content_buffer);
+                    Debug.Log($"CopyStreamingAssetsToPersistent End Copy {originFile} to {localFile}");
 #else
-                    File.Copy(originFile, localFile, true);
+                    FileMgr.Instance.Copy(originFile, localFile, true);
 #endif
                 }
 
@@ -439,7 +452,7 @@ namespace Easy.EasyAsset
         {
             byte[] res = null;
 #if UNITY_EDITOR && !AB_LOAD_BUNDLE
-            res = File.ReadAllBytes(path);
+            res = FileMgr.Instance.ReadAllBytes(path);
 #else
             res = LoadRawAssetAtPath(path);
 #endif

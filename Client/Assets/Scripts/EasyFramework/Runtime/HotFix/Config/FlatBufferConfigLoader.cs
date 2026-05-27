@@ -66,7 +66,7 @@ namespace Easy
                 string filePath = configPath + kv.Key + ".bin";
                 if(AssetsMgr.Instance.ExistAssetPath(filePath))
                 {
-                    LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack);
+                    LoadConfigCacheAsync(filePath, kv.Value, LoadConfigCallBack).Trigger();
                 }
                 else
                 {
@@ -109,7 +109,7 @@ namespace Easy
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         /// 
-        public override async void LoadConfigCacheAsync(string path, Type type, Action<object> callback) 
+        public override async EasyVoidTask LoadConfigCacheAsync(string path, Type type, Action<object> callback) 
         {
             var handle = Easy.AssetsMgr.Instance.LoadRawAsset(path);
             byte[] bytes = await handle.GetResultAsync();
@@ -141,7 +141,7 @@ namespace Easy
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override async void LoadConfigCacheAsync<T>(string path, Action<T> callback) 
+        public override async EasyVoidTask LoadConfigCacheAsync<T>(string path, Action<T> callback) 
         {
             Type type = typeof(T);
             var handle = Easy.AssetsMgr.Instance.LoadRawAsset(path);
@@ -177,7 +177,7 @@ namespace Easy
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         /// 
-        public override async void LoadConfigUnCacheAsync(string path, Type type, Action<object> callback) 
+        public override async EasyVoidTask LoadConfigUnCacheAsync(string path, Type type, Action<object> callback) 
         {
             var handle = Easy.AssetsMgr.Instance.LoadRawAsset(path);
             byte[] bytes = await handle.GetResultAsync();
@@ -209,7 +209,7 @@ namespace Easy
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override async void LoadConfigUnCacheAsync<T>(string path, Action<T> callback)
+        public override async EasyVoidTask LoadConfigUnCacheAsync<T>(string path, Action<T> callback)
         {
             Type type = typeof(T);
             var handle = Easy.AssetsMgr.Instance.LoadRawAsset(path);

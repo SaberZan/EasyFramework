@@ -62,7 +62,7 @@ namespace Easy.EasyAsset
         /// <summary>
         /// 下载线程中断
         /// </summary>
-        public CancellationTokenSource cancellationTokenSource;
+        public EasyCancellationToken cancellationTokenSource;
 
         public HttpDownloader(string fileName, long size, DownloadPriority downloadPriority, long version, string saveDirPath, Action<DownloadCode, string> callback, List<string> urls) :base(fileName, size, downloadPriority, version, saveDirPath, callback)
         {
@@ -76,8 +76,8 @@ namespace Easy.EasyAsset
         public override void Start(int timeout = 10)
         {
             downloadType = DownloadType.Start;
-            cancellationTokenSource = new CancellationTokenSource();
-            Task.Factory.StartNew(StartDownload, timeout, cancellationTokenSource.Token);
+            cancellationTokenSource = new EasyCancellationToken();
+            EasyTaskRunner.ExecInThread(()=>StartDownload(timeout), cancellationTokenSource);
         }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Easy.EasyAsset
                     long downloadedByte = 0;
                     while (downloadedByte < _contentLength)
                     {
-                        if(cancellationTokenSource.Token.IsCancellationRequested)
+                        if(cancellationTokenSource.IsCanceled)
                         {
                             break;
                         }
@@ -170,25 +170,25 @@ namespace Easy.EasyAsset
         public void MoveFile()
         {
             // 如果下载完成后，临时文件如果被意外删除了，也抛出错误提示
-            if (!File.Exists(TempFilePath))
+            if (!FileMgr.Instance.IsFileExist(TempFilePath))
             {
                 code = DownloadCode.TempFileMissing;
                 return;
             }
             // 如果下载的文件已经存在，就删除原文件
-            if (File.Exists(ABFilePath))
+            if (FileMgr.Instance.IsFileExist(ABFilePath))
             {
-                File.Delete(ABFilePath);
+                FileMgr.Instance.Delete(ABFilePath);
             }
 
             if(fileName != MD5Utility.GetFileMd5Hash(TempFilePath))
             {
-                File.Delete(TempFilePath);
+                FileMgr.Instance.Delete(TempFilePath);
                 code = DownloadCode.DownloadFail;
             }
             else
             {
-                File.Move(TempFilePath, ABFilePath);
+                FileMgr.Instance.Move(TempFilePath, ABFilePath);
                 code = DownloadCode.Success;
             }
         }

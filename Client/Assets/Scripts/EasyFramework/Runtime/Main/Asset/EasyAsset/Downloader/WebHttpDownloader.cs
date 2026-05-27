@@ -75,14 +75,14 @@ namespace Easy.EasyAsset
         {
             downloadType = DownloadType.Start;
             token = new EasyCancellationToken();
-            StartDownload(timeout, token);
+            StartDownload(timeout, token).Trigger();
         }
 
         /// <summary>
         /// 线程开始下载
         /// </summary>
         /// <param name="timeout"></param>
-        public async void StartDownload(object timeout, EasyCancellationToken  cancellationToken)
+        public async EasyVoidTask StartDownload(object timeout, EasyCancellationToken  cancellationToken)
         {
 
             try
@@ -167,25 +167,25 @@ namespace Easy.EasyAsset
         public void MoveFile()
         {
             // 如果下载完成后，临时文件如果被意外删除了，也抛出错误提示
-            if (!File.Exists(TempFilePath))
+            if (!FileMgr.Instance.IsFileExist(TempFilePath))
             {
                 code = DownloadCode.TempFileMissing;
                 return;
             }
             // 如果下载的文件已经存在，就删除原文件
-            if (File.Exists(ABFilePath))
+            if (FileMgr.Instance.IsFileExist(ABFilePath))
             {
-                File.Delete(ABFilePath);
+                FileMgr.Instance.Delete(ABFilePath);
             }
 
             if(fileName != MD5Utility.GetFileMd5Hash(TempFilePath))
             {
-                File.Delete(TempFilePath);
+                FileMgr.Instance.Delete(TempFilePath);
                 code = DownloadCode.DownloadFail;
             }
             else
             {
-                File.Move(TempFilePath, ABFilePath);
+                FileMgr.Instance.Move(TempFilePath, ABFilePath);
                 code = DownloadCode.Success;
             }
         }

@@ -51,7 +51,7 @@ namespace Easy.AA
             _initComplete = complete;
             if (EasyFrameworkMain.Instance.config.GetEasyConfig<Easy.EasyAsset.EasyAssetConfig>().hotUpdate)
             {
-                CheckUpdate();
+                CheckUpdate().Trigger();
             }
             else
             {
@@ -63,7 +63,7 @@ namespace Easy.AA
         /// 检测更新
         /// </summary>
         /// <returns></returns>
-        private async void CheckUpdate()
+        private async EasyVoidTask CheckUpdate()
         {
             await Addressables.InitializeAsync().Task;
 
@@ -75,7 +75,7 @@ namespace Easy.AA
                 if (catalogs.Count > 0)
                 {
                     EasyLogger.Log("EasyFrameWork", "Need Update Catalogs Count = " + catalogs.Count);
-                    CheckUpdateAssets(catalogs);
+                    CheckUpdateAssets(catalogs).Trigger();
                 }
                 else
                 {
@@ -97,7 +97,7 @@ namespace Easy.AA
         /// </summary>
         /// <param name="catalogs"></param>
         /// <returns></returns>
-        private async void CheckUpdateAssets(List<string> catalogs)
+        private async EasyVoidTask CheckUpdateAssets(List<string> catalogs)
         {
             var updateAssetsHandle = Addressables.UpdateCatalogs(catalogs, false);
             await updateAssetsHandle.Task;
@@ -106,7 +106,7 @@ namespace Easy.AA
                 var resourceLocators = updateAssetsHandle.Result;
                 if (resourceLocators.Count > 0)
                 {
-                    UpdateAssets(resourceLocators);
+                    UpdateAssets(resourceLocators).Trigger();
                 }
                 else
                 {
@@ -127,7 +127,7 @@ namespace Easy.AA
         /// </summary>
         /// <param name="resourceLocators"></param>
         /// <returns></returns>
-        private async void UpdateAssets(IList<IResourceLocator> resourceLocators)
+        private async EasyVoidTask UpdateAssets(IList<IResourceLocator> resourceLocators)
         {
             int allCount = resourceLocators.Count;
             int count = 0;

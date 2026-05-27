@@ -49,6 +49,26 @@ namespace Easy
             unityPlayer.Dispose();
         }
 
+        public static bool IsFileExist(string fullPath)
+        {
+            if (string.IsNullOrEmpty(fullPath))
+            {
+                return false;
+            }
+
+            int position = fullPath.LastIndexOf(SplitFlag, StringComparison.Ordinal);
+            if (position < 0)
+            {
+                return false;
+            }
+
+            string fileName = fullPath.Substring(position + SplitFlagLength);
+            var fileStream = InternalOpen(fileName);
+            bool exist = fileStream != null;
+            fileStream?.Dispose();
+            return exist;
+        }
+
         /// <summary>
         /// 初始化安卓文件系统流的新实例。
         /// </summary>
@@ -217,7 +237,7 @@ namespace Easy
             m_FileStream.Dispose();
         }
 
-        private AndroidJavaObject InternalOpen(string fileName)
+        private static AndroidJavaObject InternalOpen(string fileName)
         {
             return _AssetManager.Call<AndroidJavaObject>("open", fileName);
         }

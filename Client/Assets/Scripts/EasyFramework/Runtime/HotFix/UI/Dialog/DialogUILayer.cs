@@ -214,6 +214,7 @@ namespace Easy
                 }
                 UIMgr.Instance.AddFullScreenRectTransform(blackMask);
                 //blackMask.GetComponent<RectTransform>().offsetMax = new Vector2(0.0f, 200);
+                dialog.Awake();
                 dialog.baseGameObject.transform.SetParent(blackMask.transform);
                 blackMask.transform.SetParent(gameObject.transform, false);
                 dialog.baseGameObject.transform.localPosition = Vector3.zero;
