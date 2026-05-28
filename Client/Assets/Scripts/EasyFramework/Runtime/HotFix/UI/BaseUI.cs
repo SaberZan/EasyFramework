@@ -267,6 +267,7 @@ namespace Easy
             if (baseGameObject == null)
             {
                 baseGameObject = new GameObject(GetType().Name);
+                UIMgr.Instance.AddFullScreenRectTransform(baseGameObject);
             }
 
             OnCreate();

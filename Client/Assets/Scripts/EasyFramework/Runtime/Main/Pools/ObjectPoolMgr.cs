@@ -26,7 +26,7 @@ namespace Easy
         /// 回收对象
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        public T GetObject<T>() where T : class, IPoolObject, new()
+        public T GetObject<T>() where T : class, new()
         {
             lock(_pools)
             {
@@ -43,7 +43,7 @@ namespace Easy
         /// 回收对象
         /// </summary>
         /// <param name="obj"></param>
-        public void PutObject(IPoolObject obj)
+        public void PutObject(object obj)
         {
             lock(_pools)
             {
@@ -52,7 +52,10 @@ namespace Easy
                 {
                     _pools.Add(name,new ObjectPool());
                 }
-                obj.Reset();
+                if(obj is IPoolObject poolObject)
+                {
+                    poolObject.Reset();
+                }
                 _pools[name].Put(obj);
             }
         }

@@ -11,8 +11,9 @@ namespace Easy
     {
         private Dictionary<Type, SqliteDataList> dataDict = new Dictionary<Type, SqliteDataList>();
         private SQLiteAsyncConnection db;
-
-        private bool triggerTag = false;
+        private Stack<string> saveInfo = new Stack<string>();
+        private bool saveTag = false;
+        private int saveIndex = 0;
 
         public override void BeforeRestart()
         {
@@ -77,22 +78,37 @@ namespace Easy
             await db.DropTableAsync(tableMapping);
         }
 
-        public void TriggerSync()
+
+        /// <summary>
+        /// 开始保存数据
+        /// </summary>
+        public void BeginSave(string key)
         {
-            if (triggerTag)
-                return;
-            triggerTag = true;
-            CoroutineMgr.Instance.StartCoroutine(SyncData());
+            if(saveInfo.Count == 0)
+            {
+                saveTag = true;
+            }
+            saveInfo.Push(key);   
         }
 
-        IEnumerator SyncData()
+        /// <summary>
+        /// 结束保存数据
+        /// </summary>
+        public void EndSave(string key)
         {
-            yield return new WaitForEndOfFrame();
+            saveInfo.Pop();
+            if(saveTag && saveInfo.Count == 0)
+            {
+                SyncData();
+            }
+        }
+
+        public void SyncData()
+        {    
             foreach (var item in dataDict)
             {
                 item.Value.SyncData();
             }
-            triggerTag = false;
         }
 
     }

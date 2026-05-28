@@ -41,6 +41,7 @@ namespace Easy
     /// </summary>
 
     [NormalInit]
+    [Update]
     [OrderIndex((int)NormalInitOrderIndexEnum.UIMgr)]
     public class UIMgr : Singleton<UIMgr>
     {
@@ -108,7 +109,7 @@ namespace Easy
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _staticCanvasScaler = _canvasNode.HasComponent<CanvasScaler>() ? _canvasNode.GetComponent<CanvasScaler>() : _canvasNode.AddComponent<CanvasScaler>();
             _staticCanvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            _staticCanvasScaler.referenceResolution = new Vector2(1080, 1920);
+            _staticCanvasScaler.referenceResolution = new Vector2(640, 960);
             _staticCanvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             GraphicRaycaster graphicRaycaster = _canvasNode.AddComponent<GraphicRaycaster>();
             //完善Canvas

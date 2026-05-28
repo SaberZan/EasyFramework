@@ -13,19 +13,24 @@ namespace Easy
     /// 数据层
     /// </summary>
     [NormalInit]
-    [Update]
     [OrderIndex((int) NormalInitOrderIndexEnum.SaveDataMgr)]
     public class SaveDataMgr : Singleton<SaveDataMgr>
     {
         private bool _inited = false;
         private Dictionary<string, Type> _allTypes;
         private Dictionary<string, SaveData> _allDatas;
-        private Dictionary<string, SaveData> _allCopyDatas;
+        private Queue<Dictionary<string, SaveData>> _allCopyDatas;
         private SerializableDictionary<string, string> _stringPrefs;
         private object _saveLock;
-        private float _time;
-        private float _interval;
+
         private string _savePath;
+
+
+        private Stack<string> saveInfo = new Stack<string>();
+        private bool saveTag = false;
+        private int saveIndex = 0;
+
+        private bool threadSave = false;
         
         /// <summary>
         /// 初始化
@@ -35,11 +40,9 @@ namespace Easy
         {
             _savePath = Application.persistentDataPath;
             _saveLock = new object();
-            _time = 0;
-            _interval = 10;
             _allTypes = new Dictionary<string, Type>();
             _allDatas = new Dictionary<string, SaveData>();
-            _allCopyDatas = new Dictionary<string, SaveData>();
+            _allCopyDatas = new Queue<Dictionary<string, SaveData>>();
             //查找全部数据类
             List<Type> types = EasyFrameworkMain.Instance.GetTypes();
             foreach (var t in types)
@@ -51,6 +54,11 @@ namespace Easy
             }
             ReadAll();
             _inited = true;
+            if(EasyTaskRunner.IsStartThreadTiming)
+            {
+                threadSave = true;
+                EasyTaskRunner.Run(()=>WriteAllByChildThread()).Trigger();
+            }
             complete.Invoke(true);
         }
 
@@ -59,7 +67,8 @@ namespace Easy
         /// </summary>
         public override void BeforeRestart()
         {
-            _time = 0;
+            saveInfo.Clear();
+            saveTag = false;
             _inited = false;
             DeleteAll();
         }
@@ -450,24 +459,26 @@ namespace Easy
         /// </summary>
         private void CopyData()
         {
-            foreach(var key in _allCopyDatas.Keys)
+            var allCopyDatas = ObjectPoolMgr.Instance.GetObject<Dictionary<string, SaveData>>();
+            foreach(var key in allCopyDatas.Keys)
             {
                 if(!_allDatas.ContainsKey(key))
                 {
-                    _allCopyDatas.Remove(key);
+                    allCopyDatas.Remove(key);
                 }
             }
 
             foreach (var kv in _allDatas)
             {
-                if(!_allCopyDatas.ContainsKey(kv.Key))
+                if(!allCopyDatas.ContainsKey(kv.Key))
                 {
                     Type t = kv.Value.GetType();
                     SaveData copyData = (SaveData) t.GetConstructor(Type.EmptyTypes)?.Invoke(null);
-                    _allCopyDatas.Add(kv.Key, copyData);
+                    allCopyDatas.Add(kv.Key, copyData);
                 }
-                _allCopyDatas[kv.Key].CopyValue(kv.Value);
+                allCopyDatas[kv.Key].CopyValue(kv.Value);
             }
+            _allCopyDatas.Enqueue(allCopyDatas);
         }
 
         /// <summary>
@@ -475,8 +486,13 @@ namespace Easy
         /// </summary>
         private void WriteData()
         {
-            KeyData keyData = (KeyData)_allCopyDatas["KeyData"];
-            foreach (var kv in _allCopyDatas)
+            if(_allCopyDatas.Count <= 0)
+            {
+                return;
+            }
+            var allCopyDatas = _allCopyDatas.Dequeue();
+            KeyData keyData = (KeyData)allCopyDatas["KeyData"];
+            foreach (var kv in allCopyDatas)
             {
                 string dataKey = kv.Value.GetType().Name;
                 if(keyData.Keys.ContainsKey(dataKey))
@@ -494,12 +510,13 @@ namespace Easy
 
             foreach (var key in _stringPrefs.Keys)
             {
-                if(!_allCopyDatas.ContainsKey(key))
+                if(!allCopyDatas.ContainsKey(key))
                 {
                     _stringPrefs.Remove(key);
                 }
             }
             FileMgr.Instance.SetTargetClassObjectToFile(_savePath + "/prefs.bin", _stringPrefs);
+            ObjectPoolMgr.Instance.PutObject(allCopyDatas);
         }
 
         /// <summary>
@@ -515,7 +532,10 @@ namespace Easy
                 if(result)
                 {
                     CopyData();
-                    WriteData();
+                    while(_allCopyDatas.Count > 0)
+                    {
+                        WriteData();
+                    }
                 }
             }
             finally
@@ -556,41 +576,64 @@ namespace Easy
         /// SaveAll
         /// </summary>
         /// <returns></returns>
-        private void WriteAllByChildThread(object state)
+        private void WriteAllByChildThread()
         {
-            bool result = false;
-            try
+            while(true)
             {
-                result = Monitor.TryEnter(_saveLock);
-                if(result)
+                bool result = false;
+                try
+                {
+                    result = Monitor.TryEnter(_saveLock);
+                    if(result)
+                    {
+                        WriteData();
+                    }
+                }
+                finally
+                {
+                    if(result)
+                    {
+                        Monitor.Exit(_saveLock);
+                    }
+                }
+
+                if(_allCopyDatas.Count == 0)
+                {  
+                    Thread.Sleep(100);  
+                }
+                else
+                {
+                    Thread.Sleep(10);
+                }        
+            }
+        }
+
+        /// <summary>
+        /// 开始保存数据
+        /// </summary>
+        public void BeginSave(string key)
+        {
+            if(saveInfo.Count == 0)
+            {
+                saveTag = true;
+            }
+            saveInfo.Push(key);   
+        }
+
+        /// <summary>
+        /// 结束保存数据
+        /// </summary>
+        public void EndSave(string key)
+        {
+            saveInfo.Pop();
+            if(saveTag && saveInfo.Count == 0)
+            {
+                CopyDataByMainThread();
+                if(!threadSave)
                 {
                     WriteData();
                 }
             }
-            finally
-            {
-                if(result)
-                {
-                    Monitor.Exit(_saveLock);
-                }
-            }            
-        }
-
-        public override void Update(float deltaTime)
-        {
-            if(_inited)
-            {
-                _time += deltaTime;
-                if(_time >= _interval)
-                {
-                    if(CopyDataByMainThread())
-                    {
-                        ThreadPool.QueueUserWorkItem(WriteAllByChildThread);
-                        _time = 0;
-                    }
-                }
-            }
-            
         }
     }
 

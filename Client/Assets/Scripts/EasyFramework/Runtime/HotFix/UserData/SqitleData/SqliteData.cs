@@ -21,10 +21,6 @@
             set
             {
                 _dataStage = value;
-                if (_dataStage != DataStage.Normal)
-                {
-                    SqliteMgr.Instance.TriggerSync();
-                }
             }
             get
             {

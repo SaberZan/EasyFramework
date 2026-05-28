@@ -236,7 +236,7 @@ namespace Easy
                 return;
             }
             dialog.Hide();
-            dialog.gameObject.transform.parent.gameObject.SetActive(false);
+            dialog.baseGameObject.transform.parent.gameObject.SetActive(false);
         }
 
         /// <summary>
@@ -245,8 +245,8 @@ namespace Easy
         private void CloseDialogInterval(BaseDialogUI dialog)
         {
             dialogs.Remove(dialog);
+            var backMask = dialog.baseGameObject.transform.parent.gameObject;
             dialog.Destroy();
-            var backMask = dialog.gameObject.transform.parent.gameObject;
             GameObject.Destroy(backMask);
         }
 

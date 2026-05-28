@@ -24,7 +24,7 @@
         /// <summary>
         /// 缓存栈（所有对象保存的容器）
         /// </summary>
-        private ConcurrentStack<IPoolObject> _cacheStack = new ConcurrentStack<IPoolObject>();
+        private ConcurrentStack<object> _cacheStack = new ConcurrentStack<object>();
         
         /// <summary>
         /// 获取对象
@@ -38,7 +38,7 @@
             }
             else
             {
-                if (_cacheStack.TryPop(out IPoolObject t))
+                if (_cacheStack.TryPop(out object t))
                     return (T)t;
             }
             return default(T);
@@ -49,11 +49,14 @@
         /// </summary>
         /// <param name="obj">类型对象</param>
         /// <returns></returns>
-        public void Put(IPoolObject obj)
+        public void Put(object obj)
         {
             if (_max == -1 || _cacheStack.Count < _max)
             {
-                obj.Reset();
+                if(obj is IPoolObject poolObject)
+                {
+                    poolObject.Reset();
+                }
                 _cacheStack.Push(obj);
             }
             else

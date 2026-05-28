@@ -212,7 +212,7 @@ namespace Easy
             return File.ReadAllText(path);
         }
 
-        public static byte[] ReadAllBytes(string path)
+        public byte[] ReadAllBytes(string path)
         {
             return File.ReadAllBytes(path);
         }

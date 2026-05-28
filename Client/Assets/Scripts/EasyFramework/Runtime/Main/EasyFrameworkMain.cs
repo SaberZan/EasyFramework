@@ -78,8 +78,10 @@ namespace Easy
         /// </summary>
         private EasyFrameworkMain()
         {
-            //多语言问题
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+#if !UNITY_WEBGL 
+            // 这一行很重要 ！！！ 避免了进行数字、日期时间、字符串匹配时的地区差异，否则某些地区环境下代码会出错。
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;;
+#endif
 
             //遍历所有类
             Type[] types = Assembly.GetExecutingAssembly().GetTypes();
@@ -133,6 +135,9 @@ namespace Easy
                 {
                     EasyTaskRunner.Tick(Timing.Main);
                 };
+#if !UNITY_WEBGL 
+                EasyTaskRunner.StartThreadTiming();
+#endif
             }
 
             //优先单例
