@@ -109,7 +109,7 @@ namespace Easy
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _staticCanvasScaler = _canvasNode.HasComponent<CanvasScaler>() ? _canvasNode.GetComponent<CanvasScaler>() : _canvasNode.AddComponent<CanvasScaler>();
             _staticCanvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            _staticCanvasScaler.referenceResolution = new Vector2(640, 960);
+            _staticCanvasScaler.referenceResolution = EasyFrameworkMain.Instance.config.GetEasyConfig<UIEasyConfig>()?.size?? new Vector2(1080, 1980);
             _staticCanvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             GraphicRaycaster graphicRaycaster = _canvasNode.AddComponent<GraphicRaycaster>();
             //完善Canvas

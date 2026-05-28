@@ -186,7 +186,6 @@ namespace Easy
         /// <summary>
         /// 复制文件
         /// </summary>
-
         public void Copy(string oldPath, string newPath, bool overwrite = false)
         {
             File.Copy(oldPath, newPath, overwrite);
@@ -211,7 +210,12 @@ namespace Easy
         {
             return File.ReadAllText(path);
         }
-
+        
+        /// <summary>
+        /// 读取文件
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public byte[] ReadAllBytes(string path)
         {
             return File.ReadAllBytes(path);

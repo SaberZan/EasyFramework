@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Easy
 {
 
-    public class I18NText : EventMonoBehaviour
+    public class I18NText : EasyMono
     {
         public string Key;
 

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Easy
 {
-    public class I18NSprite : EventMonoBehaviour
+    public class I18NSprite : EasyMono
     {
         
         public string key;
@@ -39,6 +39,10 @@ namespace Easy
         private void ChangeSprite()
         {
             string context = I18NMgr.Instance.GetShowSpritePath(key);
+            if(_handle != null)
+            {
+                AssetsMgr.Instance.Release(_handle);
+            }
             _handle = AssetsMgr.Instance.LoadAsset<Sprite>(context);
             ImageContext.sprite = _handle.GetResult() as Sprite;
             ImageContext.SetNativeSize();

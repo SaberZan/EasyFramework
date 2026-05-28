@@ -32,14 +32,14 @@ namespace Easy
         /// <summary>
         /// 初始化UI组件，设置取消令牌并订阅事件
         /// </summary>
-        public virtual void Awake()
+        protected virtual void Awake()
         {
             token = new EasyCancellationToken();
             EventMgr.Instance.SubscribeByTarget(this);
         }
 
 
-        public virtual void Start()
+        protected virtual void Start()
         {
 
         }
@@ -47,7 +47,7 @@ namespace Easy
         /// <summary>
         /// 销毁UI组件及其子UI
         /// </summary>
-        public virtual void OnDestroy()
+        protected virtual void OnDestroy()
         {
 
             foreach (var routine in coroutines)
