@@ -15,7 +15,7 @@
         /// </summary>
         public virtual void AddPatch()
         {
-            EasyLogger.Log("patch : " + patchVersion);
+            EasyLogger.Log(()=>"patch : " + patchVersion);
         }
 
     }

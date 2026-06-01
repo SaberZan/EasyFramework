@@ -74,12 +74,12 @@ namespace Easy.AA
                 var catalogs = checkUpdateHandle.Result;
                 if (catalogs.Count > 0)
                 {
-                    EasyLogger.Log("EasyFrameWork", "Need Update Catalogs Count = " + catalogs.Count);
+                    EasyLogger.Log(()=>"EasyFrameWork", ()=>"Need Update Catalogs Count = " + catalogs.Count);
                     CheckUpdateAssets(catalogs).Trigger();
                 }
                 else
                 {
-                    EasyLogger.Log("EasyFrameWork", "No Need Update");
+                    EasyLogger.Log(()=>"EasyFrameWork", ()=>"No Need Update");
 
                     await EasyTaskRunner.Delay(100);
                     _initComplete.Invoke(true);
@@ -376,7 +376,7 @@ namespace Easy.AA
             {
                 if (assetHandle.AliveCount() > 0)
                 {
-                    EasyLogger.Log("EasyFrameWork","实例还没被销毁,不应删除句柄");
+                    EasyLogger.Log(()=>"EasyFrameWork",()=>"实例还没被销毁,不应删除句柄");
                 }
 
                 Addressables.Release(assetHandle.result);

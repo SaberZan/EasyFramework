@@ -134,7 +134,7 @@ namespace Easy
             PlayerSettings.keystorePass = args.ContainsKey("keystorePass") ? args["keystorePass"] : PlayerSettings.keystorePass;
             PlayerSettings.keyaliasPass = args.ContainsKey("keyaliasPass") ? args["keyaliasPass"] : PlayerSettings.keyaliasPass;
             bool isDevelopment = args.ContainsKey("development") ? bool.Parse(args["development"]) : false;
-            string name = isDevelopment ? "Release" : "Debug";
+            string name = isDevelopment ? "Debug" : "Release";
             string ext = EditorUserBuildSettings.exportAsGoogleAndroidProject? "_as" : EditorUserBuildSettings.buildAppBundle? "_aab.aab" : ".apk";
             opt.locationPathName = BuildPath + "/Android/"+ name + "/" + name +  ext;
         }
@@ -221,7 +221,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildAndroidProject",
-                "--develepment=false",
+                "--development=false",
                 "--buildAsset=true",
                 "--androidCreateSymbolsZip=true",
                 "--buildAppBundle=false",
@@ -242,7 +242,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildAndroidProject",
-                "--develepment=true",
+                "--development=true",
                 "--buildAsset=true",
                 "--androidCreateSymbolsZip=false",
                 "--buildAppBundle=false",
@@ -262,7 +262,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildAndroidProject",
-                "--develepment=true",
+                "--development=true",
                 "--buildAsset=true",
                 "--androidCreateSymbolsZip=false",
                 "--buildAppBundle=false",
@@ -282,7 +282,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildAndroidProject",
-                "--develepment=false",
+                "--development=false",
                 "--buildAsset=true",
                 "--androidCreateSymbolsZip=false",
                 "--buildAppBundle=true",
@@ -324,7 +324,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildIosProject",
-                "--develepment=false",
+                "--development=false",
                 "--buildAsset=true",
                 "--BuildOptions=Development|AllowDebugging"
             };
@@ -340,7 +340,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildIosProject",
-                "--develepment=false",
+                "--development=false",
                 "--buildAsset=true"
             };
             BuildIosProject();
@@ -369,7 +369,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildWinProject",
-                "--develepment=true",
+                "--development=true",
                 "--buildAsset=true",
                 "--BuildOptions=Development|AllowDebugging"
             };
@@ -385,7 +385,7 @@ namespace Easy
             _commandLineArgs = new string[]
             {
                 "Easy.JenkinsBuild.BuildWinProject",
-                "--develepment=false",
+                "--development=false",
                 "--buildAsset=true"
             };
             BuildWinProject();

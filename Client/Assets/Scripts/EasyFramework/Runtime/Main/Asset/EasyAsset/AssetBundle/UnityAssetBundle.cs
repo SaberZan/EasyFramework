@@ -47,7 +47,7 @@ namespace Easy.EasyAsset
             string fullPath = Const.localAssetBundleFolder + md5;
             if (!FileMgr.Instance.IsFileExist(fullPath))
             {
-                EasyLogger.LogError("EasyFrameWork", $"***** Need Load File Lost {fullPath}*****");
+                EasyLogger.LogError(()=>"EasyFrameWork", ()=>$"***** Need Load File Lost {fullPath}*****");
                 return null;
             }
             AssetBundle assetBundle = null;

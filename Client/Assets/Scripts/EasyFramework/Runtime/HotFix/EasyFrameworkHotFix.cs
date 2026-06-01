@@ -108,7 +108,7 @@
         {
             if (IsInited())
             {
-                EasyLogger.LogWarning("EasyFrameWork", "Framework已初始化.");
+                EasyLogger.LogWarning(()=>"EasyFrameWork", ()=>"Framework已初始化.");
                 onInitCompleted.Invoke(true);
                 return;
             }
@@ -158,7 +158,7 @@
         /// <param name="complete"></param>
         private void InitializeSingleton(string tag, InitCompleteCallback complete)
         {
-            EasyLogger.Log("EasyFrameWork", tag + ":单例初始化开始<color=#32CFE7>" + string.Join(",", _initModules.Keys.ToArray()) + "</color>");
+            EasyLogger.Log(()=>"EasyFrameWork", ()=>tag + ":单例初始化开始<color=#32CFE7>" + string.Join(",", _initModules.Keys.ToArray()) + "</color>");
             if (_initModules.Values.Count == 0)
             {
                 complete.Invoke(false);
@@ -187,7 +187,7 @@
             {
                 var singleTon = list[i];
                 initializingSingles.Add(singleTon.GetType().Name);
-                EasyLogger.Log("EasyFrameWork", "-HotFix-initializingSingle--" + string.Join(",", initializingSingles));
+                EasyLogger.Log(()=>"EasyFrameWork", ()=>"-HotFix-initializingSingle--" + string.Join(",", initializingSingles));
                 singleTon.Init((result) =>
                 {
                     if (result)

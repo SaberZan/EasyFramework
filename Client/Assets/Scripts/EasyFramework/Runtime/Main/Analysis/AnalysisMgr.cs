@@ -71,7 +71,7 @@ namespace Easy
                             //异步获取广告ID
                             Application.RequestAdvertisingIdentifierAsync((string advertisingId, bool trackingEnabled, string error) =>
                             {
-                                EasyLogger.Log("EasyFrameWork","Analysis - AdvertisingId " + advertisingId + " " + trackingEnabled + " " + error);
+                                EasyLogger.Log(()=>"EasyFrameWork",()=>"Analysis - AdvertisingId " + advertisingId + " " + trackingEnabled + " " + error);
                                 _adid = advertisingId;
                                 foreach (IAnalysis item in _allAnalysis)
                                 {

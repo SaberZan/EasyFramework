@@ -116,13 +116,21 @@ namespace Easy
         {
             if (IsInited())
             {
-                EasyLogger.LogWarning("EasyFrameWork", "Framework已初始化.");
+                EasyLogger.LogWarning(()=>"EasyFrameWork", ()=>"Framework已初始化.");
                 OnInitCompleted.Invoke(true);
                 return;
             }
 
             string text = Resources.Load<TextAsset>(EasyFrameworkConfig.SETTINGS_NAME).text;
             config = JsonUtility.FromJson<EasyFrameworkConfig>(text);
+
+            EasyLogger.IsLogOpen = config.GetEasyConfig<EasyLoggerConfig>()?.IsLogOpen?? false;
+            if(EasyLogger.IsLogOpen)
+            {
+                EasyLogger.openTags.AddRange(config.GetEasyConfig<EasyLoggerConfig>()?.openTags?? new string[]{});
+                EasyLogger.IsUnityLog = config.GetEasyConfig<EasyLoggerConfig>()?.IsUnityLog?? false;
+                EasyLogger.IsWriteFile = config.GetEasyConfig<EasyLoggerConfig>()?.IsWriteFile?? false;
+            }
 
             //SingletonUpdate
             _singletonUpdate = UnityEngine.Object.FindObjectOfType<SingletonUpdateMonoBehaviour>();
@@ -136,7 +144,11 @@ namespace Easy
                     EasyTaskRunner.Tick(Timing.Main);
                 };
 #if !UNITY_WEBGL 
-                EasyTaskRunner.StartThreadTiming();
+                bool IsOpenThread = config.GetEasyConfig<EasyRunnerConfig>()?.IsOpenThread?? false;
+                if(IsOpenThread)
+                {
+                    EasyTaskRunner.StartThreadTiming(config.GetEasyConfig<EasyRunnerConfig>().threadMode);
+                }
 #endif
             }
 
@@ -186,7 +198,7 @@ namespace Easy
         /// <param name="complete"></param>
         private void InitializeSingleton(string tag, InitCompleteCallback complete)
         {
-            EasyLogger.Log("EasyFrameWork", tag + ":单例初始化开始<color=#32CFE7>" + string.Join(",", _initModules.Keys.ToArray()) + "</color>");
+            EasyLogger.Log(()=>"EasyFrameWork", ()=>tag + ":单例初始化开始<color=#32CFE7>" + string.Join(",", _initModules.Keys.ToArray()) + "</color>");
             if (_initModules.Values.Count == 0)
             {
                 complete.Invoke(false);
@@ -216,7 +228,7 @@ namespace Easy
             {
                 var singleTon = list[i];
                 initializingSingles.Add(singleTon.GetType().Name);
-                EasyLogger.Log("EasyFrameWork", "-Main-initializingSingle--" + string.Join(",", initializingSingles));
+                EasyLogger.Log(()=>"EasyFrameWork", ()=>"-Main-initializingSingle--" + string.Join(",", initializingSingles));
                 singleTon.Init((result) =>
                 {
                     if (result)

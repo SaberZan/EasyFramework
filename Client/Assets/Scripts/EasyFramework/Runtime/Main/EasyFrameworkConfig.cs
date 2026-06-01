@@ -8,7 +8,7 @@ namespace Easy
     [Serializable]
     public abstract class EasyConfig
     {
-
+        
     }
 
     [Serializable]

@@ -25,88 +25,156 @@ namespace Easy
 
         private static readonly int _MAX_LOG_DAYS = 3;
 
-        private static List<string> openTags = new List<string>();
+        public static List<string> openTags = new List<string>();
+
+        public static bool IsLogOpen = true;
+
+        public static bool IsWriteFile = false;
+
+        public static bool IsUnityLog = false;
 
 
         [Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void Log(string tag, string message)
+        public static void Log(Func<string> tagFunc, Func<string> messageFun)
         {
-            if(!openTags.Contains(tag)) return;
-            Log($"tag: {tag}, messgae: {message}");
+            if(!IsLogOpen)
+            { 
+                return;
+            }
+            var tag = tagFunc();
+            var message = messageFun();
+            if(!openTags.Contains(tag)) 
+            { 
+                return;
+            }
+            Log(()=>$"tag: {tag}, messgae: {message}");
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void Log(string message)
+        public static void Log(Func<string> messageFun)
         {
-#if UNITY_EDITOR
-            UnityEngine.Debug.Log(message);
-#else
-            if(_thread == null)
-			{
-				_thread = new Thread(Write);
-				_thread.Start();
-			}
-			_logQueue.Enqueue($"I>{message}");
-#endif
+            if(!IsLogOpen) 
+            {
+                return;
+            }
+            var message = messageFun();
+
+            if(IsUnityLog)
+            {
+                UnityEngine.Debug.Log(message);
+            }
+
+            if(IsWriteFile)
+            {
+                if(_thread == null)
+                {
+                    _thread = new Thread(Write);
+                    _thread.Start();
+                }
+                _logQueue.Enqueue($"I>{message}");
+            }
+
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void LogWarning(string tag, string message)
+        public static void LogWarning(Func<string> tagFunc, Func<string> messageFun)
         {
-            if(!openTags.Contains(tag)) return;
-            LogWarning($"tag: {tag}, messgae: {message}");
+            if(!IsLogOpen)
+            { 
+                return;
+            }
+            var tag = tagFunc();
+            var message = messageFun();
+            if(!openTags.Contains(tag)) 
+            { 
+                return;
+            }
+            LogWarning(()=>$"tag: {tag}, messgae: {message}");
         }
 
 		[Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void LogWarning(string message)
+        public static void LogWarning(Func<string> messageFun)
         {
-#if UNITY_EDITOR
-            UnityEngine.Debug.LogWarning(message);
-#else
-            if(_thread == null)
-			{
-				_thread = new Thread(Write);
-				_thread.Start();
-			}
-			_logQueue.Enqueue($"W>{message}");
-#endif
+            if(!IsLogOpen)
+            { 
+                return;
+            }
+            var message = messageFun();
+
+            if(IsUnityLog)
+            {
+                UnityEngine.Debug.LogWarning(message);
+            }
+
+            if(IsWriteFile)
+            {
+                if(_thread == null)
+                {
+                    _thread = new Thread(Write);
+                    _thread.Start();
+                }
+                _logQueue.Enqueue($"I>{message}");
+            }
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void LogError(string tag, string message)
+        public static void LogError(Func<string> tagFunc, Func<string> messageFun)
         {
-            if(!openTags.Contains(tag)) return;
-            LogError($"tag: {tag}, messgae: {message}");
+            if(!IsLogOpen)
+            { 
+                return;
+            }
+            var tag = tagFunc();
+            if(!openTags.Contains(tag)) 
+            { 
+                return;
+            }
+            var message = messageFun();
+            LogError(()=>$"tag: {tag}, messgae: {message}");
         }
 
 		[Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
-        public static void LogError(string message)
+        public static void LogError(Func<string> messageFun)
         {
-#if UNITY_EDITOR
-            UnityEngine.Debug.LogError(message);
-#else
-            if(_thread == null)
-			{
-				_thread = new Thread(Write);
-				_thread.Start();
-			}
-			_logQueue.Enqueue($"E>{message}");
-#endif
+            if(!IsLogOpen)
+            { 
+                return;
+            }
+            var message = messageFun();
+
+            if(IsUnityLog)
+            {
+                UnityEngine.Debug.LogError(message);
+            }
+
+            if(IsWriteFile)
+            {
+                if(_thread == null)
+                {
+                    _thread = new Thread(Write);
+                    _thread.Start();
+                }
+                _logQueue.Enqueue($"I>{message}");
+            }
         }
 
 		[Conditional("UNITY_EDITOR"), Conditional("ENABLE_LOG")]
         public static void LogException(Exception message)
         {
-#if UNITY_EDITOR
-			UnityEngine.Debug.LogException(message);
-#else
-			if(_thread == null)
-			{
-				_thread = new Thread(Write);
-				_thread.Start();
-			}
-			_logQueue.Enqueue($"Exc>{message.ToString()}");
-#endif
+            if(IsUnityLog)
+            {
+                UnityEngine.Debug.LogException(message);
+            }
+
+            if(IsWriteFile)
+            {
+                if(_thread == null)
+                {
+                    _thread = new Thread(Write);
+                    _thread.Start();
+                }
+                _logQueue.Enqueue($"I>{message}");
+            }
         }
 
         private static string GetFileName(DateTime dateTime)

@@ -796,7 +796,7 @@ namespace Easy.EasyAsset
         {
             if(handle is BaseUnityAssetHandle baseUnityAssetHandle && baseUnityAssetHandle.AliveCount() > 0)
             {
-                EasyLogger.Log("EasyFrameWork","实例还没被销毁,不应删除句柄");
+                EasyLogger.Log(()=>"EasyFrameWork",()=>"实例还没被销毁,不应删除句柄");
                 return false;
             }
             foreach (var abName in handle.dependAB)

@@ -77,7 +77,7 @@ namespace Easy
         public T GetTargetClassObject<T>(string fullpath, bool isStreamingAsset = false, bool isEncrypt = true)
             where T : class
         {
-            EasyLogger.LogWarning("EasyFrameWork",$"********** {isStreamingAsset} **********");
+            EasyLogger.LogWarning(()=>"EasyFrameWork",()=>$"********** {isStreamingAsset} **********");
             byte[] encryptContent;
             if (isStreamingAsset)
             {
@@ -87,7 +87,7 @@ namespace Easy
             {
                 if (!File.Exists(fullpath))
                 {
-                    EasyLogger.LogWarning("EasyFrameWork", $"***** Need Load File Lost {fullpath}*****");
+                    EasyLogger.LogWarning(()=>"EasyFrameWork", ()=>$"***** Need Load File Lost {fullpath}*****");
                     return null;
                 }
                 encryptContent = File.ReadAllBytes(fullpath);
@@ -125,7 +125,7 @@ namespace Easy
         /// <returns></returns>
         public byte[] LoadStreamingAssetFileSync(string filePath)
         {
-            Debug.Log("EasyFrameWork" + $"LoadStreamingAssetFileSync : Loading file name is {filePath}");
+            EasyLogger.Log(()=>"EasyFrameWork", ()=> $"LoadStreamingAssetFileSync : Loading file name is {filePath}");
 
             byte[] databuffer;
 

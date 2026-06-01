@@ -109,7 +109,7 @@ namespace Easy
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _staticCanvasScaler = _canvasNode.HasComponent<CanvasScaler>() ? _canvasNode.GetComponent<CanvasScaler>() : _canvasNode.AddComponent<CanvasScaler>();
             _staticCanvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            _staticCanvasScaler.referenceResolution = EasyFrameworkMain.Instance.config.GetEasyConfig<UIEasyConfig>()?.size?? new Vector2(1080, 1980);
+            _staticCanvasScaler.referenceResolution = EasyFrameworkMain.Instance.config.GetEasyConfig<EasyUIConfig>()?.size?? new Vector2(1080, 1980);
             _staticCanvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             GraphicRaycaster graphicRaycaster = _canvasNode.AddComponent<GraphicRaycaster>();
             //完善Canvas
@@ -141,7 +141,7 @@ namespace Easy
         /// <param name="scene"></param>
         private void onSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
         {
-            EasyLogger.Log("EasyFrameWork", "场景切换,UIView自动移除全部UI节点(请不要在Awake中添加UI,会被误移除).");
+            EasyLogger.Log(()=>"EasyFrameWork", ()=>"场景切换,UIView自动移除全部UI节点(请不要在Awake中添加UI,会被误移除).");
             RemoveAllLayer();
         }
 
@@ -448,7 +448,7 @@ namespace Easy
         {
             if (_staticCanvasScaler == null)
             {
-                EasyLogger.LogError("EasyFrameWork", "UIView SetResolution Failed ,Please Init TJFramework First!");
+                EasyLogger.LogError(()=>"EasyFrameWork", ()=>"UIView SetResolution Failed ,Please Init TJFramework First!");
                 return;
             }
             _staticCanvasScaler.referenceResolution = new Vector2(width, height);

@@ -167,7 +167,7 @@ public class ExcelTable
             }
             msg += "\n";
         }
-        Easy.EasyLogger.Log(msg);
+        Easy.EasyLogger.Log(()=>msg);
     }
 
    

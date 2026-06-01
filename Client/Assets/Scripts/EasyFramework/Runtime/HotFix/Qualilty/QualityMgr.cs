@@ -63,7 +63,7 @@ namespace Easy
                 level = 1;
             QualitySettings.SetQualityLevel(level, true);
 #endif
-            EasyLogger.Log("Quality = " + QualitySettings.GetQualityLevel());
+            EasyLogger.Log(()=>"Quality = " + QualitySettings.GetQualityLevel());
             complete.Invoke(true);
         }
 

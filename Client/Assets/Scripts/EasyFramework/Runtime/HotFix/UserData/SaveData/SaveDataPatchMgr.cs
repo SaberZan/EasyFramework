@@ -81,7 +81,7 @@
                 }
                 else
                 {
-                    EasyLogger.LogError("版本补丁函数AddPatch未实现");
+                    EasyLogger.LogError(()=>"版本补丁函数AddPatch未实现");
                 }
 
             }
