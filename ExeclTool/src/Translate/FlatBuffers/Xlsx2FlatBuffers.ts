@@ -1,4 +1,4 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
@@ -6,58 +6,42 @@ import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
+    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
+
     private outputPathFbsStr: string = '';
-
     private outputPathBinStr: string = '';
-
     private outputPathCodeStr: string = '';
-
     private outputPathJsonStr: string = '';
-
     private toCode: string = "";
-
     private namespaceStart = "namespace CfgSpace; \n\n";
-
     private packageCommonImport = "include \"Common.fbs\"; \n\n";
 
-    // private namespaceStart = "";
-
-    // private namespaceEnd = "}\n";
-
     private tableStart = "table {0} {\n";
-
     private tableEnd = "}\n\n";
-
     private structStart = "struct {0} {\n";
-
     private structEnd = "}\n\n";
-
     private unionStart = "union {0} {\n";
-
     private unionEnd = "}\n\n";
-
     private enumStart = "enum {0} {\n";
-
     private enumEnd = "}\n\n";
-
     private fieldStr = "\t{0} : {1};\n"
-
     private rootType = "root_type {0};\n\n";
-
     private intArray = "table IntArray { \n\t data : [int];\n}\n\n";
-
     private boolArray = "table BoolArray { \n\t data : [bool];\n}\n\n";
-
     private floatArray = "table FloatArray { \n\t data : [float];\n}\n\n";
-
     private stringArray = "table StringArray { \n\t data : [string];\n}\n\n";
 
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         super.TranslateExcel(pathStr,outputPathStr,translate,params);
+
+        // 解析子结构定义
+        let structPath = path.join(pathStr, '..', 'define');
+        await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathFbsStr = path.join(outputPathStr , "fbs");
         this.outputPathBinStr = path.join(outputPathStr , "bin");
@@ -235,7 +219,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         let keys = dataArr[0];
         let types = dataArr[1];
 
-        //检测层级结构，有多少层级
+        // 计算子结构层级
         let layerNum = 0;
         for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
             let type = types[typeIndex];
@@ -244,7 +228,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
         }
 
-        //若没有配置，必有一层层级
+        // 如果没有指定子结构层级，默认为1
         if (layerNum === 0) {
             layerNum = 1;
         }
@@ -266,7 +250,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                     continue;
                 }
 
-                let result = this.TransformValue(type, _arrLine[colIndex], rowIndex, colIndex); //检测类型，传入所在的行和列，方便报错检查
+                let result = this.TransformStructValue(type, _arrLine[colIndex], rowIndex, colIndex);
                 if (!_.isNil(result) && !_.isNaN(result)) {
                     let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
                     subTmp[keyLower] = result;
@@ -298,8 +282,8 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                     reject(err);
                     return;
                 }
-                console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-                console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
+                console.log(stdout);  
+                console.log(stderr);  
                 resolve();
             });
         })
@@ -313,8 +297,8 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                     reject(err);
                     return;
                 }
-                console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-                console.log(stderr);  // stderr为执行命令行操作后返回的错误提示
+                console.log(stdout);  
+                console.log(stderr);  
                 resolve();
             });
         })
@@ -386,7 +370,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    //翻译配置的字段到对应应该有的数据类型。
+    // 转换配置中的字到对应的数据类型
     private _TransformBasicsValue (type: string, data: any) {
         let result;
         switch (type) {
@@ -421,13 +405,12 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    //检测type 对应的值
-    private TransformValue (type: string, data: string, row?: number, col?: number) {
-
-        if(type.includes('serialize')) {
-            return undefined;
+    // 检查 type 是否为子结构
+    private TransformStructValue (type: string, data: string, row?: number, col?: number) {
+        if (this.structHelper.IsStructType(type)) {
+            return this.structHelper.TransformStructValue(type, data);
         }
-        
+
         let result;
         if(typeof(data) == 'string') {
             data = data.replace(/[\r\n]/g, '');
@@ -443,7 +426,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
 
         }else if(type.includes('[,]')) {
-            //二维数组
+            // 二维数组
             type = type.replace('[,]','');
             result = [];
             let datas = data.substring(2,data.length-2).split('],[');
@@ -457,7 +440,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
 
         }else{
-            //正常值
+            // 普通值
             result = this._TransformBasicsValue(type, data);
         }
         return result;
@@ -465,7 +448,6 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
     private outputPathCsStr: string = '';
 
-    // private csNamespaceStart = "namespace ReadCfgSpace\r\n{\r\n";
     private csNamespaceStart = "";
     private csConfigHead = "\t[Easy.Config(\"{0}\")]\r\n"
     private csClassDictionaryStart = "\tpublic class {0}Dictionary : System.Collections.Generic.Dictionary<{1}, CfgSpace.{2}>\r\n\t{\r\n" 
@@ -482,7 +464,6 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     private csMergeCreateFunLine7 = "\t\t\t\cfgs.{0}Dictionary = {1}Dictionary.CreateConfig(configData);\r\n"
     private csCreateFunEnd = "\t\t}\r\n";
     private csClassEnd = "\t}\r\n";
-    // private csNamespaceEnd = "}\r\n";
     private csNamespaceEnd = "";
     private csSubMergeCreateFunStart = "\t\tpublic static {0}Dictionary CreateConfig(CfgSpace.{1} configData)\r\n \t\t{\r\n"
     private csClassStart = "\tpublic class {0}\r\n\t{\r\n"

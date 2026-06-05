@@ -1,43 +1,43 @@
 {
     "target": "JSON",
     "params": {
-        "toCode" : "csharp"
+        "toCode": "csharp"
     },
     "designPath": ".\\design",
     "output": {
         "code" : "../Client/Assets/Scripts/Game/Rumtime/HotFix/Cfg",
         "bin" : "../Client/Assets/GameResources/Cfg"
     },
-    "enum":
-    {
-        "Enum1":{
-            "sheets":[
+    "enum": {
+        "Enum1": {
+            "sheets": [
                 "EnumTest"
             ]
         }
     },
-    "struct":
-    {
-        "Struct1":{
-            "sheets":[
+    "struct": {
+        "Struct1": {
+            "sheets": [
                 "StructTest"
             ]
         }
     },
-    "config": 
-    {
+    "config": {
         "1_常量表": {
             "sheets": [
-                ["常量","GameConstCfg"]
+                [
+                    "常量",
+                    "GameConstCfg"
+                ]
             ]
         },
-        "2_关卡表": {
+        "3_物品表": {
             "sheets": [
-                ["Map","MapCfg"],
-                ["Monster","MonsterCfg"]
-            ],
-            "mergeName": "LevelCfg",
-            "toDir": "Level"
+                [
+                    "ItemConfig",
+                    "ItemCfg"
+                ]
+            ]
         }
     }
 }

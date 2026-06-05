@@ -1,18 +1,25 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2Ts extends BaseTranslateConfig {
+
+    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
 
     private outputTsPathStr: string = '';
 
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
+
+        // 解析子结构定义
+        let structPath = path.join(pathStr, '..', 'define');
+        await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputTsPathStr = path.join(outputPathStr , "ts");
         if(!fs.existsSync(this.outputTsPathStr)) {
@@ -74,16 +81,16 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         let keys = dataArr[0];
         let types = dataArr[1];
 
-        //检测层级结构，有多少层级
+        // 计算子结构层级
         let layerNum = 0;
         for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
             let type = types[typeIndex];
-            if (type && type[0] == '#') {
+            if (type && type[0] == '$') {
                 layerNum += 1;
             }
         }
 
-        //若没有配置，必有一层层级
+        // 如果没有指定子结构层级，默认为1
         if (layerNum === 0) {
             layerNum = 1;
         }
@@ -95,7 +102,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                 continue;
             }
 
-            // 遍历引用，方便定义对象。
+            // 沿着子结构层级遍历
             let tmp = jsonOut;
             for (let layIndex = 0; layIndex < layerNum - 1; ++layIndex) {
                 if (!tmp[_arrLine[layIndex]]) {
@@ -113,7 +120,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                     continue;
                 }
 
-                let result = this.TransformValue(type, _arrLine[colIndex], rowIndex, colIndex); //检测类型，传入所在的行和列，方便报错检查
+                let result = this.TransformStructValue(type, _arrLine[colIndex], rowIndex, colIndex);
                 if (!_.isNil(result) && !_.isNaN(result)) {
                     let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
                     subTmp[keyLower] = result;
@@ -172,7 +179,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    //翻译配置的字段到对应应该有的数据类型。
+    // 转换配置中的字到对应的数据类型
     private _TransformBasicsValue (type: string, data: any) {
         let result;
         switch (type) {
@@ -211,11 +218,10 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    //检测type 对应的值
-    private TransformValue (type: string, data: string, row?: number, col?: number) {
-
-        if(type.includes('serialize')) {
-            return undefined;
+    // 检查 type 是否为子结构
+    private TransformStructValue (type: string, data: string, row?: number, col?: number) {
+        if (this.structHelper.IsStructType(type)) {
+            return this.structHelper.TransformStructValue(type, data);
         }
 
         let result;
@@ -231,7 +237,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         }else if(type.includes('[,]')) {
-            //二维数组
+            // 二维数组
             type = type.replace('[,]','');
             result = [];
             let datas = data.substring(2,data.length-2).split('],[');
@@ -245,7 +251,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         }else{
-            //正常值
+            // 普通值
             result = this._TransformBasicsValue(type, data);
         }
         return result;
