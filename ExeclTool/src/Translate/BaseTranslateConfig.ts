@@ -16,6 +16,8 @@ export default class BaseTranslateConfig {
 
     public isDir: boolean = false;
 
+    public definePath: string = "";
+
     /**
      * 
      * @param pathStr 表的路径
@@ -28,6 +30,7 @@ export default class BaseTranslateConfig {
         this.translateSheets = translate.sheets;
         this.mergeName = translate.mergeName;
         this.toDir = translate.toDir;
+        this.definePath = translate.definePath || "";
         this.isDir = false;
         console.log("-1- isDir " + this.isDir)
         if (fs.existsSync(pathStr) && fs.statSync(pathStr).isDirectory()) { 

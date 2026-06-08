@@ -141,7 +141,10 @@ gulp.task("copyOutput",(cb)=>{
         }else{
             fs.mkdirSync(outpath);
         }
-        fs.cpSync(path.join(tmp_path,key), outpath, { recursive: true });
+        if(fs.existsSync(path.join(tmp_path,key))) {
+            fs.cpSync(path.join(tmp_path,key), outpath, { recursive: true });
+        }
+        
     }
     cb();
 });

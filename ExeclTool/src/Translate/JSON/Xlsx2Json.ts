@@ -1,11 +1,11 @@
-Ôªøimport xlsx from 'node-xlsx';
+import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
-import Utils from '../utils';
-import BaseTranslateConfig from './BaseTranslateConfig';
-import BaseTranslateStruct, { StructDefinition } from './BaseTranslateStruct';
+import Utils from '../../utils';
+import BaseTranslateConfig from '../BaseTranslateConfig';
+import BaseTranslateStruct, { StructDefinition } from '../BaseTranslateStruct';
 
 export default class Xlsx2Json extends BaseTranslateConfig {
 
@@ -18,7 +18,7 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
         console.log('-- isDir ' + this.isDir + '    ' + this.translateSheets);
 
-        // Ëß£ÊûêÂ≠êÁªìÊûÑÂÆö‰πâ
+        // Ω‚Œˆ◊”Ω·ππ∂®“Â
         let structPath = path.join(pathStr, '..', 'define');
         await this.structHelper.ParseStructDefinitions(structPath);
 
@@ -90,18 +90,8 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // ËÆ°ÁÆóÂ≠êÁªìÊûÑÂ±ÇÁ∫ß
-        let layerNum = 0;
-        for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
-            let type = types[typeIndex];
-            if (type && type[0] == '$') {
-                layerNum += 1;
-            }
-        }
-
-        if (layerNum === 0) {
-            layerNum = 1;
-        }
+        // ƒ¨»œµ•≤„º∂£¨»Áπ˚µ⁄“ª–– ˝æ›∞¸∫¨«∂Ã◊◊÷∂Œ£®¥¯µ„µƒ◊÷∂Œ√˚£©£¨ª·◊‘∂Ø¥¶¿Ì
+        let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -134,7 +124,7 @@ export default class Xlsx2Json extends BaseTranslateConfig {
                 let fieldPath = this.structHelper.ParseFieldPath(key);
 
                 if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformValue(type, value));
+                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
                 } else {
                     let result = this.TransformStructValue(type, value, rowIndex, colIndex);
                     if (!_.isNil(result) && !_.isNaN(result)) {

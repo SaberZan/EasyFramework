@@ -1,9 +1,9 @@
 ﻿import xlsx from 'node-xlsx';
 import path from 'path';
-import fs from "fs";
-import { mkdir, readdir, writeFile } from "fs/promises";
+import fs from 'fs';
+import { mkdir, readdir, writeFile } from 'fs/promises';
 import _ from 'lodash';
-import { exec } from 'child_process'
+import { exec } from 'child_process';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateStruct from '../BaseTranslateStruct';
@@ -16,87 +16,70 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     private outputPathBinStr: string = '';
     private outputPathCodeStr: string = '';
     private outputPathJsonStr: string = '';
-    private toCode: string = "";
-    private namespaceStart = "namespace CfgSpace; \n\n";
-    private packageCommonImport = "include \"Common.fbs\"; \n\n";
+    private outputPathCsStr: string = '';
+    private toCode: string = '';
 
-    private tableStart = "table {0} {\n";
-    private tableEnd = "}\n\n";
-    private structStart = "struct {0} {\n";
-    private structEnd = "}\n\n";
-    private unionStart = "union {0} {\n";
-    private unionEnd = "}\n\n";
-    private enumStart = "enum {0} {\n";
-    private enumEnd = "}\n\n";
-    private fieldStr = "\t{0} : {1};\n"
-    private rootType = "root_type {0};\n\n";
-    private intArray = "table IntArray { \n\t data : [int];\n}\n\n";
-    private boolArray = "table BoolArray { \n\t data : [bool];\n}\n\n";
-    private floatArray = "table FloatArray { \n\t data : [float];\n}\n\n";
-    private stringArray = "table StringArray { \n\t data : [string];\n}\n\n";
+    private namespaceStart = 'namespace CfgSpace; \n\n';
+    private packageCommonImport = 'include \"Common.fbs\"; \n\n';
 
-    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
+    private tableStart = 'table {0} {\n';
+    private tableEnd = '}\n\n';
+    private structStart = 'struct {0} {\n';
+    private structEnd = '}\n\n';
+    private fieldStr = '    {0} : {1};\n';
+    private rootType = 'root_type {0};\n\n';
 
-        super.TranslateExcel(pathStr,outputPathStr,translate,params);
+    private csNotes = '/**\n * {0}\n */\n';
+    private csConfigHead = '    [Easy.Config(\"{0}\")]\n';
+    private csClassDictionaryStart = 'public static class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\n{\n';
+    private csPrivateStr = '        private {0} _{1};\n';
+    private csPublicStr = '        public static {0} {1} => _{1};\n\n';
+    private csClassEnd = '}\n\n';
 
-        // 解析子结构定义
-        let structPath = path.join(pathStr, '..', 'define');
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
+        await super.TranslateExcel(pathStr, outputPathStr, translate, params);
+
+        let structPath = this.definePath || path.join(pathStr, '..', 'define');
         await this.structHelper.ParseStructDefinitions(structPath);
 
-        this.outputPathFbsStr = path.join(outputPathStr , "fbs");
-        this.outputPathBinStr = path.join(outputPathStr , "bin");
-        this.outputPathCodeStr = path.join(outputPathStr , "code" , params.toCode);
-        this.outputPathJsonStr = path.join(outputPathStr , "json");
-        this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
+        this.outputPathFbsStr = path.join(outputPathStr, 'fbs');
+        this.outputPathBinStr = path.join(outputPathStr, 'bin');
+        this.outputPathCodeStr = path.join(outputPathStr, 'code', params.toCode);
+        this.outputPathJsonStr = path.join(outputPathStr, 'json');
+        this.outputPathCsStr = path.join(outputPathStr, 'code', 'cs');
         this.toCode = params.toCode;
 
-        if(!fs.existsSync(this.outputPathFbsStr)) {
-            await mkdir(this.outputPathFbsStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathBinStr)) {
-            await mkdir(this.outputPathBinStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathCodeStr)) {
-            await mkdir(this.outputPathCodeStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathJsonStr)) {
-            await mkdir(this.outputPathJsonStr, { recursive: true });
-        }
-        if(!fs.existsSync(this.outputPathCsStr)) {
-            await mkdir(this.outputPathCsStr, { recursive: true });
-        }
+        if (!fs.existsSync(this.outputPathFbsStr)) await mkdir(this.outputPathFbsStr, { recursive: true });
+        if (!fs.existsSync(this.outputPathBinStr)) await mkdir(this.outputPathBinStr, { recursive: true });
+        if (!fs.existsSync(this.outputPathCodeStr)) await mkdir(this.outputPathCodeStr, { recursive: true });
+        if (!fs.existsSync(this.outputPathJsonStr)) await mkdir(this.outputPathJsonStr, { recursive: true });
+        if (!fs.existsSync(this.outputPathCsStr)) await mkdir(this.outputPathCsStr, { recursive: true });
 
-        if(this.toDir != undefined) {
+        if (this.toDir) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr, this.toDir);
-            if(!fs.existsSync(this.outputPathJsonStr)) {
-                await mkdir(this.outputPathJsonStr, { recursive: true });
-            }
+            if (!fs.existsSync(this.outputPathJsonStr)) await mkdir(this.outputPathJsonStr, { recursive: true });
         }
 
-        if (this.isDir) { 
+        if (this.isDir) {
             let files = await readdir(pathStr);
-            for(let i in files) {
+            for (let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
-                for (let i = 0; i < data.length; ++i) {
-                    this.xlsxData[data[i].name] = data[i].data;
+                for (let j = 0; j < data.length; ++j) {
+                    this.xlsxData[data[j].name] = data[j].data;
                 }
-                let fileName = files[i].replace(path.extname(files[i]),"");
+                let fileName = files[i].replace(path.extname(files[i]), '');
                 await this.TransferTableJson(fileName);
-                if(i == "0") {
-                    await this.TransferTableCs();
+                if (i == '0') {
                     await this.TransferTableFbs();
-                    await this.GenCode(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
-                        this.toCode,
-                        this.outputPathCodeStr);
+                    await this.TransferTableCs();
+                    await this.GenCode(path.join(this.outputPathFbsStr, this.mergeName + '.fbs'), this.toCode, this.outputPathCodeStr);
                 }
-                await this.GenBin(path.join(this.outputPathFbsStr, this.mergeName + ".fbs"),
-                                path.join(this.outputPathJsonStr, this.mergeName + fileName+".json"),
-                                path.join(this.outputPathBinStr, this.mergeName));
+                await this.GenBin(path.join(this.outputPathFbsStr, this.mergeName + '.fbs'), path.join(this.outputPathJsonStr, this.mergeName + fileName + '.json'), path.join(this.outputPathBinStr, this.mergeName));
             }
         } else {
             let parsedPath = path.parse(pathStr);
-            parsedPath.base += ".xlsx";
-            parsedPath.ext = ".xlsx";
+            parsedPath.base += '.xlsx';
+            parsedPath.ext = '.xlsx';
             let data = xlsx.parse(path.format(parsedPath));
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
@@ -107,262 +90,214 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                await this.GenBin(path.join(this.outputPathFbsStr, translateName + ".fbs") , 
-                                path.join(this.outputPathJsonStr, translateName+".json"),
-                                this.outputPathBinStr);
-                await this.GenCode(path.join(this.outputPathFbsStr, translateName + ".fbs") ,
-                                this.toCode,
-                                this.outputPathCodeStr);
+                await this.GenBin(path.join(this.outputPathFbsStr, translateName + '.fbs'), path.join(this.outputPathJsonStr, translateName + '.json'), path.join(this.outputPathBinStr, translateName));
             }
         }
     }
 
-    private async TransferTableFbs() : Promise<void> {
-        if(this.merge) {
-
-            let fbsContent = this.packageCommonImport; 
-            fbsContent += this.namespaceStart;
-
+    private async TransferTableJson(file: string = ''): Promise<void> {
+        if (this.merge) {
+            let all: { [key: string]: any } = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                fbsContent += this.createFbs(this.xlsxData[sheetName],translateName);
-            }
-
-            fbsContent += Utils.FormatStr(this.tableStart, this.mergeName);
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                fbsContent += Utils.FormatStr(this.fieldStr, translateNamekeyLower + "Array", "[" + translateNamekeyUpper + "]");
-            }
-            fbsContent += this.tableEnd;
-
-            fbsContent += Utils.FormatStr(this.rootType, this.mergeName);
-
-            await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, this.mergeName));
-        }else{
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                let fbsContent = this.packageCommonImport;
-                fbsContent += this.namespaceStart;
-                fbsContent += this.createFbs(this.xlsxData[sheetName],translateName);
-                fbsContent += Utils.FormatStr(this.tableStart, translateName + "s");
-                fbsContent += Utils.FormatStr(this.fieldStr, translateNamekeyLower + "Array","[" + translateName + "]");
-                fbsContent += this.tableEnd;
-                fbsContent += Utils.FormatStr(this.rootType, translateName + "s");
-                await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, translateName));
-            }
-        }
-    }
-
-    private createFbs(data: any, className: string) {
-
-        let tableContent = Utils.FormatStr(this.tableStart, className);
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let decs = dataArr[2];
-        for (let keyIndex = 0; keyIndex < keys.length; ++keyIndex) {
-            let key = keys[keyIndex];
-            if (_.isNil(key) || _.isEmpty(key)) {
-                continue;
-            }
-            let type = this.TransformType(types[keyIndex]);
-            if(type != undefined){
-                let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                tableContent += Utils.FormatStr(this.fieldStr, keyLower, type);
-            }
-        }
-        tableContent += this.tableEnd;
-        return tableContent;
-    }
-
-    private async SaveFbsToFile(data: any, filePath: string) : Promise<void> {
-        await writeFile(filePath + ".fbs", data, { flag: 'w', encoding: 'utf8' });
-    }
-
-    private async TransferTableJson(file: string = "") : Promise<void> {
-        if(this.merge) {
-            let all: {[key: string]: any} = {};
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                all[translateNamekeyLower + "Array"] = jsonData[translateNamekeyLower + "Array"];
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
+                all[translateName] = jsonData;
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
-        }else{
+        } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
 
-    private CreateJson(data: any, className: string) {
-        let jsonOut: { [key: string]: any }[] = [];
+    private async TransferTableFbs(): Promise<void> {
+        let fbsContent = this.namespaceStart + this.packageCommonImport;
 
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
+        for (let structName in this.structHelper.structDefinitions) {
+            fbsContent += this.CreateFbsStruct(this.structHelper.structDefinitions[structName]);
+        }
 
-        // 计算子结构层级
-        let layerNum = 0;
-        for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
-            let type = types[typeIndex];
-            if (type && type[0] == '#') {
-                layerNum += 1;
+        if (this.merge) {
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
+            }
+            fbsContent += this.rootType.replace('{0}', this.mergeName);
+        } else {
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
+                fbsContent += this.rootType.replace('{0}', translateName);
             }
         }
 
-        // 如果没有指定子结构层级，默认为1
-        if (layerNum === 0) {
-            layerNum = 1;
+        fs.writeFileSync(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), fbsContent, 'utf8');
+    }
+
+    private async TransferTableCs(): Promise<void> {
+        if (this.merge) {
+            let content = '';
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                content += this.CreateCs(this.xlsxData[sheetName], translateName, this.mergeName);
+            }
+            content += Utils.FormatStr(this.csNotes, this.mergeName);
+            if (!this.isDir) content += Utils.FormatStr(this.csConfigHead, this.mergeName);
+            content += Utils.FormatStr(this.csClassDictionaryStart, this.mergeName, 'int', this.mergeName);
+            content += Utils.FormatStr(this.csPrivateStr, 'int', 'id');
+            content += Utils.FormatStr(this.csPublicStr, 'int', 'id');
+            content += this.csClassEnd;
+            this.SaveCsToFile(content, path.join(this.outputPathCsStr, this.mergeName));
+        } else {
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                let content = Utils.FormatStr(this.csNotes, translateName);
+                content += Utils.FormatStr(this.csConfigHead, translateName);
+                content += this.CreateCs(this.xlsxData[sheetName], translateName, '');
+                this.SaveCsToFile(content, path.join(this.outputPathCsStr, translateName));
+            }
+        }
+    }
+
+    private CreateJson(data: any, className: string): any {
+        let jsonOut: { [key: string]: any } = {};
+
+        if (!data || data.length < 3) {
+            console.warn('Invalid data for FlatBuffers', className);
+            return jsonOut;
         }
 
-        let index = 0;
-        for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
-            let _arrLine = dataArr[rowIndex];
+        let keys = data[0] || [];
+        let types = data[1] || [];
 
-            if (_.isNil(_arrLine[0]) || _arrLine[0] == '') {
-                continue;
-            }
+        for (let rowIndex = 3; rowIndex < data.length; ++rowIndex) {
+            let _arrLine = data[rowIndex];
+            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] === '') continue;
 
             let subTmp: { [key: string]: any } = {};
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
                 let type = types[colIndex];
                 let value = _arrLine[colIndex];
-                if (_.isNil(key) || _.isEmpty(key) || typeof(value) == "undefined") {
-                    continue;
-                }
+                if (_.isNil(key) || _.isEmpty(key) || typeof value === 'undefined') continue;
 
-                let result = this.TransformStructValue(type, _arrLine[colIndex], rowIndex, colIndex);
-                if (!_.isNil(result) && !_.isNaN(result)) {
-                    let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                    subTmp[keyLower] = result;
+                let fieldPath = this.structHelper.ParseFieldPath(key);
+                if (fieldPath.length > 1) {
+                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
+                } else {
+                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
+                    if (!_.isNil(result) && !_.isNaN(result)) {
+                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
+                        subTmp[keyLower] = result;
+                    }
                 }
             }
 
-            jsonOut[index] = subTmp;
-
-            ++index;
+            jsonOut[_arrLine[0]] = subTmp;
         }
 
-        let output : {[key:string]: object} = {};
-        className = Utils.GetFristUpperAndLowerStr(className)[1];
-        output[className + "Array"] = jsonOut;
-        return output;
+        return jsonOut;
     }
 
-    private async SaveJsonToFile(data: any, filePath: string) : Promise<void> {
-        var _str_all = "";
-        _str_all += JSON.stringify(data, null, 4);
-        await writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
+    private CreateFbsStruct(structDef: any): string {
+        let content = this.structStart.replace('{0}', structDef.name);
+        for (let field of structDef.fields) {
+            content += this.fieldStr.replace('{0}', field.name).replace('{1}', this.TransformType(field.type));
+        }
+        content += this.structEnd;
+        return content;
     }
 
-    private async GenBin(fbsPath: string, jsonPath: string, outputPath: string) : Promise<void> {
-        return new Promise((resolve, reject)=>{
-            let cmd = ".\\lib\\flatc\\flatc.exe " + " -I " + path.dirname(fbsPath)   + " -o " + outputPath + " -b " + fbsPath + " " + jsonPath;
-            exec(cmd, (err, stdout, stderr) => {
-                if(err) {
-                    reject(err);
-                    return;
-                }
-                console.log(stdout);  
-                console.log(stderr);  
-                resolve();
-            });
-        })
+    private CreateFbs(data: any, className: string): string {
+        if (!data || data.length < 2) {
+            console.warn('Invalid data for FlatBuffers FBS', className);
+            return '';
+        }
+
+        let keys = data[0] || [];
+        let types = data[1] || [];
+        let content = this.tableStart.replace('{0}', className);
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key)) continue;
+
+            let fieldType = this.TransformType(type);
+            if (this.structHelper.IsStructType(type)) {
+                content += this.fieldStr.replace('{0}', key).replace('{1}', type);
+            } else {
+                content += this.fieldStr.replace('{0}', key).replace('{1}', fieldType);
+            }
+        }
+
+        content += this.tableEnd;
+        return content;
     }
 
-    private async GenCode(fbsPath: string, toCode: string, outputPath: string) : Promise<void> {
-        return new Promise((resolve, reject)=>{
-            let cmd = ".\\lib\\flatc\\flatc.exe -o " + outputPath + " --" + toCode +" " + fbsPath;
-            exec(cmd, (err, stdout, stderr) => {
-                if(err) {
-                    reject(err);
-                    return;
-                }
-                console.log(stdout);  
-                console.log(stderr);  
-                resolve();
-            });
-        })
+    private CreateCs(data: any, className: string, mergeName: string): string {
+        if (!data || data.length < 2) {
+            console.warn('Invalid data for FlatBuffers CS', className);
+            return '';
+        }
+
+        let keys = data[0] || [];
+        let types = data[1] || [];
+        let content = '';
+
+        if (mergeName !== className) {
+            content += Utils.FormatStr(this.csNotes, className);
+        }
+        content += Utils.FormatStr(this.csClassDictionaryStart, className, 'int', className);
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key)) continue;
+
+            let csType = this.TransformCsType(type);
+            let keyUpperLower = Utils.GetFristUpperAndLowerStr(key);
+            let keyUpper = keyUpperLower[0];
+            let keyLower = keyUpperLower[1];
+
+            content += Utils.FormatStr(this.csPrivateStr, csType, keyLower);
+            content += Utils.FormatStr(this.csPublicStr, csType, keyUpper, keyLower);
+        }
+
+        content += this.csClassEnd;
+        return content;
     }
 
-    private TransformType(type: string) {
+    private TransformType(type: string): string {
         let result;
         switch (type) {
-            case 'int':
-            case 'Int':
-                result = 'int';
-                break;
-            case 'int[]':
-            case 'Int[]':
-                result = '[int]';
-                break;   
-            case 'int[,]':
-            case 'Int[,]':
-                result = '[CfgSpace.IntArray]';
-                break;   
-            case 'float':
-            case 'Float':
-                result = 'float';
-                break;
-            case 'float[]':
-            case 'Float[]':
-                result = '[float]';
-                break;
-            case 'float[,]':
-            case 'Float[,]':
-                result = '[CfgSpace.FloatArray]';
-                break;    
-            case 'bool':
-            case 'Bool':
-            case 'boolen':
-            case 'Boolen':
-                result = 'bool';
-                break;
-            case 'bool[]':
-            case 'Bool[]':
-            case 'boolen[]':
-            case 'Boolen[]':
-                result = '[bool]';
-                break;
-            case 'bool[,]':
-            case 'Bool[,]':
-            case 'boolen[,]':
-            case 'Boolen[,]':
-                result = '[CfgSpace.BoolArray]';
-                break;
-            case 'string':
-            case 'String':
-                result = 'string';
-                break;
-            case 'string[]':
-            case 'String[]':
-                result = '[string]';
-            case 'string[,]':
-            case 'String[,]':
-                result = '[CfgSpace.StringArray]';
+            case 'int': case 'Int': result = 'int'; break;
+            case 'int[]': case 'Int[]': result = '[int]'; break;
+            case 'int[,]': case 'Int[,]': result = '[IntArray]'; break;
+            case 'float': case 'Float': result = 'float'; break;
+            case 'float[]': case 'Float[]': result = '[float]'; break;
+            case 'float[,]': case 'Float[,]': result = '[FloatArray]'; break;
+            case 'bool': case 'Bool': case 'boolen': case 'Boolen': result = 'bool'; break;
+            case 'bool[]': case 'Bool[]': case 'boolen[]': case 'Boolen[]': result = '[bool]'; break;
+            case 'bool[,]': case 'Bool[,]': case 'boolen[,]': case 'Boolen[,]': result = '[BoolArray]'; break;
+            case 'string': case 'String': result = 'string'; break;
+            case 'string[]': case 'String[]': result = '[string]'; break;
+            case 'string[,]': case 'String[,]': result = '[StringArray]'; break;
             default:
-                if(type.includes('serialize')) {
-                    result = undefined;
-                }else{
+                if (this.structHelper.IsStructType(type)) {
+                    result = type;
+                } else if (type.includes('[]')) {
+                    result = '[' + this.TransformType(type.replace('[]', '')) + ']';
+                } else {
                     result = type;
                 }
                 break;
@@ -370,229 +305,119 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // 转换配置中的字到对应的数据类型
-    private _TransformBasicsValue (type: string, data: any) {
+    private TransformCsType(type: string): string {
         let result;
         switch (type) {
-            case 'int':
-            case 'Int':
-                result = parseInt(data);
-                break;
-            case 'float':
-            case 'Float':
-                result = parseFloat(data);
-                break;
-            case 'bool':
-            case 'Bool':
-            case 'boolen':
-            case 'Boolen':
-                result = Boolean(data);
-                break;
-            case 'string':
-            case 'String':
-                result = data;
-                if (result == '') {
-                    result = null;
-                }
-                break;
+            case 'int': case 'Int': result = 'int'; break;
+            case 'int[]': case 'Int[]': result = 'int[]'; break;
+            case 'int[,]': case 'Int[,]': result = 'CfgSpace.IntArray[]'; break;
+            case 'float': case 'Float': result = 'float'; break;
+            case 'float[]': case 'Float[]': result = 'float[]'; break;
+            case 'float[,]': case 'Float[,]': result = 'CfgSpace.FloatArray[]'; break;
+            case 'bool': case 'Bool': case 'boolen': case 'Boolen': result = 'bool'; break;
+            case 'bool[]': case 'Bool[]': case 'boolen[]': case 'Boolen[]': result = 'bool[]'; break;
+            case 'bool[,]': case 'Bool[,]': case 'boolen[,]': case 'Boolen[,]': result = 'CfgSpace.BoolArray[]'; break;
+            case 'string': case 'String': result = 'string'; break;
+            case 'string[]': case 'String[]': result = 'string[]'; break;
+            case 'string[,]': case 'String[,]': result = 'CfgSpace.StringArray[]'; break;
             default:
-                result = data;
-                if (result == '') {
-                    result = null;
+                if (this.structHelper.IsStructType(type)) {
+                    result = 'CfgSpace.' + type;
+                } else if (type.includes('[]')) {
+                    result = this.TransformCsType(type.replace('[]', '')) + '[]';
+                } else {
+                    result = type;
                 }
                 break;
         }
         return result;
     }
 
-    // 检查 type 是否为子结构
-    private TransformStructValue (type: string, data: string, row?: number, col?: number) {
+    private SaveJsonToFile(data: any, filePath: string): void {
+        fs.writeFileSync(filePath + '.json', JSON.stringify(data, null, 4), 'utf8');
+    }
+
+    private SaveCsToFile(data: string, filePath: string): void {
+        fs.writeFileSync(filePath + '.cs', data, 'utf8');
+    }
+
+    private _TransformBasicsValue(type: string, data: any): any {
+        let result;
+        switch (type) {
+            case 'int': case 'Int': result = parseInt(data); break;
+            case 'float': case 'Float': result = parseFloat(data); break;
+            case 'bool': case 'Bool': case 'boolen': case 'Boolen': result = Boolean(data); break;
+            case 'string': case 'String': result = data; if (result === '') result = null; break;
+            case 'json': case 'Json': result = JSON.parse(data); break;
+            default: result = data; if (result === '') result = null; break;
+        }
+        return result;
+    }
+
+    private TransformStructValue(type: string, data: string, row?: number, col?: number): any {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
         }
 
         let result;
-        if(typeof(data) == 'string') {
+        if (typeof data === 'string') {
             data = data.replace(/[\r\n]/g, '');
         }
-        if(type.includes('serialize')) {
-            result = this._TransformBasicsValue(type, data);
-        }else if(type.includes('[]')) {   
-            type = type.replace('[]','');
-            result = [];
-            let _datas = data.substring(1,data.length -1).split(',');
-            for (let i = 0; i < _datas.length; ++i) {
-                result.push(this._TransformBasicsValue(type, _datas[i]));
-            }
 
-        }else if(type.includes('[,]')) {
-            // 二维数组
-            type = type.replace('[,]','');
+        if (type.includes('[,]')) {
+            type = type.replace('[,]', '');
             result = [];
-            let datas = data.substring(2,data.length-2).split('],[');
+            let datas = data.substring(2, data.length - 2).split('],[');
             for (let i = 0; i < datas.length; ++i) {
-                let tmpResult = []
+                let tmpResult = [];
                 let _datas = datas[i].split(',');
                 for (let j = 0; j < _datas.length; ++j) {
                     tmpResult.push(this._TransformBasicsValue(type, _datas[j]));
                 }
-                result.push({data : tmpResult});
+                result.push({ data: tmpResult });
             }
-
-        }else{
-            // 普通值
+        } else if (type.includes('[]')) {
+            type = type.replace('[]', '');
+            result = [];
+            let _datas = data.substring(1, data.length - 1).split(',');
+            for (let i = 0; i < _datas.length; ++i) {
+                result.push(this._TransformBasicsValue(type, _datas[i]));
+            }
+        } else {
             result = this._TransformBasicsValue(type, data);
         }
         return result;
     }
 
-    private outputPathCsStr: string = '';
-
-    private csNamespaceStart = "";
-    private csConfigHead = "\t[Easy.Config(\"{0}\")]\r\n"
-    private csClassDictionaryStart = "\tpublic class {0}Dictionary : System.Collections.Generic.Dictionary<{1}, CfgSpace.{2}>\r\n\t{\r\n" 
-    private csNotes = "/**\r\n * {0}\r\n */\r\n"
-    private csCreateFunStart = "\t\tpublic static {0}Dictionary CreateConfig(Google.FlatBuffers.ByteBuffer byteBuffer)\r\n \t\t{\r\n"
-    private csMergeCreateFunStart = "\t\tpublic static {0} CreateConfig(Google.FlatBuffers.ByteBuffer byteBuffer)\r\n \t\t{\r\n"
-    private csCreateFunLine1 = "\t\t\t{0}Dictionary cfgs = new {1}Dictionary();\r\n"
-    private csMergeCreateFunLine1 = "\t\t\t\{0} cfgs = new {1}();\r\n"
-    private csCreateFunLine2 = "\t\t\tCfgSpace.{0} configData = CfgSpace.{1}.GetRootAs{2}(byteBuffer);\r\n"
-    private csCreateFunLine3 = "\t\t\tfor(int i = 0; i < configData.{0}ArrayLength; ++i)\r\n\t\t\t{\r\n"
-    private csCreateFunLine4 = "\t\t\t\tCfgSpace.{0} cfg = (CfgSpace.{1})configData.{2}Array(i);\r\n"
-    private csCreateFunLine5 = "\t\t\t\tcfgs.Add(cfg.{0}, cfg);\r\n\t\t\t}"
-    private csCreateFunLine6 = "\r\n\t\t\treturn cfgs;\r\n"
-    private csMergeCreateFunLine7 = "\t\t\t\cfgs.{0}Dictionary = {1}Dictionary.CreateConfig(configData);\r\n"
-    private csCreateFunEnd = "\t\t}\r\n";
-    private csClassEnd = "\t}\r\n";
-    private csNamespaceEnd = "";
-    private csSubMergeCreateFunStart = "\t\tpublic static {0}Dictionary CreateConfig(CfgSpace.{1} configData)\r\n \t\t{\r\n"
-    private csClassStart = "\tpublic class {0}\r\n\t{\r\n"
-    private publicDictionaryStr = "\t\tpublic {0}Dictionary {1}Dictionary;\r\n\r\n";
-      
-    private TransferTableCs() {
-        if(this.merge) {
-            let classContent = this.csNamespaceStart;
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let csData = this.CreateMergeCs(this.xlsxData[this.translateSheets[i][0]],this.translateSheets[i][1], this.mergeName);
-                classContent += csData;
-            }
-
-            classContent += Utils.FormatStr(this.csNotes, this.mergeName);
-            if(!this.isDir) {
-                classContent += Utils.FormatStr(this.csConfigHead, this.mergeName);
-            }
-            classContent += Utils.FormatStr(this.csClassStart, this.mergeName);
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let type = this.xlsxData[this.translateSheets[i][0]][1][0];
-                let translateName = this.translateSheets[i][1];
-                let upperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upperAndLower[0];
-                let translateNamekeyLower = upperAndLower[1];
-                classContent += Utils.FormatStr(this.publicDictionaryStr, translateNamekeyUpper, translateNamekeyLower);
-            }
-
-            classContent += Utils.FormatStr(this.csMergeCreateFunStart, this.mergeName);
-            classContent += Utils.FormatStr(this.csMergeCreateFunLine1, this.mergeName, this.mergeName);
-            classContent += Utils.FormatStr(this.csCreateFunLine2, this.mergeName, this.mergeName, this.mergeName);
-
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let type = this.xlsxData[this.translateSheets[i][0]][1][0];
-                let translateName = this.translateSheets[i][1];
-                let upperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upperAndLower[0];
-                let translateNamekeyLower = upperAndLower[1];
-                classContent += Utils.FormatStr(this.csMergeCreateFunLine7, translateNamekeyLower, translateNamekeyUpper);
-            }
-            classContent += this.csCreateFunLine6;
-            classContent += this.csCreateFunEnd;
-            classContent += this.csClassEnd;
-            classContent += this.csNamespaceEnd;
-
-            this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, this.mergeName));
-        }else{
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let classContent = this.csNamespaceStart;
-                classContent += Utils.FormatStr(this.csNotes, translateName);
-                classContent += Utils.FormatStr(this.csConfigHead, translateName);
-                let csData = this.CreateCs(this.xlsxData[sheetName],translateName);
-                classContent += csData;
-                classContent += this.csNamespaceEnd;
-                this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
-            }
-        }
+    private async GenCode(fbsPath: string, toCode: string, outputPath: string): Promise<void> {
+        let cmd = 'flatc --' + toCode + ' -o ' + outputPath + ' ' + fbsPath;
+        console.log(cmd);
+        return new Promise<void>((resolve, reject) => {
+            exec(cmd, (err, stdout, stderr) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);
+                console.log(stderr);
+                resolve();
+            });
+        });
     }
 
-    private CreateCs(data: any, className: string) {
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let key = keys[0];
-        let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
-        let keyUpper = keyUpperAndLower[0];
-        let type = this.TransformCsType(types[0]);
-        let classContent = Utils.FormatStr(this.csClassDictionaryStart, className, type, className);
-        classContent += Utils.FormatStr(this.csCreateFunStart, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine1, className, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine2, className + "s", className + "s", className + "s");
-        classContent += Utils.FormatStr(this.csCreateFunLine3, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine4, className, className, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine5, keyUpper);
-        classContent += this.csCreateFunLine6;
-        classContent += this.csCreateFunEnd;
-        classContent += this.csClassEnd;
-        return classContent;
-    }
-
-    private CreateMergeCs(data: any, className: string, mergeName: string) {
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let key = keys[0];
-        let type = this.TransformCsType(types[0]);
-        let classContent = Utils.FormatStr(this.csNotes, className);
-        classContent += Utils.FormatStr(this.csClassDictionaryStart, className, type, className);
-        classContent += Utils.FormatStr(this.csSubMergeCreateFunStart, className, mergeName);
-        classContent += Utils.FormatStr(this.csCreateFunLine1, className, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine3, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine4, className, className, className);
-        classContent += Utils.FormatStr(this.csCreateFunLine5, key);
-        classContent += this.csCreateFunLine6;
-        classContent += this.csCreateFunEnd;
-        classContent += this.csClassEnd;
-        return classContent;
-    }
-
-    private TransformCsType(type: string) {
-        let result;
-        switch (type) {
-            case 'int':
-            case 'Int':
-                result = 'int';
-                break;
-            case 'float':
-            case 'Float':
-                result = 'float';
-                break;
-            case 'bool':
-            case 'Bool':
-            case 'boolen':
-            case 'Boolen':
-                result = 'bool';
-                break;
-            case 'string':
-            case 'String':
-                result = 'string';
-                break;
-            default:
-                result = type;
-                break;
-        }
-        return result;
-    }
-
-    private SaveCsToFile(data: any, filePath: string) {
-        fs.writeFileSync(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
+    private async GenBin(fbsPath: string, jsonPath: string, binPath: string): Promise<void> {
+        let cmd = 'flatc -b -o ' + path.dirname(binPath) + ' -I ' + path.dirname(fbsPath) + ' ' + fbsPath + ' ' + jsonPath;
+        console.log(cmd);
+        return new Promise<void>((resolve, reject) => {
+            exec(cmd, (err, stdout, stderr) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);
+                console.log(stderr);
+                resolve();
+            });
+        });
     }
 }

@@ -1,12 +1,15 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2Cs extends BaseTranslateConfig {
+
+    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
 
     private outputPathCsStr: string = '';
 
@@ -41,6 +44,10 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
+
+        // 解析子结构定义
+        let structPath = this.definePath || path.join(pathStr, '..', 'define');
+        await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
         this.outputPathJsonStr = path.join(outputPathStr, "json");
@@ -116,59 +123,18 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-
                 let classContent = this.namespaceStart;
-
+                classContent += this.notes.replace('{0}', translateName);
+                if(!this.isDir) {
+                    classContent += this.configHead.replace('{0}', translateName);
+                }
                 let csData = this.CreateCs(this.xlsxData[sheetName],translateName);
                 classContent += csData;
-
-                classContent += Utils.FormatStr(this.notes, translateName + "Dictionary");
-                classContent += Utils.FormatStr(this.configHead, translateName);
-
-                let type = this.xlsxData[this.translateSheets[i][0]][1][0];
-                classContent += Utils.FormatStr(this.classDictionaryStart, translateName + "Dictionary", type, translateName);
                 classContent += this.classEnd;
                 classContent += this.namespaceEnd;
-    
                 await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
             }
         }
-    }
-
-    private CreateCs(data: any, className: string) {
-
-        let classContent = this.notes.replace('{0}', className);
-        classContent += this.classStart.replace('{0}', className);
-
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let decs = dataArr[2];
-        for (let keyIndex = 0; keyIndex < keys.length; ++keyIndex) {
-            let key = keys[keyIndex];
-            if (_.isNil(key) || _.isEmpty(key)) {
-                continue;
-            }
-            // console.log("key = " + key);
-            let type = this.TransformType(types[keyIndex]);
-            let upperAndLower = Utils.GetFristUpperAndLowerStr(key);
-            let keyUpper = upperAndLower[0];
-            let keyLower = upperAndLower[1];
-            let dec = decs[keyIndex];
-            if(dec != undefined)
-                dec = dec.replace(/[\r\n]/g, '');
-            classContent += Utils.FormatStr(this.privateStr, type, keyLower, dec);
-            classContent += Utils.FormatStr(this.publicStr, type, keyUpper, keyLower);
-        }
-        classContent += this.classEnd;
-        return classContent;
-    }
-
-    private async SaveCsToFile(data: any, filePath: string) : Promise<void> {
-        await writeFile(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
     }
 
     private async TransferTableJson(file: string = "") : Promise<void> {
@@ -177,52 +143,93 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let upperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upperAndLower[0];
-                let translateNamekeyLower = upperAndLower[1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                all[translateNamekeyLower + "Dic"] = jsonData;
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
+                all[translateName] = jsonData;
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
 
+    private CreateCs(data: any, className: string) {
+        // 添加数据验证
+        if (!data || data.length < 2) {
+            console.warn('Invalid data for CS generation:', className);
+            return '';
+        }
+
+        let dataArr = data;
+        let keys = dataArr[0] || [];
+        let types = dataArr[1] || [];
+        
+        if (keys.length === 0) {
+            console.warn('No keys found for CS generation:', className);
+            return '';
+        }
+
+        let key = keys[0];
+        let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
+        let keyUpper = keyUpperAndLower[0];
+        let type = this.TransformType(types[0]);
+        let classContent = Utils.FormatStr(this.classDictionaryStart, className, type, className);
+        classContent += Utils.FormatStr(this.privateStr, "int", "_id", "id");
+        classContent += Utils.FormatStr(this.publicStr, "int", "id", "_id");
+
+        for (let colIndex = 1; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key)) {
+                continue;
+            }
+            
+            // 处理嵌套字段和数组字段
+            let fieldPath = this.structHelper.ParseFieldPath(key);
+            if (fieldPath.length > 1) {
+                // 跳过嵌套字段，它们应该通过子结构定义处理
+                continue;
+            }
+            
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldType = this.TransformType(type);
+            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, key);
+            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+        }
+
+        classContent += this.classEnd;
+
+        return classContent;
+    }
+
     private CreateJson(data: any, className: string) {
         let jsonOut: { [key: string]: any } = {};
 
+        if (!data || data.length < 3) {
+            console.warn('Invalid data for', className);
+            return jsonOut;
+        }
+
         let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
+        let keys = dataArr[0] || [];
+        let types = dataArr[1] || [];
 
-        //检测层级结构，有多少层级
-        let layerNum = 0;
-        for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
-            let type = types[typeIndex];
-            if (type && type[0] == '#') {
-                layerNum += 1;
-            }
-        }
-
-        //若没有配置，必有一层层级
-        if (layerNum === 0) {
-            layerNum = 1;
-        }
+        // 默认单层级，如果第一行数据包含嵌套字段（带点的字段名），会自动处理
+        let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
 
-            if (_.isNil(_arrLine[0]) || _arrLine[0] == '') {
+            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] == '') {
                 continue;
             }
 
-            // 遍历引用，方便定义对象。
             let tmp = jsonOut;
             for (let layIndex = 0; layIndex < layerNum - 1; ++layIndex) {
                 if (!tmp[_arrLine[layIndex]]) {
@@ -232,23 +239,34 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             }
 
             let subTmp: { [key: string]: any } = {};
+
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                let type = types[colIndex];
+                if (_.isNil(key) || _.isEmpty(key)) {
+                    continue;
+                }
+                let type = types[colIndex] || 'string';
                 let value = _arrLine[colIndex];
-                if (_.isNil(key) || _.isEmpty(key) || typeof(value) == "undefined") {
+                if (_.isNil(value) || typeof (value) == "undefined") {
                     continue;
                 }
 
-                let result = this.TransformValue(type, _arrLine[colIndex], rowIndex, colIndex); //检测类型，传入所在的行和列，方便报错检查
-                if (!_.isNil(result) && !_.isNaN(result)) {
-                    if(type == "json" || type == "Json") {
-                        result["$type"] = "JSONObject, Assembly-CSharp";
+                let fieldPath = this.structHelper.ParseFieldPath(key);
+
+                if (fieldPath.length > 1) {
+                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
+                } else {
+                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
+                    if (!_.isNil(result) && !_.isNaN(result)) {
+                        if(type == "json" || type == "Json") {
+                            result["$type"] = "JSONObject, Assembly-CSharp";
+                        }
+                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
+                        subTmp[keyLower] = result;
                     }
-                    let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                    subTmp[keyLower] = result;
                 }
             }
+
             subTmp["$type"] = className + ", Assembly-CSharp";
 
             tmp[_arrLine[layerNum - 1]] = subTmp;
@@ -301,7 +319,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         return result;
     }
 
-    //翻译配置的字段到对应应该有的数据类型。
+    //转换配置中的字到对应的数据类型
     private _TransformBasicsValue (type: string, data: any) {
         let result;
         switch (type) {
@@ -345,8 +363,8 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         return result;
     }
 
-    //检测type 对应的值
-    private TransformValue (type: string, data: string, row?: number, col?: number) {
+    //检查type 对应的值
+    private TransformStructValue (type: string, data: string, row?: number, col?: number) {
 
         let result;
         if(typeof(data) == 'string') {
@@ -382,4 +400,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
         return result;
     }
+
+    private async SaveCsToFile(data: any, filePath: string) : Promise<void> {
+        await writeFile(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
+    }
 }
+

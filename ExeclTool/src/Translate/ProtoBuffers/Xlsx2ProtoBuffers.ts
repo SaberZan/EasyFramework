@@ -1,12 +1,10 @@
-Ôªøimport xlsx from 'node-xlsx';
+import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../utils';
-import protobuf from 'protobufjs'
-import { pbjs, pbts } from 'protobufjs-cli';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateStruct from '../BaseTranslateStruct';
 
@@ -38,7 +36,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
-        // Ëß£ÊûêÂ≠êÁªìÊûÑÂÆö‰πâ
+        // Ω‚Œˆ◊”Ω·ππ∂®“Â
         let structPath = path.join(pathStr, '..', 'define');
         await this.structHelper.ParseStructDefinitions(structPath);
 
@@ -105,86 +103,13 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-
                 let protoPath = path.join(this.outputPathProtosStr, translateName + ".proto");
-                let jsonPath = path.join(this.outputPathJsonStr, translateName+".json");
-                let bytesPath = path.join(this.outputPathBytesStr, translateName+".bytes");
-                let messageName = "CfgSpace." + translateName + "s";
+                let jsonPath = path.join(this.outputPathJsonStr, translateName + ".json");
+                let bytesPath = path.join(this.outputPathBytesStr, translateName + ".bytes");
+                let messageName = "CfgSpace." + translateName;
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
-                await this.GenCode(protoPath,this.toCode,this.outputPathCodeStr);
             }
         }
-    }
-
-    private async TransferTableProtos() : Promise<void> {
-        if(this.merge) {
-
-            let protosContent = this.syntax;
-            protosContent += this.packageStart;
-            protosContent += this.packageCommonImport;
-
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                protosContent += this.CreateProtos(this.xlsxData[sheetName],translateName);
-            }
-
-            protosContent += Utils.FormatStr(this.messageStart, this.mergeName);
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                protosContent += Utils.FormatStr(this.fieldStr, "repeated " + translateNamekeyUpper , translateNamekeyLower + "Array", " "+ (i + 1));
-            }
-            protosContent += this.messageEnd;
-
-            await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, this.mergeName));
-        }else{
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                let protosContent = this.syntax;
-                protosContent += this.packageStart;
-                protosContent += this.packageCommonImport;
-                protosContent += this.CreateProtos(this.xlsxData[sheetName],translateName);
-                protosContent += Utils.FormatStr(this.messageStart, translateName + "s");
-                protosContent += Utils.FormatStr(this.fieldStr, "repeated " +  translateName, translateNamekeyLower + "Array", "1");
-                protosContent += this.messageEnd;
-                await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, translateName));
-            }
-        }
-    }
-
-    private CreateProtos(data: any, className: string) {
-
-        let tableContent = Utils.FormatStr(this.messageStart, className);
-        let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let decs = dataArr[2];
-        for (let keyIndex = 0; keyIndex < keys.length; ++keyIndex) {
-            let key = keys[keyIndex];
-            if (_.isNil(key) || _.isEmpty(key)) {
-                continue;
-            }
-            let type = this.TransformType(types[keyIndex])
-            if(type != undefined && type != "") {
-                let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                tableContent += Utils.FormatStr(this.fieldStr, type, keyLower, "" + (keyIndex + 1));
-            }
-        }
-        tableContent += this.messageEnd;
-        return tableContent;
-    }
-
-    private async SaveProtosToFile(data: any, filePath: string) : Promise<void> {
-        await writeFile(filePath + ".proto", data, { flag: 'w', encoding: 'utf8' });
     }
 
     private async TransferTableJson(file: string = "") : Promise<void> {
@@ -193,136 +118,162 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let upAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upAndLower[0];
-                let translateNamekeyLower = upAndLower[1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
-                all[translateNamekeyLower + "Array"] = jsonData[translateNamekeyLower + "Array"];
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
+                all[translateName] = jsonData;
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName],translateName);
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
 
-    private CreateJson(data: any, className: string) {
-        let jsonOut: { [key: string]: any }[] = [];
+    private async TransferTableProtos() : Promise<void> {
+        if(this.merge) {
+            let protoContent = '';
+            protoContent += this.syntax;
+            protoContent += this.packageStart;
+            
+            // …˙≥…À˘”–Ω·ππÃÂ∂®“Â
+            for (let structName in this.structHelper.structDefinitions) {
+                let structDef = this.structHelper.structDefinitions[structName];
+                protoContent += this.CreateProtoStruct(structDef);
+            }
+            
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
+            }
+            this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, this.mergeName));
+        }else{
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                let protoContent = '';
+                protoContent += this.syntax;
+                protoContent += this.packageStart;
+                
+                // …˙≥…À˘”–Ω·ππÃÂ∂®“Â
+                for (let structName in this.structHelper.structDefinitions) {
+                    let structDef = this.structHelper.structDefinitions[structName];
+                    protoContent += this.CreateProtoStruct(structDef);
+                }
+                
+                protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
+                this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, translateName));
+            }
+        }
+    }
 
+    private CreateProtoStruct(structDef: any) : string {
+        let content = this.messageStart.replace('{0}', structDef.name);
+        let fieldIndex = 1;
+        for (let field of structDef.fields) {
+            content += this.fieldStr.replace('{0}', this.TransformType(field.type))
+                                     .replace('{1}', field.name)
+                                     .replace('{2}', fieldIndex.toString());
+            fieldIndex++;
+        }
+        content += this.messageEnd;
+        return content;
+    }
+
+    private CreateProto(data: any, className: string) : string {
         let dataArr = data;
         let keys = dataArr[0];
         let types = dataArr[1];
-
-        // ËÆ°ÁÆóÂ≠êÁªìÊûÑÂ±ÇÁ∫ß
-        let layerNum = 0;
-        for (let typeIndex = 0; typeIndex < types.length; ++typeIndex) {
-            let type = types[typeIndex];
-            if (type && type[0] == '#') {
-                layerNum += 1;
+        let content = this.messageStart.replace('{0}', className);
+        let fieldIndex = 1;
+        for (let i = 0; i < keys.length; ++i) {
+            let key = keys[i];
+            let type = types[i];
+            if (_.isNil(key) || _.isEmpty(key)) {
+                continue;
             }
+            content += this.fieldStr.replace('{0}', this.TransformType(type))
+                                     .replace('{1}', key)
+                                     .replace('{2}', fieldIndex.toString());
+            fieldIndex++;
+        }
+        content += this.messageEnd;
+        return content;
+    }
+
+    private CreateJson(data: any, className: string) {
+        let jsonOut: { [key: string]: any } = {};
+
+        if (!data || data.length < 3) {
+            console.warn('Invalid data for ProtoBuffers', className);
+            return jsonOut;
         }
 
-        // Â¶ÇÊûúÊ≤°ÊúâÊåáÂÆöÂ≠êÁªìÊûÑÂ±ÇÁ∫ßÔºåÈªòËÆ§‰∏∫1
-        if (layerNum === 0) {
-            layerNum = 1;
-        }
+        let dataArr = data;
+        let keys = dataArr[0] || [];
+        let types = dataArr[1] || [];
 
-        let index = 0;
+        // ƒ¨»œµ•≤„º∂£¨»Áπ˚µ⁄“ª–– ˝æ›∞¸∫¨«∂Ã◊◊÷∂Œ£®¥¯µ„µƒ◊÷∂Œ√˚£©£¨ª·◊‘∂Ø¥¶¿Ì
+        let layerNum = 1;
+
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
 
-            if (_.isNil(_arrLine[0]) || _arrLine[0] == '') {
+            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] == '') {
                 continue;
             }
 
+            let tmp = jsonOut;
+            for (let layIndex = 0; layIndex < layerNum - 1; ++layIndex) {
+                if (!tmp[_arrLine[layIndex]]) {
+                    tmp[_arrLine[layIndex]] = {};
+                }
+                tmp = tmp[_arrLine[layIndex]];
+            }
+
             let subTmp: { [key: string]: any } = {};
+
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                let type = types[colIndex];
+                if (_.isNil(key) || _.isEmpty(key)) {
+                    continue;
+                }
+                let type = types[colIndex] || 'string';
                 let value = _arrLine[colIndex];
-                if (_.isNil(key) || _.isEmpty(key) || typeof(value) == "undefined") {
+                if (_.isNil(value) || typeof(value) == "undefined") {
                     continue;
                 }
 
-                let result = this.TransformStructValue(type, _arrLine[colIndex], rowIndex, colIndex);
-                if (!_.isNil(result) && !_.isNaN(result)) {
-                    let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                    subTmp[keyLower] = result;
+                let fieldPath = this.structHelper.ParseFieldPath(key);
+
+                if (fieldPath.length > 1) {
+                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
+                } else {
+                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
+                    if (!_.isNil(result) && !_.isNaN(result)) {
+                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
+                        subTmp[keyLower] = result;
+                    }
                 }
             }
 
-            jsonOut[index] = subTmp;
-
-            ++index;
+            tmp[_arrLine[layerNum - 1]] = subTmp;
         }
 
-        let output : {[key:string]: object} = {};
-        className = Utils.GetFristUpperAndLowerStr(className)[1];
-        output[className + "Array"] = jsonOut;
-        return output;
+        return jsonOut;
     }
 
-    private async SaveJsonToFile(data: any, filePath: string) : Promise<void> {
+    private async SaveJsonToFile(data: any, filePath: string) {
         var _str_all = "";
         _str_all += JSON.stringify(data, null, 4);
-        await writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
+        return writeFile(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
-    private async GenBytes(protoPath: string, jsonPath: string, messageName: string ,bytesPath: string) : Promise<void> {
-        let jsonData = JSON.parse(fs.readFileSync(jsonPath).toString());
-        let root = protobuf.loadSync(protoPath)
-        if(root != null)
-        {
-            let allMessages= root.lookupType(messageName);
-            let message = allMessages.create(jsonData);
-            let buffer = allMessages.encode(message).finish();
-            await writeFile(bytesPath, buffer);
-        }
-    }
-
-    private async GenCode(protoPath: string, toCode: string, outputPath: string) : Promise<void> {
-        let cmd = "";
-        let parsedPath = path.parse(protoPath);
-        switch (toCode) {
-            case "ts":
-                parsedPath.dir = outputPath;
-                parsedPath.base = "";
-                parsedPath.ext = ".js";
-                let jsPath = path.format(parsedPath);
-                parsedPath.ext = ".d.ts";
-                let dtsPath = path.format(parsedPath);
-
-                return new Promise((resolve,reject)=>{
-                    pbjs.main(["-t", "static-module", "-w","commonjs", "-o", jsPath,  protoPath, "-p", path.dirname(protoPath)],(err, output)=>{
-                        if(err){
-                            console.log("err == " + err);
-                            reject(err);
-                            return;
-                        }
-                        pbts.main(["-o",dtsPath, jsPath]);
-                        resolve();
-                    });
-                })
-
-            default:
-                return new Promise((resolve,reject)=>{
-                    cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir +  " --" + toCode +"_out " + outputPath + " " + protoPath;
-                    console.log(cmd);
-                    exec(cmd, (err, stdout, stderr) => {
-                        if(err) {
-                            reject(err);
-                            return;
-                        }
-                        console.log(stdout);  
-                        console.log(stderr);    
-                        resolve();
-                    });
-                });
-        }
+    private SaveProtosToFile(content: string, filePath: string) {
+        fs.writeFileSync(filePath + ".proto", content, { flag: 'w', encoding: 'utf8' });
     }
 
     private TransformType(type: string) {
@@ -377,14 +328,22 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             case 'string[]':
             case 'String[]':
                 result = 'repeated string';
+                break;
             case 'string[,]':
             case 'String[,]':
                 result = 'repeated CfgSpace.StringArray';
+                break;
             default:
                 if(type.includes('serialize')) {
                     result = "";
-                }else if(type.includes("[]")) {
-                    result = "repeated " + this.TransformType(type.replace("[]",""));
+                }else if (this.structHelper.IsStructType(type)) {
+                    result = type;
+                } else if(type.includes('[,]')) {
+                    let baseType = type.replace('[,]', '');
+                    result = 'repeated CfgSpace.' + baseType + 'Array';
+                } else if(type.includes("[]")) {
+                    let baseType = type.replace("[]","");
+                    result = "repeated " + this.TransformType(baseType);
                 }else{
                     result = type;
                 }
@@ -393,7 +352,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // ËΩ¨Êç¢ÈÖçÁΩÆ‰∏≠ÁöÑÂ≠óÂà∞ÂØπÂ∫îÁöÑÊï∞ÊçÆÁ±ªÂûã
+    // ◊™ªª≈‰÷√÷–µƒ◊÷µΩ∂‘”¶µƒ ˝æ›¿‡–Õ
     private _TransformBasicsValue (type: string, data: any) {
         let result;
         switch (type) {
@@ -428,7 +387,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // Ê£ÄÊü• type ÊòØÂê¶‰∏∫Â≠êÁªìÊûÑ
+    // ºÏ≤È type  «∑ÒŒ™◊”Ω·ππ
     private TransformStructValue (type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
@@ -440,16 +399,8 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         }
         if(type.includes('serialize')) {
             result = this._TransformBasicsValue(type, data);
-        }else if(type.includes('[]')) {   
-            type = type.replace('[]','');
-            result = [];
-            let _datas = data.substring(1,data.length -1).split(',');
-            for (let i = 0; i < _datas.length; ++i) {
-                result.push(this._TransformBasicsValue(type, _datas[i]));
-            }
-
         }else if(type.includes('[,]')) {
-            // ‰∫åÁª¥Êï∞ÁªÑ
+            // ∂˛Œ¨ ˝◊È
             type = type.replace('[,]','');
             result = [];
             let datas = data.substring(2,data.length-2).split('],[');
@@ -462,10 +413,50 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 result.push({data : tmpResult});
             }
 
+        }else if(type.includes('[]')) {   
+            type = type.replace('[]','');
+            result = [];
+            let _datas = data.substring(1,data.length -1).split(',');
+            for (let i = 0; i < _datas.length; ++i) {
+                result.push(this._TransformBasicsValue(type, _datas[i]));
+            }
+
         }else{
-            // ÊôÆÈÄöÂÄº
+            // ∆’Õ®÷µ
             result = this._TransformBasicsValue(type, data);
         }
         return result;
+    }
+
+    private async GenCode(protoPath: string, toCode: string, outputPath: string) {
+        let cmd = `pbjs -t static-module -w commonjs -o ${path.join(outputPath, toCode + ".js")} ${protoPath}`;
+        console.log(cmd);
+        return new Promise<void>((resolve, reject) => {
+            exec(cmd, (err, stdout, stderr) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);  
+                console.log(stderr);    
+                resolve();
+            });
+        });
+    }
+
+    private async GenBytes(protoPath: string, jsonPath: string, messageName: string, bytesPath: string) {
+        let cmd = `pbjs -t static-module -w commonjs -o ${bytesPath}.js ${protoPath}`;
+        console.log(cmd);
+        return new Promise<void>((resolve, reject) => {
+            exec(cmd, (err, stdout, stderr) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);  
+                console.log(stderr);    
+                resolve();
+            });
+        });
     }
 }

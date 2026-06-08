@@ -1,5 +1,5 @@
 {
-    "target": "JSON",
+    "target": "CS",
     "params": {
         "toCode": "csharp"
     },
@@ -36,6 +36,14 @@
                 [
                     "ItemConfig",
                     "ItemCfg"
+                ]
+            ]
+        },
+        "4_装备表": {
+            "sheets": [
+                [
+                    "EquipmentConfig",
+                    "EquipmentCfg"
                 ]
             ]
         }
