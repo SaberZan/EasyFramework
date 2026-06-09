@@ -1,0 +1,44 @@
+{
+    "target": "CS",
+    "params": {
+        "toCode": "csharp"
+    },
+    "designPath": "./design",
+    "output": {
+        "code": "./tmp/code/cs",
+        "bin": "./tmp/bin"
+    },
+    "config": {
+        "1_常量表.xlsx": {
+            "sheets": [
+                [
+                    "常量",
+                    "GameConstCfg"
+                ]
+            ]
+        },
+        "3_物品表.xlsx": {
+            "sheets": [
+                [
+                    "ItemConfig",
+                    "ItemCfg"
+                ]
+            ]
+        },
+        "4_装备表.xlsx": {
+            "sheets": [
+                [
+                    "EquipmentConfig",
+                    "EquipmentCfg"
+                ]
+            ]
+        }
+    },
+    "struct": {
+        "Struct1": {
+            "sheets": [
+                "StructTest"
+            ]
+        }
+    }
+}

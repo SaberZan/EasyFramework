@@ -10,8 +10,6 @@ import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
-    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
-
     private outputPathFbsStr: string = '';
     private outputPathBinStr: string = '';
     private outputPathCodeStr: string = '';
@@ -24,7 +22,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
     private tableStart = 'table {0} {\n';
     private tableEnd = '}\n\n';
-    private structStart = 'struct {0} {\n';
+    private structStart = 'table {0} {\n';
     private structEnd = '}\n\n';
     private fieldStr = '    {0} : {1};\n';
     private rootType = 'root_type {0};\n\n';
@@ -39,7 +37,12 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
 
-        let structPath = this.definePath || path.join(pathStr, '..', 'define');
+        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
+        await this.enumHelper.TranslateExcel(enumPath);
+
+        //TODO 生成枚举的fbs文件, 以及bytes文件 toCode 文件, json文件, cs文件
+
+        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathFbsStr = path.join(outputPathStr, 'fbs');
@@ -72,9 +75,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 if (i == '0') {
                     await this.TransferTableFbs();
                     await this.TransferTableCs();
-                    await this.GenCode(path.join(this.outputPathFbsStr, this.mergeName + '.fbs'), this.toCode, this.outputPathCodeStr);
+                    await this.GenCode(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), this.toCode, this.outputPathCodeStr);
                 }
-                await this.GenBin(path.join(this.outputPathFbsStr, this.mergeName + '.fbs'), path.join(this.outputPathJsonStr, this.mergeName + fileName + '.json'), path.join(this.outputPathBinStr, this.mergeName));
+                await this.GenBin(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), path.join(this.outputPathJsonStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + fileName + '.json'), path.join(this.outputPathBinStr, (this.merge ? this.mergeName : this.translateSheets[0][1])));
             }
         } else {
             let parsedPath = path.parse(pathStr);
@@ -110,17 +113,15 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
-                await this.SaveJsonToFile(jsonData, path.join(this.outputPathJsonStr, translateName));
+                let wrapper: any = { records: jsonData };
+                await this.SaveJsonToFile(wrapper, path.join(this.outputPathJsonStr, translateName));
             }
         }
     }
 
     private async TransferTableFbs(): Promise<void> {
-        let fbsContent = this.namespaceStart + this.packageCommonImport;
+        let fbsContent = this.packageCommonImport + this.namespaceStart;
 
-        for (let structName in this.structHelper.structDefinitions) {
-            fbsContent += this.CreateFbsStruct(this.structHelper.structDefinitions[structName]);
-        }
 
         if (this.merge) {
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -134,7 +135,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
-                fbsContent += this.rootType.replace('{0}', translateName);
+                fbsContent += this.rootType.replace('{0}', translateName + '_Array');
             }
         }
 
@@ -169,7 +170,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private CreateJson(data: any, className: string): any {
-        let jsonOut: { [key: string]: any } = {};
+        let jsonOut: any[] = [];
 
         if (!data || data.length < 3) {
             console.warn('Invalid data for FlatBuffers', className);
@@ -202,7 +203,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 }
             }
 
-            jsonOut[_arrLine[0]] = subTmp;
+            jsonOut.push(subTmp);
         }
 
         return jsonOut;
@@ -217,30 +218,114 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return content;
     }
 
+    /**
+     * Generate a sub-table name for a nested field within a parent table.
+     * e.g. (EquipmentCfg, attrs) -> EquipmentCfg_Attrs
+     */
+    private getSubTableName(className: string, fieldName: string): string {
+        let parts = Utils.GetFristUpperAndLowerStr(fieldName);
+        return className + '_' + parts[0];
+    }
+
     private CreateFbs(data: any, className: string): string {
         if (!data || data.length < 2) {
-            console.warn('Invalid data for FlatBuffers FBS', className);
+            console.warn("Invalid data for FlatBuffers FBS", className);
             return '';
         }
 
-        let keys = data[0] || [];
-        let types = data[1] || [];
-        let content = this.tableStart.replace('{0}', className);
+        let keys: string[] = data[0] || [];
+        let types: string[] = data[1] || [];
+
+        // Group nested fields by their top-level parent name.
+        // e.g. 'attrs[0].value1' -> parentName='attrs', subField='value1'
+        //      'attr.name'       -> parentName='attr',  subField='name'
+        interface NestedGroup {
+            fields: { [fieldName: string]: string };
+            isArray: boolean;
+        }
+        let nestedGroups: { [parentName: string]: NestedGroup } = {};
+        interface SimpleField {
+            key: string;
+            type: string;
+        }
+        let simpleFields: SimpleField[] = [];
 
         for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
             if (_.isNil(key) || _.isEmpty(key)) continue;
 
-            let fieldType = this.TransformType(type);
-            if (this.structHelper.IsStructType(type)) {
-                content += this.fieldStr.replace('{0}', key).replace('{1}', type);
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let parentName = fieldInfo.name;
+
+                if (!nestedGroups[parentName]) {
+                    nestedGroups[parentName] = { fields: {}, isArray: fieldInfo.isArray };
+                }
+
+                if (fieldInfo.isArray) {
+                    nestedGroups[parentName].isArray = true;
+                }
+
+                let subFieldName = fieldInfo.fieldPath[fieldInfo.fieldPath.length - 1];
+
+                if (!nestedGroups[parentName].fields[subFieldName]) {
+                    nestedGroups[parentName].fields[subFieldName] = type;
+                }
+
+                continue;
+            }
+
+            simpleFields.push({ key, type });
+        }
+
+        let content = '';
+
+        // 1. Generate sub-table definitions for each nested group
+        for (let parentName of Object.keys(nestedGroups)) {
+            let group = nestedGroups[parentName];
+            let subTableName = this.getSubTableName(className, parentName);
+
+            content += this.tableStart.replace('{0}', subTableName);
+            for (let [fieldName, fieldType] of Object.entries(group.fields)) {
+                let fbsType = this.TransformType(fieldType);
+                content += this.fieldStr.replace('{0}', fieldName).replace('{1}', fbsType);
+            }
+            content += this.tableEnd;
+        }
+
+        // 2. Generate the main table
+        content += this.tableStart.replace('{0}', className);
+
+        for (let field of simpleFields) {
+            let fbsType = this.TransformType(field.type);
+            if (this.structHelper.IsStructType(field.type)) {
+                content += this.fieldStr.replace('{0}', field.key).replace('{1}', field.type);
             } else {
-                content += this.fieldStr.replace('{0}', key).replace('{1}', fieldType);
+                content += this.fieldStr.replace('{0}', field.key).replace('{1}', fbsType);
+            }
+        }
+
+        // 3. Add nested field references with proper FlatBuffers types
+        for (let parentName of Object.keys(nestedGroups)) {
+            let group = nestedGroups[parentName];
+            let subTableName = this.getSubTableName(className, parentName);
+
+            if (group.isArray) {
+                content += this.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
+            } else {
+                content += this.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
             }
         }
 
         content += this.tableEnd;
+
+        // 3. Generate wrapper table for flatc binary generation (array root type)
+        content += this.tableStart.replace('{0}', className + '_Array');
+        content += this.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
+        content += this.tableEnd;
+
         return content;
     }
 
@@ -277,7 +362,8 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return content;
     }
 
-    private TransformType(type: string): string {
+    private TransformType(type: any): string {
+        if (typeof type !== 'string') return '';
         let result;
         switch (type) {
             case 'int': case 'Int': result = 'int'; break;
@@ -293,7 +379,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             case 'string[]': case 'String[]': result = '[string]'; break;
             case 'string[,]': case 'String[,]': result = '[StringArray]'; break;
             default:
-                if (this.structHelper.IsStructType(type)) {
+                if (this.enumHelper.IsEnumType(type)) {
+                    result = type;
+                } else if (this.structHelper.IsStructType(type)) {
                     result = type;
                 } else if (type.includes('[]')) {
                     result = '[' + this.TransformType(type.replace('[]', '')) + ']';
@@ -305,7 +393,8 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    private TransformCsType(type: string): string {
+    private TransformCsType(type: any): string {
+        if (typeof type !== 'string') return '';
         let result;
         switch (type) {
             case 'int': case 'Int': result = 'int'; break;
@@ -321,7 +410,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             case 'string[]': case 'String[]': result = 'string[]'; break;
             case 'string[,]': case 'String[,]': result = 'CfgSpace.StringArray[]'; break;
             default:
-                if (this.structHelper.IsStructType(type)) {
+                if (this.enumHelper.IsEnumType(type)) {
+                    result = 'CfgSpace.' + type;
+                } else if (this.structHelper.IsStructType(type)) {
                     result = 'CfgSpace.' + type;
                 } else if (type.includes('[]')) {
                     result = this.TransformCsType(type.replace('[]', '')) + '[]';
@@ -390,7 +481,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private async GenCode(fbsPath: string, toCode: string, outputPath: string): Promise<void> {
-        let cmd = 'flatc --' + toCode + ' -o ' + outputPath + ' ' + fbsPath;
+        let cmd = '.\\lib\\flatc\\flatc.exe --' + toCode + ' -o ' + outputPath + ' ' + fbsPath;
         console.log(cmd);
         return new Promise<void>((resolve, reject) => {
             exec(cmd, (err, stdout, stderr) => {
@@ -406,7 +497,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private async GenBin(fbsPath: string, jsonPath: string, binPath: string): Promise<void> {
-        let cmd = 'flatc -b -o ' + path.dirname(binPath) + ' -I ' + path.dirname(fbsPath) + ' ' + fbsPath + ' ' + jsonPath;
+        let cmd = '.\\lib\\flatc\\flatc.exe -b --json -o ' + path.dirname(binPath) + ' -I ' + path.dirname(fbsPath) + ' ' + fbsPath + ' ' + jsonPath;
         console.log(cmd);
         return new Promise<void>((resolve, reject) => {
             exec(cmd, (err, stdout, stderr) => {
@@ -421,3 +512,4 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         });
     }
 }
+

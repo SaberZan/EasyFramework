@@ -2,6 +2,25 @@ import fs from "fs";
 
 export default class BaseTranslateConfig {
 
+
+    private _enumHelper: any = null;
+    private _structHelper: any = null;
+
+    public get enumHelper(): any {
+        if (!this._enumHelper) {
+            const m = require("./BaseTranslateEnum");
+            this._enumHelper = new m.default();
+        }
+        return this._enumHelper;
+    }
+
+    public get structHelper(): any {
+        if (!this._structHelper) {
+            const m = require("./BaseTranslateStruct");
+            this._structHelper = new m.default();
+        }
+        return this._structHelper;
+    }
     public xlsxData: { [Key: string]: any } = {};
 
     public translateSheets: any;
@@ -16,7 +35,7 @@ export default class BaseTranslateConfig {
 
     public isDir: boolean = false;
 
-    public definePath: string = "";
+
 
     /**
      * 
@@ -30,7 +49,6 @@ export default class BaseTranslateConfig {
         this.translateSheets = translate.sheets;
         this.mergeName = translate.mergeName;
         this.toDir = translate.toDir;
-        this.definePath = translate.definePath || "";
         this.isDir = false;
         console.log("-1- isDir " + this.isDir)
         if (fs.existsSync(pathStr) && fs.statSync(pathStr).isDirectory()) { 

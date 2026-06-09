@@ -6,18 +6,16 @@ import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateStruct from '../BaseTranslateStruct';
+import BaseTranslateEnum from '../BaseTranslateEnum';
+
+
 
 export default class Xlsx2Cs extends BaseTranslateConfig {
 
-    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
 
     private outputPathCsStr: string = '';
 
     private outputPathJsonStr: string = '';
-
-    // private namespaceStart = 'using {0}; \r\n{ \r\n';
-
-    // private namespaceEnd = "}";
 
     private namespaceStart = "";
 
@@ -25,7 +23,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
     private configHead = "\t[Easy.Config(\"{0}\")]\r\n";
 
-    private classStart = "\tpublic class {0}\r\n \t{\r\n";
+    private classStart = "\t[System.Serializable]\r\n\tpublic class {0}\r\n \t{\r\n";
 
     private classDictionaryStart = "\tpublic class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\r\n \t{\r\n";
 
@@ -44,9 +42,30 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        
+        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
+        await this.enumHelper.TranslateExcel(enumPath);
 
-        // 解析子结构定义
-        let structPath = this.definePath || path.join(pathStr, '..', 'define');
+                // Generate CS enum files
+        let enumCsDir = path.join(outputPathStr, 'code', 'cs');
+        if (!fs.existsSync(enumCsDir)) {
+            await mkdir(enumCsDir, { recursive: true });
+        }
+        for (let enumName in this.enumHelper.enumDefinitions) {
+            let def = this.enumHelper.enumDefinitions[enumName];
+            let csContent = this.notes.replace('{0}', enumName);
+            csContent += '\tpublic enum ' + enumName + ' {\r\n';
+            let first = true;
+            for (let fieldName in def.fields) {
+                if (!first) csContent += ',\r\n';
+                csContent += '\t\t' + fieldName + ' = ' + def.fields[fieldName];
+                first = false;
+            }
+            if (!first) csContent += '\r\n';
+            csContent += '\t}\r\n';
+            await writeFile(path.join(enumCsDir, enumName + '.cs'), csContent, { flag: 'w', encoding: 'utf8' });
+        }
+        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
@@ -79,10 +98,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 }
             }
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += ".xlsx";
-            parsedPath.ext = ".xlsx";
-            let data = xlsx.parse(path.format(parsedPath));
+            let data = xlsx.parse(pathStr + ".xlsx");
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -93,7 +109,6 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
     private async TransferTableCs() : Promise<void> {
         if(this.merge) {
-
             let classContent = this.namespaceStart;
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let csData = this.CreateCs(this.xlsxData[this.translateSheets[i][0]],this.translateSheets[i][1]);
@@ -123,14 +138,22 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
+                
+                let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
+                
+                for (let parentField in nestedFields) {
+                    let structClassName = parentField.charAt(0).toUpperCase() + parentField.slice(1);
+                    let fields = this.DeduplicateFields(nestedFields[parentField]);
+                    await this.SaveStructClassToFile(structClassName, fields);
+                }
+                
                 let classContent = this.namespaceStart;
                 classContent += this.notes.replace('{0}', translateName);
                 if(!this.isDir) {
                     classContent += this.configHead.replace('{0}', translateName);
                 }
-                let csData = this.CreateCs(this.xlsxData[sheetName],translateName);
+                let csData = this.CreateCs(this.xlsxData[sheetName], translateName);
                 classContent += csData;
-                classContent += this.classEnd;
                 classContent += this.namespaceEnd;
                 await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
             }
@@ -158,7 +181,6 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
     }
 
     private CreateCs(data: any, className: string) {
-        // 添加数据验证
         if (!data || data.length < 2) {
             console.warn('Invalid data for CS generation:', className);
             return '';
@@ -181,6 +203,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         classContent += Utils.FormatStr(this.privateStr, "int", "_id", "id");
         classContent += Utils.FormatStr(this.publicStr, "int", "id", "_id");
 
+        // ???????????????
+        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
+
         for (let colIndex = 1; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
@@ -188,10 +213,20 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 continue;
             }
             
-            // 处理嵌套字段和数组字段
             let fieldPath = this.structHelper.ParseFieldPath(key);
             if (fieldPath.length > 1) {
-                // 跳过嵌套字段，它们应该通过子结构定义处理
+                // ?????????????? attrs[0].value1
+                // ?????????? attr.name
+                let fieldName = fieldPath[0].toString();
+                let isArrayStruct = fieldPath.length > 2 && !isNaN(Number(fieldPath[1]));
+                let structClassName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                
+                if (!structFields[fieldName]) {
+                    structFields[fieldName] = {
+                        type: structClassName,
+                        isArray: isArrayStruct
+                    };
+                }
                 continue;
             }
             
@@ -199,13 +234,94 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             let keyUpper = keyUpperAndLower[0];
             let keyLower = keyUpperAndLower[1];
             let fieldType = this.TransformType(type);
+            
             classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, key);
             classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
         }
 
-        classContent += this.classEnd;
+        // ??????
+        for (let fieldName in structFields) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(fieldName);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldInfo = structFields[fieldName];
+            let fieldType = fieldInfo.isArray ? fieldInfo.type + '[]' : fieldInfo.type;
+            
+            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, fieldName);
+            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+        }
 
+        classContent += this.classEnd;
         return classContent;
+    }
+
+    private CollectNestedFields(data: any): { [parentField: string]: { name: string; type: string }[] } {
+        let nestedFields: { [parentField: string]: { name: string; type: string }[] } = {};
+        
+        if (!data || data.length < 2) {
+            return nestedFields;
+        }
+        
+        let keys = data[0] || [];
+        let types = data[1] || [];
+        
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key)) {
+                continue;
+            }
+            
+            let fieldPath = this.structHelper.ParseFieldPath(key);
+            if (fieldPath.length > 1) {
+                let parentField = fieldPath[0].toString();
+                if (!nestedFields[parentField]) {
+                    nestedFields[parentField] = [];
+                }
+                let actualFieldName = fieldPath.slice(1).filter((p: any) => isNaN(parseInt(p.toString()))).join("_");
+                if (actualFieldName) {
+                    nestedFields[parentField].push({
+                        name: actualFieldName,
+                        type: type
+                    });
+                }
+            }
+        }
+        
+        return nestedFields;
+    }
+    
+    private DeduplicateFields(fields: { name: string; type: string }[]): { name: string; type: string }[] {
+        let seen: { [name: string]: boolean } = {};
+        let result: { name: string; type: string }[] = [];
+        
+        for (let field of fields) {
+            if (!seen[field.name]) {
+                seen[field.name] = true;
+                result.push(field);
+            }
+        }
+        
+        return result;
+    }
+    
+    private async SaveStructClassToFile(structName: string, fields: { name: string; type: string }[]): Promise<void> {
+        let classContent = this.notes.replace('{0}', structName);
+        classContent += this.classStart.replace('{0}', structName);
+        
+        for (let field of fields) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(field.name);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldType = this.TransformType(field.type);
+            
+            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, field.name);
+            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+        }
+        
+        classContent += this.classEnd;
+        
+        await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, structName));
     }
 
     private CreateJson(data: any, className: string) {
@@ -220,7 +336,6 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // 默认单层级，如果第一行数据包含嵌套字段（带点的字段名），会自动处理
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -273,17 +388,17 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
         }
 
-        let output = jsonOut
-        return output;
+        return jsonOut;
     }
 
     private SaveJsonToFile(data: any, filePath: string) {
-        var _str_all = "";
+        let _str_all = "";
         _str_all += JSON.stringify(data, null, 4);
         fs.writeFileSync(filePath + ".json", _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransformType(type: string) {
+    private TransformType(type: any) {
+        if (typeof type !== 'string') return type;
         let result;
         switch (type) {
             case 'int':
@@ -304,13 +419,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             case 'String':
                 result = 'string';
                 break;
-            case 'json':
-            case 'Json':
-                result = "JSONObject";
-                break;
             default:
-                if(type.includes('serialize')) {
-                    result = type.replace('serialize-','');
+                if(this.enumHelper.enumDefinitions[type]) { 
+                    result = type;
                 }else{
                     result = type;
                 }
@@ -319,8 +430,8 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         return result;
     }
 
-    //转换配置中的字到对应的数据类型
-    private _TransformBasicsValue (type: string, data: any) {
+    private _TransformBasicsValue (type: any, data: any) {
+        if (typeof type !== 'string') return data;
         let result;
         switch (type) {
             case 'int':
@@ -344,14 +455,12 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                     result = null;
                 }
                 break;
-            case 'json':
-            case 'Json':
-                result = JSON.parse(data);
-                break;
             default:
-                if(type.includes('serialize')) {
-                    type = type.replace('serialize-','');
-                    result = JSON.parse(data);
+                if(this.enumHelper.enumDefinitions[type]) { 
+                    result = data;
+                    if (result == '') {
+                        result = null;
+                    }
                 }else{
                     result = data;
                     if (result == '') {
@@ -363,25 +472,19 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         return result;
     }
 
-    //检查type 对应的值
     private TransformStructValue (type: string, data: string, row?: number, col?: number) {
-
         let result;
         if(typeof(data) == 'string') {
             data = data.replace(/[\r\n]/g, '');
         }
-        if(type.includes('serialize')) {
-            result = this._TransformBasicsValue(type, data);
-        }else if(type.includes('[]')) {   
+        if(type.includes('[]')) {
             type = type.replace('[]','');
             result = [];
             let _datas = data.substring(1,data.length -1).split(',');
             for (let i = 0; i < _datas.length; ++i) {
                 result.push(this._TransformBasicsValue(type, _datas[i]));
             }
-
         }else if(type.includes('[,]')) {
-            //二维数组
             type = type.replace('[,]','');
             result = [];
             let datas = data.substring(2,data.length-2).split('],[');
@@ -393,9 +496,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 }
                 result.push(tmpResult);
             }
-
         }else{
-            //正常值
             result = this._TransformBasicsValue(type, data);
         }
         return result;

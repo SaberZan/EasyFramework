@@ -1,4 +1,4 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
@@ -6,11 +6,11 @@ import _ from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import BaseTranslateEnum from '../BaseTranslateEnum';
 import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
-    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
 
     private outputPathProtosStr: string = '';
     private outputPathBytesStr: string = '';
@@ -36,8 +36,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
 
-        // �����ӽṹ����
-        let structPath = path.join(pathStr, '..', 'define');
+        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
+        await this.enumHelper.TranslateExcel(enumPath);
+        //TODO 生成枚举的protos文件, 以及bytes文件 Code 文件, json文件
+
+        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathProtosStr = path.join(outputPathStr , "protos");
@@ -91,10 +94,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             }
 
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += ".xlsx";
-            parsedPath.ext = ".xlsx";
-            let data = xlsx.parse(path.format(parsedPath));
+            let data = xlsx.parse(pathStr);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -138,7 +138,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             protoContent += this.syntax;
             protoContent += this.packageStart;
             
-            // �������нṹ�嶨��
+            // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
             for (let structName in this.structHelper.structDefinitions) {
                 let structDef = this.structHelper.structDefinitions[structName];
                 protoContent += this.CreateProtoStruct(structDef);
@@ -158,7 +158,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 protoContent += this.syntax;
                 protoContent += this.packageStart;
                 
-                // �������нṹ�嶨��
+                // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
                 for (let structName in this.structHelper.structDefinitions) {
                     let structDef = this.structHelper.structDefinitions[structName];
                     protoContent += this.CreateProtoStruct(structDef);
@@ -216,7 +216,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // Ĭ�ϵ��㼶�������һ�����ݰ���Ƕ���ֶΣ�������ֶ����������Զ�����
+        // 默锟较碉拷锟姐级锟斤拷锟斤拷锟斤拷锟揭伙拷锟斤拷锟斤拷莅锟斤拷锟角讹拷锟斤拷侄危锟斤拷锟斤拷锟斤拷锟街讹拷锟斤拷锟斤拷锟斤拷锟斤拷锟皆讹拷锟斤拷锟斤拷
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -276,7 +276,8 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         fs.writeFileSync(filePath + ".proto", content, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransformType(type: string) {
+    private TransformType(type: any) {
+        if (typeof type !== 'string') return '';
         let result = type;
         switch (type) {
             case 'int':
@@ -352,7 +353,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // ת�������е��ֵ���Ӧ����������
+    // 转锟斤拷锟斤拷锟斤拷锟叫碉拷锟街碉拷锟斤拷应锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
     private _TransformBasicsValue (type: string, data: any) {
         let result;
         switch (type) {
@@ -387,7 +388,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // ��� type �Ƿ�Ϊ�ӽṹ
+    // 锟斤拷锟?type 锟角凤拷为锟接结构
     private TransformStructValue (type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
@@ -400,7 +401,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         if(type.includes('serialize')) {
             result = this._TransformBasicsValue(type, data);
         }else if(type.includes('[,]')) {
-            // ��ά����
+            // 锟斤拷维锟斤拷锟斤拷
             type = type.replace('[,]','');
             result = [];
             let datas = data.substring(2,data.length-2).split('],[');
@@ -422,7 +423,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             }
 
         }else{
-            // ��ֵͨ
+            // 锟斤拷通值
             result = this._TransformBasicsValue(type, data);
         }
         return result;

@@ -6,6 +6,7 @@ import _, { reject } from 'lodash';
 import { exec } from 'child_process'
 import Utils from '../../utils';
 import protobuf from 'protobufjs'
+import BaseTranslateEnum from '../BaseTranslateEnum'
 import { pbjs, pbts } from 'protobufjs-cli';
 import BaseTranslateBefore from '../BaseTranslateBefore';
 
@@ -45,6 +46,7 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
             await mkdir(this.outputPathCodeStr, { recursive: true });
         }
         await this.TransferCommonProtos();
+        await this.TransferEnumProtos();
         let protoPath = path.join(this.outputPathProtosStr, "Common.proto");
         await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
     }
@@ -58,6 +60,29 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
         protosContent += this.stringArray;
         await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, "Common"));
     }
+
+    private async TransferEnumProtos(): Promise<void> {
+        let enumDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Enum.xlsx');
+        let enumHelper = new BaseTranslateEnum();
+        await enumHelper.TranslateExcel(enumDefPath);
+        
+        let protoContent = this.syntax;
+        protoContent += this.packageStart;
+        for (let enumName in enumHelper.enumDefinitions) {
+            let def = enumHelper.enumDefinitions[enumName];
+            protoContent += 'enum ' + enumName + ' {\n';
+            for (let fieldName in def.fields) {
+                let val = def.fields[fieldName];
+                protoContent += '    ' + fieldName + ' = ' + val + ';\n';
+            }
+            protoContent += '}\n\n';
+        }
+        
+        if (protoContent.length > this.syntax.length + this.packageStart.length) {
+            await this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, 'Enum'));
+        }
+    }
+
 
     private async SaveProtosToFile(data: any, filePath: string) : Promise<void> {
         await writeFile(filePath + ".proto", data, { flag: 'w', encoding: 'utf8' });

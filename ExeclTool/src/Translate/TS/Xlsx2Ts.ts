@@ -5,11 +5,8 @@ import { mkdir, readdir, writeFile } from 'fs/promises';
 import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
-import BaseTranslateStruct from '../BaseTranslateStruct';
 
 export default class Xlsx2Ts extends BaseTranslateConfig {
-
-    private structHelper: BaseTranslateStruct = new BaseTranslateStruct();
 
     private outputTsPathStr: string = '';
 
@@ -17,8 +14,29 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
 
-        // ½âÎö×Ó½á¹¹¶¨Òå - Ö§³Ö×Ô¶¨ÒåÂ·¾¶
-        let structPath = this.definePath || path.join(pathStr, '..', 'define');
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Ó½á¹¹ï¿½ï¿½ï¿½ï¿½ - Ö§ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½Â·ï¿½ï¿½
+        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
+        await this.enumHelper.TranslateExcel(enumPath);
+        //        // Generate TS enum files
+        let enumTsDir = path.join(outputPathStr, 'ts');
+        if (!fs.existsSync(enumTsDir)) {
+            await mkdir(enumTsDir, { recursive: true });
+        }
+        for (let enumName in this.enumHelper.enumDefinitions) {
+            let def = this.enumHelper.enumDefinitions[enumName];
+            let tsContent = 'export enum ' + enumName +' {\n';
+            let parts: string[] = [];
+            for (let fieldName in def.fields) {
+                parts.push('    ' + fieldName + ' = ' + def.fields[fieldName]);
+            }
+            tsContent += parts.join(',\n');
+            if (parts.length > 0) tsContent += '\n';
+            tsContent += '}\n';
+            tsContent += 'export default ' + enumName + ';\n';
+            await writeFile(path.join(enumTsDir, enumName + '.ts'), tsContent, { flag: 'w', encoding: 'utf8' });
+        }
+
+        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputTsPathStr = path.join(outputPathStr, 'ts');
@@ -86,7 +104,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // Ä¬ÈÏµ¥²ã¼¶£¬Èç¹ûµÚÒ»ÐÐÊý¾Ý°üº¬Ç¶Ì××Ö¶Î£¨´øµãµÄ×Ö¶ÎÃû£©£¬»á×Ô¶¯´¦Àí
+        // Ä¬ï¿½Ïµï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ý°ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -144,7 +162,8 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         await writeFile(filePath + '.ts', _str_all, { flag: 'w', encoding: 'utf8' });
     }
 
-    private TransformType(type: string) {
+    private TransformType(type: any) {
+        if (typeof type !== 'string') return type;
         let result;
         switch (type) {
             case 'int':
@@ -180,7 +199,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    // ×ª»»ÅäÖÃÖÐµÄ×Öµ½¶ÔÓ¦µÄÊý¾ÝÀàÐÍ
+    // ×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½Öµï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     private _TransformBasicsValue(type: string, data: any) {
         let result;
         switch (type) {
@@ -219,7 +238,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    // ¼ì²é type ÊÇ·ñÎª×Ó½á¹¹
+    // ï¿½ï¿½ï¿½ type ï¿½Ç·ï¿½Îªï¿½Ó½á¹¹
     private TransformStructValue(type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
@@ -238,7 +257,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         } else if (type.includes('[,]')) {
-            // ¶þÎ¬Êý×é
+            // ï¿½ï¿½Î¬ï¿½ï¿½ï¿½ï¿½
             type = type.replace('[,]', '');
             result = [];
             let datas = data.substring(2, data.length - 2).split('],[');
@@ -252,7 +271,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         } else {
-            // ÆÕÍ¨Öµ
+            // ï¿½ï¿½Í¨Öµ
             result = this._TransformBasicsValue(type, data);
         }
         return result;

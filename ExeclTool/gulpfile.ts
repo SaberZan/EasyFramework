@@ -89,34 +89,18 @@ gulp.task("genCfg",(cb)=>{
             await before.BeforeTranslate(tmp_path, param.params);
 
             let promiseArr : Promise<void>[] = [];
+           
+            
             
             // 处理 config
             for(let key in param.config) {
                 let tmpKey = key;
                 let tmpResult = param.config[key];
                 let translateRule = new selectTranslateConfig();
-                promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "cfg", tmpKey) , tmp_path, tmpResult, param.params));
+                promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "cfg", tmpKey), tmp_path, tmpResult, param.params));
             }
 
-            // 处理 enum
-            if(param.enum) {
-                for(let key in param.enum) {
-                    let tmpKey = key;
-                    let tmpResult = param.enum[key];
-                    let translateRule = new selectTranslateConfig();
-                    promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "define") , tmp_path, tmpResult, param.params));
-                }
-            }
 
-            // 处理 struct
-            if(param.struct) {
-                for(let key in param.struct) {
-                    let tmpKey = key;
-                    let tmpResult = param.struct[key];
-                    let translateRule = new selectTranslateConfig();
-                    promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "define") , tmp_path, tmpResult, param.params));
-                }
-            }
 
             await Promise.all(promiseArr);
             let after = new selectTranslateAfter();

@@ -1,24 +1,31 @@
 {
     "target": "CS",
     "params": {
-        "toCode": "csharp"
+        "toCode": "csharp",
+        "designPath": "./design"
     },
-    "designPath": ".\\design",
+    "designPath": "./design",
     "output": {
-        "code" : "../Client/Assets/Scripts/Game/Rumtime/HotFix/Cfg",
-        "bin" : "../Client/Assets/GameResources/Cfg"
+        "code": "../Client/Assets/Scripts/Game/Rumtime/HotFix/Cfg",
+        "bin": "../Client/Assets/GameResources/Cfg"
     },
     "enum": {
         "Enum1": {
             "sheets": [
-                "EnumTest"
+                [
+                    "EnumTest",
+                    "EnumTest"
+                ]
             ]
         }
     },
     "struct": {
         "Struct1": {
             "sheets": [
-                "StructTest"
+                [
+                    "StructTest",
+                    "StructTest"
+                ]
             ]
         }
     },

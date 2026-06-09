@@ -1,0 +1,56 @@
+{
+    "1001": {
+        "id": 1001,
+        "name": "神剑",
+        "price": 1000,
+        "StructTest": [
+            {
+                "value1": "攻击",
+                "value2": 50,
+                "value3": 1.5
+            },
+            {
+                "value1": "暴击",
+                "value2": 20,
+                "value3": 2
+            }
+        ],
+        "$type": "EquipmentCfg, Assembly-CSharp"
+    },
+    "1002": {
+        "id": 1002,
+        "name": "神盾",
+        "price": 800,
+        "StructTest": [
+            {
+                "value1": "防御",
+                "value2": 30,
+                "value3": 1.2
+            },
+            {
+                "value1": "格挡",
+                "value2": 15,
+                "value3": 1.5
+            }
+        ],
+        "$type": "EquipmentCfg, Assembly-CSharp"
+    },
+    "1003": {
+        "id": 1003,
+        "name": "神戒",
+        "price": 500,
+        "StructTest": [
+            {
+                "value1": "魔法",
+                "value2": 40,
+                "value3": 1.8
+            },
+            {
+                "value1": "速度",
+                "value2": 10,
+                "value3": 1
+            }
+        ],
+        "$type": "EquipmentCfg, Assembly-CSharp"
+    }
+}

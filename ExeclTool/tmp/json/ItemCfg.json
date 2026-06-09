@@ -3,33 +3,33 @@
         "id": 1001,
         "name": "剑",
         "price": 100,
-        "attrs": [
-            "{\"value1\":\"攻击\"",
-            "\"value2\":10",
-            "\"value3\":1.5}",
-            "{\"value1\":\"耐久\"",
-            "\"value2\":100",
-            "\"value3\":0.8}"
-        ]
+        "attr": {
+            "name": "攻击",
+            "value": 10,
+            "coeff": 1.5
+        },
+        "$type": "ItemCfg, Assembly-CSharp"
     },
     "1002": {
         "id": 1002,
         "name": "盾",
         "price": 80,
-        "attrs": [
-            "{\"value1\":\"防御\"",
-            "\"value2\":15",
-            "\"value3\":1.2}"
-        ]
+        "attr": {
+            "name": "防御",
+            "value": 15,
+            "coeff": 1.2
+        },
+        "$type": "ItemCfg, Assembly-CSharp"
     },
     "1003": {
         "id": 1003,
         "name": "药水",
         "price": 10,
-        "attrs": [
-            "{\"value1\":\"回复\"",
-            "\"value2\":50",
-            "\"value3\":0}"
-        ]
+        "attr": {
+            "name": "回复",
+            "value": 50,
+            "coeff": 0
+        },
+        "$type": "ItemCfg, Assembly-CSharp"
     }
 }
