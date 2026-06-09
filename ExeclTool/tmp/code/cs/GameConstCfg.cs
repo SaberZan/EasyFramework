@@ -2,6 +2,7 @@
  * GameConstCfg
  */
 	[Easy.Config("GameConstCfg")]
+	[System.Serializable]
 	public class GameConstCfg : System.Collections.Generic.Dictionary<string, GameConstCfg>
  	{
 		[Newtonsoft.Json.JsonProperty]

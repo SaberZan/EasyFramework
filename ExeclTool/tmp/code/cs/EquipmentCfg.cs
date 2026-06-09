@@ -2,6 +2,7 @@
  * EquipmentCfg
  */
 	[Easy.Config("EquipmentCfg")]
+	[System.Serializable]
 	public class EquipmentCfg : System.Collections.Generic.Dictionary<int, EquipmentCfg>
  	{
 		[Newtonsoft.Json.JsonProperty]

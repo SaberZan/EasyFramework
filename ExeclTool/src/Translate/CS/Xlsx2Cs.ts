@@ -25,7 +25,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
     private classStart = "\t[System.Serializable]\r\n\tpublic class {0}\r\n \t{\r\n";
 
-    private classDictionaryStart = "\tpublic class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\r\n \t{\r\n";
+    private classDictionaryStart = "\t[System.Serializable]\r\n\tpublic class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\r\n \t{\r\n";
 
     private classEnd = "\t} \r\n";
 
@@ -73,6 +73,12 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
         if(!fs.existsSync(this.outputPathCsStr)) {
             await mkdir(this.outputPathCsStr, { recursive: true });
+        }
+        // Generate standalone struct CS files from Struct.xlsx
+        for (let structName in this.structHelper.structDefinitions) {
+            let structDef = this.structHelper.structDefinitions[structName];
+            let content = this.BuildStructClassContent(structName, structDef.fields);
+            await this.SaveCsToFile(content, path.join(this.outputPathCsStr, structName));
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
             await mkdir(this.outputPathJsonStr, { recursive: true });
@@ -141,18 +147,13 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 
                 let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
                 
-                for (let parentField in nestedFields) {
-                    let structClassName = parentField.charAt(0).toUpperCase() + parentField.slice(1);
-                    let fields = this.DeduplicateFields(nestedFields[parentField]);
-                    await this.SaveStructClassToFile(structClassName, fields);
-                }
                 
                 let classContent = this.namespaceStart;
                 classContent += this.notes.replace('{0}', translateName);
                 if(!this.isDir) {
                     classContent += this.configHead.replace('{0}', translateName);
                 }
-                let csData = this.CreateCs(this.xlsxData[sheetName], translateName);
+                let csData = this.CreateCs(this.xlsxData[sheetName], translateName, nestedFields);
                 classContent += csData;
                 classContent += this.namespaceEnd;
                 await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
@@ -180,7 +181,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
     }
 
-    private CreateCs(data: any, className: string) {
+    private CreateCs(data: any, className: string, nestedFieldDefs?: { [parentField: string]: { name: string; type: string }[] }) {
         if (!data || data.length < 2) {
             console.warn('Invalid data for CS generation:', className);
             return '';
@@ -200,6 +201,18 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         let keyUpper = keyUpperAndLower[0];
         let type = this.TransformType(types[0]);
         let classContent = Utils.FormatStr(this.classDictionaryStart, className, type, className);
+
+        // Generate nested struct class definitions INSIDE the main class
+        if (nestedFieldDefs) {
+            for (let fieldName in nestedFieldDefs) {
+                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                if (this.structHelper.IsStructType(capitalized)) { continue; }
+                let structClassName = className + capitalized;
+                let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
+                classContent += this.BuildStructClassContent(structClassName, fields);
+            }
+        }
+
         classContent += Utils.FormatStr(this.privateStr, "int", "_id", "id");
         classContent += Utils.FormatStr(this.publicStr, "int", "id", "_id");
 
@@ -219,7 +232,8 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 // ?????????? attr.name
                 let fieldName = fieldPath[0].toString();
                 let isArrayStruct = fieldPath.length > 2 && !isNaN(Number(fieldPath[1]));
-                let structClassName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                let structClassName = this.structHelper.IsStructType(capitalized) ? capitalized : className + capitalized;
                 
                 if (!structFields[fieldName]) {
                     structFields[fieldName] = {
@@ -305,6 +319,21 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         return result;
     }
     
+    private BuildStructClassContent(structName: string, fields: { name: string; type: string }[]): string {
+        let content = this.notes.replace('{0}', structName);
+        content += this.classStart.replace('{0}', structName);
+        for (let field of fields) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(field.name);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldType = this.TransformType(field.type);
+            content += Utils.FormatStr(this.privateStr, fieldType, keyLower, field.name);
+            content += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+        }
+        content += this.classEnd;
+        return content;
+    }
+
     private async SaveStructClassToFile(structName: string, fields: { name: string; type: string }[]): Promise<void> {
         let classContent = this.notes.replace('{0}', structName);
         classContent += this.classStart.replace('{0}', structName);
