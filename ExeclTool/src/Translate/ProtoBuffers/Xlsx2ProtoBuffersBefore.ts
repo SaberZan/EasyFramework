@@ -7,6 +7,7 @@ import { exec } from 'child_process'
 import Utils from '../../utils';
 import protobuf from 'protobufjs'
 import BaseTranslateEnum from '../BaseTranslateEnum'
+import BaseTranslateStruct from '../BaseTranslateStruct'
 import { pbjs, pbts } from 'protobufjs-cli';
 import BaseTranslateBefore from '../BaseTranslateBefore';
 
@@ -58,7 +59,35 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
         protosContent += this.boolArray;
         protosContent += this.floatArray;
         protosContent += this.stringArray;
+
+        // Add struct definitions from Struct.xlsx
+        let structDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Struct.xlsx');
+        let structHelper = new BaseTranslateStruct();
+        await structHelper.ParseStructDefinitions(structDefPath);
+        for (let structName in structHelper.structDefinitions) {
+            let def = structHelper.structDefinitions[structName];
+            protosContent += 'message ' + structName + ' {\n';
+            let idx = 1;
+            for (let field of def.fields) {
+                let protoType = this.TransformProtoType(field.type);
+                protosContent += '  ' + protoType + ' ' + field.name + ' = ' + idx + ';\n';
+                idx++;
+            }
+            protosContent += '}\n\n';
+        }
+
         await this.SaveProtosToFile(protosContent, path.join(this.outputPathProtosStr, "Common"));
+    }
+
+    private TransformProtoType(type: string): string {
+        switch (type) {
+            case 'int': case 'Int': return 'int32';
+            case 'float': case 'Float': return 'float';
+            case 'string': case 'String': return 'string';
+            case 'bool': case 'Bool': return 'bool';
+            case 'int[]': return 'repeated int32';
+            default: return type;
+        }
     }
 
     private async TransferEnumProtos(): Promise<void> {

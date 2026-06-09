@@ -7,6 +7,7 @@ import Utils from '../../utils';
 import BaseTranslateEnum from '../BaseTranslateEnum';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateBefore from '../BaseTranslateBefore';
+import BaseTranslateStruct from '../BaseTranslateStruct'
 import { exec } from 'child_process';
 
 export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
@@ -61,6 +62,20 @@ export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
         fbsContent += this.boolArray;
         fbsContent += this.floatArray;
         fbsContent += this.stringArray;
+
+        // Add struct definitions from Struct.xlsx
+        let structDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Struct.xlsx');
+        let structHelper = new BaseTranslateStruct();
+        await structHelper.ParseStructDefinitions(structDefPath);
+        for (let structName in structHelper.structDefinitions) {
+            let def = structHelper.structDefinitions[structName];
+            fbsContent += 'table ' + structName + ' {\n';
+            for (let field of def.fields) {
+                fbsContent += '    ' + field.name + ' : ' + field.type + ';\n';
+            }
+            fbsContent += '}\n\n';
+        }
+
         await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, "Common"));
     }
 

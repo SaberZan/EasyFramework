@@ -9,7 +9,7 @@ export default class Utils {
     public static FormatStr(str:string, ...args: string[]): string {
         let result = str;
         for(let i = 0; i < args.length; ++i){
-            result = result.replace("{" + i + "}", args[i]);
+            result = result.split("{" + i + "}").join(args[i]);
         }
         return result;
     }

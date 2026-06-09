@@ -91,10 +91,14 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                     await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
                 }
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
-            }
+                await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr);
 
+            }
         } else {
-            let data = xlsx.parse(pathStr);
+            let parsedPath = path.parse(pathStr);
+            parsedPath.base += ".xlsx";
+            parsedPath.ext = ".xlsx";
+            let data = xlsx.parse(path.format(parsedPath));
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -108,10 +112,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 let bytesPath = path.join(this.outputPathBytesStr, translateName + ".bytes");
                 let messageName = "CfgSpace." + translateName;
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
+                await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr);
             }
         }
-    }
 
+    }
     private async TransferTableJson(file: string = "") : Promise<void> {
         if(this.merge) {
             let all: {[key: string]: any} = {};
@@ -139,10 +144,10 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             protoContent += this.packageStart;
             
             // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
-            for (let structName in this.structHelper.structDefinitions) {
-                let structDef = this.structHelper.structDefinitions[structName];
-                protoContent += this.CreateProtoStruct(structDef);
-            }
+            // Import Common.proto for struct definitions
+            protoContent += this.packageCommonImport;
+
+
             
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
@@ -159,10 +164,10 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 protoContent += this.packageStart;
                 
                 // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
-                for (let structName in this.structHelper.structDefinitions) {
-                    let structDef = this.structHelper.structDefinitions[structName];
-                    protoContent += this.CreateProtoStruct(structDef);
-                }
+                // Import Common.proto for struct definitions
+                protoContent += this.packageCommonImport;
+
+
                 
                 protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
                 this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, translateName));
@@ -185,20 +190,61 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
     private CreateProto(data: any, className: string) : string {
         let dataArr = data;
-        let keys = dataArr[0];
-        let types = dataArr[1];
-        let content = this.messageStart.replace('{0}', className);
-        let fieldIndex = 1;
+        let keys = dataArr[0] || [];
+        let types = dataArr[1] || [];
+        let nestedMap: { [parent: string]: { fields: { [name: string]: string }; isArray: boolean } } = {};
+        let simpleKeys: { key: string; type: string }[] = [];
         for (let i = 0; i < keys.length; ++i) {
             let key = keys[i];
             let type = types[i];
-            if (_.isNil(key) || _.isEmpty(key)) {
+            if (_.isNil(key) || _.isEmpty(key)) continue;
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let parentName = fieldInfo.name;
+                let subFieldName = fieldInfo.fieldPath[fieldInfo.fieldPath.length - 1];
+                if (!nestedMap[parentName]) {
+                    nestedMap[parentName] = { fields: {}, isArray: fieldInfo.isArray };
+                }
+                if (fieldInfo.isArray) nestedMap[parentName].isArray = true;
+                if (!nestedMap[parentName].fields[subFieldName]) {
+                    nestedMap[parentName].fields[subFieldName] = type;
+                }
                 continue;
             }
-            content += this.fieldStr.replace('{0}', this.TransformType(type))
-                                     .replace('{1}', key)
-                                     .replace('{2}', fieldIndex.toString());
-            fieldIndex++;
+            simpleKeys.push({ key, type });
+        }
+        let content = "";
+        // Generate sub-messages for non-Struct.xlsx types
+        for (let parentName in nestedMap) {
+            let cap = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+            if (this.structHelper.IsStructType(cap)) continue;
+            let subName = className + "_" + cap;
+            content += this.messageStart.replace("{0}", subName);
+            let idx = 1;
+            for (let fn in nestedMap[parentName].fields) {
+                let ft = nestedMap[parentName].fields[fn];
+                content += this.fieldStr.replace("{0}", this.TransformType(ft)).replace("{1}", fn).replace("{2}", idx.toString());
+                idx++;
+            }
+            content += this.messageEnd;
+        }
+        // Main message
+        content += this.messageStart.replace("{0}", className);
+        let fi = 1;
+        for (let f of simpleKeys) {
+            content += this.fieldStr.replace("{0}", this.TransformType(f.type)).replace("{1}", f.key).replace("{2}", fi.toString());
+            fi++;
+        }
+        // Add nested field references
+        for (let parentName in nestedMap) {
+            let cap = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+            let tn = this.structHelper.IsStructType(cap) ? cap : className + "_" + cap;
+            let isArr = false;
+            for (let k of keys) { if (k && (k.startsWith(parentName + "[") || k.startsWith(parentName + ".")) && k !== parentName) { isArr = k.includes("["); break; } }
+            if (isArr) tn = "repeated " + tn;
+            let fld = this.structHelper.IsStructType(cap) ? parentName.charAt(0).toLowerCase() + parentName.slice(1) : parentName;
+            content += this.fieldStr.replace("{0}", tn).replace("{1}", fld).replace("{2}", fi.toString());
+            fi++;
         }
         content += this.messageEnd;
         return content;
@@ -248,6 +294,12 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 }
 
                 let fieldPath = this.structHelper.ParseFieldPath(key);
+
+                let firstField = fieldPath[0].toString();
+                let capitalized = firstField.charAt(0).toUpperCase() + firstField.slice(1);
+                if (this.structHelper.IsStructType(capitalized)) {
+                    fieldPath[0] = firstField.charAt(0).toLowerCase() + firstField.slice(1);
+                }
 
                 if (fieldPath.length > 1) {
                     this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
@@ -430,34 +482,94 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     }
 
     private async GenCode(protoPath: string, toCode: string, outputPath: string) {
-        let cmd = `pbjs -t static-module -w commonjs -o ${path.join(outputPath, toCode + ".js")} ${protoPath}`;
-        console.log(cmd);
+        let parsedPath = path.parse(protoPath);
+        let protocCmd = ".\\lib\\protoc\\protoc.exe -I " + parsedPath.dir + " --" + toCode + "_out " + outputPath + " " + protoPath;
+        console.log(protocCmd);
         return new Promise<void>((resolve, reject) => {
-            exec(cmd, (err, stdout, stderr) => {
+            exec(protocCmd, (err, stdout, stderr) => {
                 if(err) {
                     reject(err);
                     return;
                 }
-                console.log(stdout);  
-                console.log(stderr);    
+                console.log(stdout);
+                console.log(stderr);
                 resolve();
             });
         });
+        
+    }   
+    
+    private JsonToProtoText(data: any): string {
+        function toText(v: any, ind: number): string[] {
+            let p = "  ".repeat(ind);
+            let r: string[] = [];
+            if (v === null || v === undefined) return r;
+            if (typeof v === "string") return [JSON.stringify(v)];
+            if (typeof v === "number" || typeof v === "boolean") return [String(v)];
+            if (Array.isArray(v)) {
+                for (let item of v) {
+                    if (typeof item === "object" && item !== null) {
+                        r.push("{");
+                        r.push(...toText(item, ind + 1));
+                        r.push("}");
+                    } else {
+                        r.push(...toText(item, ind));
+                    }
+                }
+                return r;
+            }
+            for (let k in v) {
+                let val = v[k];
+                if (val === null || val === undefined) continue;
+                if (Array.isArray(val)) {
+                    for (let item of val) {
+                        if (typeof item === "object" && item !== null) {
+                            r.push(p + k + " {", ...toText(item, ind + 1), p + "}");
+                        } else {
+                            r.push(p + k + ": " + toText(item, 0)[0]);
+                        }
+                    }
+                } else if (typeof val === "object" && val !== null) {
+                    r.push(p + k + " {", ...toText(val, ind + 1), p + "}");
+                } else {
+                    r.push(p + k + ": " + toText(val, 0)[0]);
+                }
+            }
+            return r;
+        }
+        return toText(data, 0).join("\n");
     }
-
     private async GenBytes(protoPath: string, jsonPath: string, messageName: string, bytesPath: string) {
-        let cmd = `pbjs -t static-module -w commonjs -o ${bytesPath}.js ${protoPath}`;
-        console.log(cmd);
-        return new Promise<void>((resolve, reject) => {
-            exec(cmd, (err, stdout, stderr) => {
-                if(err) {
-                    reject(err);
-                    return;
+        let jsonStr = fs.readFileSync(jsonPath, "utf8");
+        let jsonData = JSON.parse(jsonStr);
+        let allParts: Buffer[] = [];
+        let idx = 0;
+        for (let key in jsonData) {
+            let record = jsonData[key];
+            let protoText = this.JsonToProtoText(record);
+            let txtPath = bytesPath + "_" + idx + ".txt";
+            let binPath = bytesPath + "_" + idx + ".bin";
+            fs.writeFileSync(txtPath, protoText, "utf8");
+            let cmd = `.\\lib\\protoc\\protoc.exe --encode=${messageName} -I ${path.dirname(protoPath)} ${protoPath} < "${txtPath}" > "${binPath}"`;
+            try {
+                const execSync = require("child_process").execSync;
+                execSync(cmd);
+                if (fs.existsSync(binPath)) {
+                    let binData = fs.readFileSync(binPath);
+                    let lenBuf = Buffer.alloc(4);
+                    lenBuf.writeUInt32LE(binData.length, 0);
+                    allParts.push(lenBuf, binData);
                 }
-                console.log(stdout);  
-                console.log(stderr);    
-                resolve();
-            });
-        });
+            } catch(e) {
+                console.error("Record", key, "failed:", (e instanceof Error ? e.message : String(e)));
+            }
+            try { fs.unlinkSync(txtPath); } catch(e2) {}
+            try { fs.unlinkSync(binPath); } catch(e2) {}
+            idx++;
+        }
+        if (allParts.length > 0) {
+            fs.writeFileSync(bytesPath, Buffer.concat(allParts));
+            console.log("Generated:", bytesPath);
+        }
     }
 }

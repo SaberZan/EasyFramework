@@ -94,6 +94,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 await this.GenBin(path.join(this.outputPathFbsStr, translateName + '.fbs'), path.join(this.outputPathJsonStr, translateName + '.json'), path.join(this.outputPathBinStr, translateName));
+                await this.GenCode(path.join(this.outputPathFbsStr, translateName + '.fbs'), this.toCode, this.outputPathCodeStr);
             }
         }
     }
@@ -193,6 +194,12 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
                 let fieldPath = this.structHelper.ParseFieldPath(key);
                 if (fieldPath.length > 1) {
+                    // Lowercase first element if it matches a known struct type (flatc naming compatibility)
+                    let firstField = fieldPath[0].toString();
+                    let capitalized = firstField.charAt(0).toUpperCase() + firstField.slice(1);
+                    if (this.structHelper.IsStructType(capitalized)) {
+                        fieldPath[0] = firstField.charAt(0).toLowerCase() + firstField.slice(1);
+                    }
                     this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
                 } else {
                     let result = this.TransformStructValue(type, value, rowIndex, colIndex);
@@ -282,8 +289,12 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
         let content = '';
 
-        // 1. Generate sub-table definitions for each nested group
+        // 1. Generate sub-table definitions for each nested group (skip if matching Struct.xlsx type)
         for (let parentName of Object.keys(nestedGroups)) {
+            let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+            if (this.structHelper.IsStructType(capitalized)) {
+                continue; // Skip - type is defined in Struct.xlsx
+            }
             let group = nestedGroups[parentName];
             let subTableName = this.getSubTableName(className, parentName);
 
@@ -310,12 +321,23 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         // 3. Add nested field references with proper FlatBuffers types
         for (let parentName of Object.keys(nestedGroups)) {
             let group = nestedGroups[parentName];
-            let subTableName = this.getSubTableName(className, parentName);
-
-            if (group.isArray) {
-                content += this.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
+            let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+            
+            if (this.structHelper.IsStructType(capitalized)) {
+                // Reference the struct type from Struct.xlsx directly (lowercase field name to avoid flatc naming conflict)
+                let fieldKey = parentName.charAt(0).toLowerCase() + parentName.slice(1);
+                if (group.isArray) {
+                    content += this.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + capitalized + ']');
+                } else {
+                    content += this.fieldStr.replace('{0}', fieldKey).replace('{1}', capitalized);
+                }
             } else {
-                content += this.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
+                let subTableName = this.getSubTableName(className, parentName);
+                if (group.isArray) {
+                    content += this.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
+                } else {
+                    content += this.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
+                }
             }
         }
 
@@ -344,10 +366,26 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         }
         content += Utils.FormatStr(this.csClassDictionaryStart, className, 'int', className);
 
+        let structFields: { [fieldName: string]: { typeName: string; isArray: boolean } } = {};
+
         for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
             if (_.isNil(key) || _.isEmpty(key)) continue;
+
+            let fieldPath = this.structHelper.ParseFieldPath(key);
+            if (fieldPath.length > 1) {
+                let parentName = fieldPath[0].toString();
+                if (!structFields[parentName]) {
+                    let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+                    let isArray = fieldPath.length > 2 && !isNaN(Number(fieldPath[1]));
+                    let typeName = this.structHelper.IsStructType(capitalized)
+                        ? 'CfgSpace.' + capitalized
+                        : 'CfgSpace.' + className + '_' + capitalized;
+                    structFields[parentName] = { typeName, isArray };
+                }
+                continue;
+            }
 
             let csType = this.TransformCsType(type);
             let keyUpperLower = Utils.GetFristUpperAndLowerStr(key);
@@ -356,6 +394,18 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
             content += Utils.FormatStr(this.csPrivateStr, csType, keyLower);
             content += Utils.FormatStr(this.csPublicStr, csType, keyUpper, keyLower);
+        }
+
+        // Add struct field references
+        for (let fieldName in structFields) {
+            let info = structFields[fieldName];
+            let keyUpperLower = Utils.GetFristUpperAndLowerStr(fieldName);
+            let keyUpper = keyUpperLower[0];
+            let keyLower = keyUpperLower[1];
+            let fieldType = info.isArray ? info.typeName + "[]" : info.typeName;
+
+            content += Utils.FormatStr(this.csPrivateStr, fieldType, keyLower);
+            content += Utils.FormatStr(this.csPublicStr, fieldType, keyUpper, keyLower);
         }
 
         content += this.csClassEnd;
