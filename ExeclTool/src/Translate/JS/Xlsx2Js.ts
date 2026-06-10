@@ -16,30 +16,6 @@ export default class Xlsx2Js extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
 
-        // 解析子结构定义 - 支持自定义路径
-        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
-        await this.enumHelper.TranslateExcel(enumPath);
-        //        // Generate JS enum files
-        let enumJsDir = path.join(outputPathStr, 'js');
-        if (!fs.existsSync(enumJsDir)) {
-            await mkdir(enumJsDir, { recursive: true });
-        }
-        for (let enumName in this.enumHelper.enumDefinitions) {
-            let def = this.enumHelper.enumDefinitions[enumName];
-            let jsContent = 'var ' + enumName + ' = {\n';
-            let parts: string[] = [];
-            for (let fieldName in def.fields) {
-                parts.push('    ' + fieldName + ': ' + def.fields[fieldName]);
-            }
-            jsContent += parts.join(',\n');
-            if (parts.length > 0) jsContent += '\n';
-            jsContent += '};\n';
-            await writeFile(path.join(enumJsDir, enumName + '.js'), jsContent, { flag: 'w', encoding: 'utf8' });
-        }
-
-        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
-        await this.structHelper.ParseStructDefinitions(structPath);
-
         this.outputJsPathStr = path.join(outputPathStr, 'js');
         if (!fs.existsSync(this.outputJsPathStr)) {
             await mkdir(this.outputJsPathStr, { recursive: true });

@@ -1,0 +1,16 @@
+export default {
+    syntax : "syntax = \"proto3\"; \n\n",
+    packageStart : "package CfgSpace; \n\n",
+    packageCommonImport : "import \"Common.proto\"; \n\n",
+    messageStart : "message {0} {\n",
+    messageEnd : "}\n\n",
+    enumStart : "enum {0} {\n",
+    enumEnd : "}\n\n",
+    fieldEnumStr : "{0} = {1};\n",
+    fieldMapStr : "\t Map<{0},{1}> {2} = {3};\n",
+    fieldStr : "\t{0} {1} = {2};\n",
+    intArray : "message IntArray {\n\t repeated int32 data = 1;\n}\n\n",
+    boolArray : "message BoolArray {\n\t repeated bool data = 1;\n}\n\n",
+    floatArray : "message FloatArray {\n\t repeated float data = 1;\n}\n\n",
+    stringArray : "message StringArray {\n\t repeated string data = 1;\n}\n\n",
+}

@@ -5,6 +5,7 @@ import { mkdir, readdir, writeFile } from 'fs/promises';
 import _ from 'lodash';
 import { exec } from 'child_process';
 import Utils from '../../utils';
+import FbsDefine from './FbsDefine';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateStruct from '../BaseTranslateStruct';
 
@@ -17,33 +18,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     private outputPathCsStr: string = '';
     private toCode: string = '';
 
-    private namespaceStart = 'namespace CfgSpace; \n\n';
-    private packageCommonImport = 'include \"Common.fbs\"; \n\n';
-
-    private tableStart = 'table {0} {\n';
-    private tableEnd = '}\n\n';
-    private structStart = 'table {0} {\n';
-    private structEnd = '}\n\n';
-    private fieldStr = '    {0} : {1};\n';
-    private rootType = 'root_type {0};\n\n';
-
-    private csNotes = '/**\n * {0}\n */\n';
-    private csConfigHead = '    [Easy.Config(\"{0}\")]\n';
-    private csClassDictionaryStart = 'public static class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\n{\n';
-    private csPrivateStr = '        private {0} _{1};\n';
-    private csPublicStr = '        public static {0} {1} => _{1};\n\n';
-    private csClassEnd = '}\n\n';
 
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
-
-        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
-        await this.enumHelper.TranslateExcel(enumPath);
-
-        //TODO 生成枚举的fbs文件, 以及bytes文件 toCode 文件, json文件, cs文件
-
-        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
-        await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathFbsStr = path.join(outputPathStr, 'fbs');
         this.outputPathBinStr = path.join(outputPathStr, 'bin');
@@ -74,7 +51,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 await this.TransferTableJson(fileName);
                 if (i == '0') {
                     await this.TransferTableFbs();
-                    await this.TransferTableCs();
+                    if(this.toCode == "csharp") { 
+                        await this.TransferTableCs();
+                    }
                     await this.GenCode(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), this.toCode, this.outputPathCodeStr);
                 }
                 await this.GenBin(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), path.join(this.outputPathJsonStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + fileName + '.json'), path.join(this.outputPathBinStr, (this.merge ? this.mergeName : this.translateSheets[0][1])));
@@ -89,7 +68,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
             await this.TransferTableJson();
             await this.TransferTableFbs();
-            await this.TransferTableCs();
+            if(this.toCode == "csharp") { 
+                await this.TransferTableCs();
+            }
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
@@ -121,7 +102,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private async TransferTableFbs(): Promise<void> {
-        let fbsContent = this.packageCommonImport + this.namespaceStart;
+        let fbsContent = FbsDefine.packageCommonImport + FbsDefine.namespaceStart;
 
 
         if (this.merge) {
@@ -130,13 +111,13 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let translateName = this.translateSheets[i][1];
                 fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
             }
-            fbsContent += this.rootType.replace('{0}', this.mergeName);
+            fbsContent += FbsDefine.rootType.replace('{0}', this.mergeName);
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
-                fbsContent += this.rootType.replace('{0}', translateName + '_Array');
+                fbsContent += FbsDefine.rootType.replace('{0}', translateName + '_Array');
             }
         }
 
@@ -151,19 +132,19 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let translateName = this.translateSheets[i][1];
                 content += this.CreateCs(this.xlsxData[sheetName], translateName, this.mergeName);
             }
-            content += Utils.FormatStr(this.csNotes, this.mergeName);
-            if (!this.isDir) content += Utils.FormatStr(this.csConfigHead, this.mergeName);
-            content += Utils.FormatStr(this.csClassDictionaryStart, this.mergeName, 'int', this.mergeName);
-            content += Utils.FormatStr(this.csPrivateStr, 'int', 'id');
-            content += Utils.FormatStr(this.csPublicStr, 'int', 'id');
-            content += this.csClassEnd;
+            content += Utils.FormatStr(FbsDefine.csNotes, this.mergeName);
+            if (!this.isDir) content += Utils.FormatStr(FbsDefine.csConfigHead, this.mergeName);
+            content += Utils.FormatStr(FbsDefine.csClassDictionaryStart, this.mergeName, 'int', this.mergeName);
+            content += Utils.FormatStr(FbsDefine.csPrivateStr, 'int', 'id');
+            content += Utils.FormatStr(FbsDefine.csPublicStr, 'int', 'id');
+            content += FbsDefine.csClassEnd;
             this.SaveCsToFile(content, path.join(this.outputPathCsStr, this.mergeName));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let content = Utils.FormatStr(this.csNotes, translateName);
-                content += Utils.FormatStr(this.csConfigHead, translateName);
+                let content = Utils.FormatStr(FbsDefine.csNotes, translateName);
+                content += Utils.FormatStr(FbsDefine.csConfigHead, translateName);
                 content += this.CreateCs(this.xlsxData[sheetName], translateName, '');
                 this.SaveCsToFile(content, path.join(this.outputPathCsStr, translateName));
             }
@@ -217,11 +198,11 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private CreateFbsStruct(structDef: any): string {
-        let content = this.structStart.replace('{0}', structDef.name);
+        let content = FbsDefine.structStart.replace('{0}', structDef.name);
         for (let field of structDef.fields) {
-            content += this.fieldStr.replace('{0}', field.name).replace('{1}', this.TransformType(field.type));
+            content += FbsDefine.fieldStr.replace('{0}', field.name).replace('{1}', this.TransformType(field.type));
         }
-        content += this.structEnd;
+        content += FbsDefine.structEnd;
         return content;
     }
 
@@ -298,23 +279,23 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             let group = nestedGroups[parentName];
             let subTableName = this.getSubTableName(className, parentName);
 
-            content += this.tableStart.replace('{0}', subTableName);
+            content += FbsDefine.tableStart.replace('{0}', subTableName);
             for (let [fieldName, fieldType] of Object.entries(group.fields)) {
                 let fbsType = this.TransformType(fieldType);
-                content += this.fieldStr.replace('{0}', fieldName).replace('{1}', fbsType);
+                content += FbsDefine.fieldStr.replace('{0}', fieldName).replace('{1}', fbsType);
             }
-            content += this.tableEnd;
+            content += FbsDefine.tableEnd;
         }
 
         // 2. Generate the main table
-        content += this.tableStart.replace('{0}', className);
+        content += FbsDefine.tableStart.replace('{0}', className);
 
         for (let field of simpleFields) {
             let fbsType = this.TransformType(field.type);
             if (this.structHelper.IsStructType(field.type)) {
-                content += this.fieldStr.replace('{0}', field.key).replace('{1}', field.type);
+                content += FbsDefine.fieldStr.replace('{0}', field.key).replace('{1}', field.type);
             } else {
-                content += this.fieldStr.replace('{0}', field.key).replace('{1}', fbsType);
+                content += FbsDefine.fieldStr.replace('{0}', field.key).replace('{1}', fbsType);
             }
         }
 
@@ -327,26 +308,26 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 // Reference the struct type from Struct.xlsx directly (lowercase field name to avoid flatc naming conflict)
                 let fieldKey = parentName.charAt(0).toLowerCase() + parentName.slice(1);
                 if (group.isArray) {
-                    content += this.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + capitalized + ']');
+                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + capitalized + ']');
                 } else {
-                    content += this.fieldStr.replace('{0}', fieldKey).replace('{1}', capitalized);
+                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', capitalized);
                 }
             } else {
                 let subTableName = this.getSubTableName(className, parentName);
                 if (group.isArray) {
-                    content += this.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
+                    content += FbsDefine.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
                 } else {
-                    content += this.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
+                    content += FbsDefine.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
                 }
             }
         }
 
-        content += this.tableEnd;
+        content += FbsDefine.tableEnd;
 
         // 3. Generate wrapper table for flatc binary generation (array root type)
-        content += this.tableStart.replace('{0}', className + '_Array');
-        content += this.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
-        content += this.tableEnd;
+        content += FbsDefine.tableStart.replace('{0}', className + '_Array');
+        content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
+        content += FbsDefine.tableEnd;
 
         return content;
     }
@@ -362,9 +343,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         let content = '';
 
         if (mergeName !== className) {
-            content += Utils.FormatStr(this.csNotes, className);
+            content += Utils.FormatStr(FbsDefine.csNotes, className);
         }
-        content += Utils.FormatStr(this.csClassDictionaryStart, className, 'int', className);
+        content += Utils.FormatStr(FbsDefine.csClassDictionaryStart, className, 'int', className);
 
         let structFields: { [fieldName: string]: { typeName: string; isArray: boolean } } = {};
 
@@ -392,8 +373,8 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             let keyUpper = keyUpperLower[0];
             let keyLower = keyUpperLower[1];
 
-            content += Utils.FormatStr(this.csPrivateStr, csType, keyLower);
-            content += Utils.FormatStr(this.csPublicStr, csType, keyUpper, keyLower);
+            content += Utils.FormatStr(FbsDefine.csPrivateStr, csType, keyLower);
+            content += Utils.FormatStr(FbsDefine.csPublicStr, csType, keyUpper, keyLower);
         }
 
         // Add struct field references
@@ -404,11 +385,11 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             let keyLower = keyUpperLower[1];
             let fieldType = info.isArray ? info.typeName + "[]" : info.typeName;
 
-            content += Utils.FormatStr(this.csPrivateStr, fieldType, keyLower);
-            content += Utils.FormatStr(this.csPublicStr, fieldType, keyUpper, keyLower);
+            content += Utils.FormatStr(FbsDefine.csPrivateStr, fieldType, keyLower);
+            content += Utils.FormatStr(FbsDefine.csPublicStr, fieldType, keyUpper, keyLower);
         }
 
-        content += this.csClassEnd;
+        content += FbsDefine.csClassEnd;
         return content;
     }
 

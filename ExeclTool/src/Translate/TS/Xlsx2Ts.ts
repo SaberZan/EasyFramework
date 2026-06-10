@@ -14,31 +14,6 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
 
-        // �����ӽṹ���� - ֧���Զ���·��
-        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
-        await this.enumHelper.TranslateExcel(enumPath);
-        //        // Generate TS enum files
-        let enumTsDir = path.join(outputPathStr, 'ts');
-        if (!fs.existsSync(enumTsDir)) {
-            await mkdir(enumTsDir, { recursive: true });
-        }
-        for (let enumName in this.enumHelper.enumDefinitions) {
-            let def = this.enumHelper.enumDefinitions[enumName];
-            let tsContent = 'export enum ' + enumName +' {\n';
-            let parts: string[] = [];
-            for (let fieldName in def.fields) {
-                parts.push('    ' + fieldName + ' = ' + def.fields[fieldName]);
-            }
-            tsContent += parts.join(',\n');
-            if (parts.length > 0) tsContent += '\n';
-            tsContent += '}\n';
-            tsContent += 'export default ' + enumName + ';\n';
-            await writeFile(path.join(enumTsDir, enumName + '.ts'), tsContent, { flag: 'w', encoding: 'utf8' });
-        }
-
-        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
-        await this.structHelper.ParseStructDefinitions(structPath);
-
         this.outputTsPathStr = path.join(outputPathStr, 'ts');
         if (!fs.existsSync(this.outputTsPathStr)) {
             await mkdir(this.outputTsPathStr, { recursive: true });
@@ -104,7 +79,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // Ĭ�ϵ��㼶�������һ�����ݰ���Ƕ���ֶΣ�������ֶ����������Զ�����
+        // Default layerNum: the first data layer may contain nested fields
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -199,7 +174,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    // ת�������е��ֵ���Ӧ����������
+    // Transform type to corresponding field value type
     private _TransformBasicsValue(type: string, data: any) {
         let result;
         switch (type) {
@@ -238,7 +213,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 
-    // ��� type �Ƿ�Ϊ�ӽṹ
+    // Check if type is a struct type
     private TransformStructValue(type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
@@ -257,7 +232,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         } else if (type.includes('[,]')) {
-            // ��ά����
+            // Two-dimensional array
             type = type.replace('[,]', '');
             result = [];
             let datas = data.substring(2, data.length - 2).split('],[');
@@ -271,7 +246,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             }
 
         } else {
-            // ��ֵͨ
+            // Ordinary value
             result = this._TransformBasicsValue(type, data);
         }
         return result;

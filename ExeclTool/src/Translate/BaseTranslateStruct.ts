@@ -28,7 +28,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     public structDefinitions: { [name: string]: StructDefinition } = {};
 
     /**
-     * ���������ӽṹ�����ļ�
+     * Parse struct definitions from the specified Excel file
      */
     public async ParseStructDefinitions(definePath: string): Promise<void> {
         if (!fs.existsSync(definePath)) {
@@ -72,7 +72,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * ��������Ƿ�Ϊ�ӽṹ����
+     * Check if the given type is a struct type
      */
     public IsStructType(type: string): boolean {
         if (typeof type !== 'string') return false;
@@ -81,15 +81,15 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * ����Ƿ������������ֶΣ��� items[0].name��
+     * Check if the key represents an array field, e.g. items[0].name
      */
     public IsArrayField(key: string): boolean {
         return key.includes('[') && key.includes(']');
     }
 
     /**
-     * ��ȡ�ֶ���������
-     * ���磺"items[0].name" -> { fieldName: "items", index: 0, subField: "name" }
+     * e.g. "items[0].name" -> { fieldName: "items", index: 0, subField: "name" }
+     * e.g. "items[0].name" -> { fieldName: "items", index: 0, subField: "name" }
      */
     public ParseArrayField(key: string): { fieldName: string; index: number; subField?: string } | null {
         let arrayMatch = key.match(/^(.+?)\[(\d+)\](?:\.(.+))?$/);
@@ -104,7 +104,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * ת���ӽṹ���ݣ�JSON�ַ��� -> ����
+     * Transform a struct value from string format into the appropriate type
      */
     public TransformStructValue(type: string, data: string): any {
         if (type.includes('[]')) {
@@ -135,7 +135,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * �����ӽṹ����
+     * Parse a struct object from the given row data
      */
     private ParseStructObject(structDef: StructDefinition, data: any): any {
         let result: any = {};
@@ -154,7 +154,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * ת����������ֵ
+     * Transform a basic value from string into the specified type
      */
     private TransformBasicValue(type: string, data: any): any {
         let result;
@@ -189,17 +189,17 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * �����ֶ�·����֧���ӽṹ�ֶθ�ʽ��
-     * ���磺"attr.value" -> ["attr", "value"]
-     * ���磺"attrs[0].value" -> ["attrs", "0", "value"]
-     * ���磺"items[0].name" -> ["items", "0", "name"]
+     * e.g. "attr.value" -> ["attr", "value"]
+     * e.g. "attrs[0].value" -> ["attrs", "0", "value"]
+     * e.g. "items[0].name" -> ["items", "0", "name"]
+     * e.g. "items[0].name" -> ["items", "0", "name"]
      */
     public ParseFieldPath(key: string): (string | number)[] {
         let result: (string | number)[] = [];
         let parts = key.split('.');
 
         for (let part of parts) {
-            // ��������������field[0] -> field �� 0
+            // Handle array index, e.g. field[0] -> field and 0
             let arrayMatches = part.split(/[\[\]]/).filter(s => s !== '');
             for (let match of arrayMatches) {
                 result.push(match);
@@ -210,8 +210,8 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * ����Ƕ�׶����ֵ
-     * �Զ���������ϲ�
+     * Set the value at the given path in the nested object
+     * Set the value at the given path in the nested object
      */
     public SetNestedValue(obj: any, path: (string | number)[], value: any): void {
         let current = obj;
@@ -220,7 +220,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             let key = path[i];
             let nextKey = path[i + 1];
 
-            // �ж���һ���Ƿ�����������
+            // Check if the next key is an array index
             let isNextArrayIndex = typeof nextKey === "number" || (!isNaN(parseInt(nextKey.toString())));
 
             if (current[key] === undefined || current[key] === null) {
@@ -234,7 +234,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             current = current[key];
         }
 
-        // ��������ֵ
+        // Handle the last key in the path
         let lastKey = path[path.length - 1];
         let arrayMatch = lastKey.toString().match(/(.+)\[(\d*)\]$/);
         if (arrayMatch) {
@@ -249,7 +249,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * �����ֶ���Ϣ
+     * Analyze a field and return field info
      */
     public AnalyzeField(key: string, type: string): FieldInfo {
         let result: FieldInfo = {

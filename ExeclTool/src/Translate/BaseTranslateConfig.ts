@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 export default class BaseTranslateConfig {
 
@@ -55,5 +56,11 @@ export default class BaseTranslateConfig {
             this.isDir = true;
             console.log("-2- isDir " + this.isDir)
         }
+
+        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
+        await this.enumHelper.TranslateExcel(enumPath);
+
+        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
+        await this.structHelper.ParseStructDefinitions(structPath);
     }
 }

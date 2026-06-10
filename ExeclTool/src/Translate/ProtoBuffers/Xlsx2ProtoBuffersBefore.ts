@@ -6,6 +6,7 @@ import _, { reject } from 'lodash';
 import { exec } from 'child_process'
 import os from "os";
 import Utils from '../../utils';
+import ProtoDefine from './ProtoDefine';
 import protobuf from 'protobufjs'
 import BaseTranslateEnum from '../BaseTranslateEnum'
 import BaseTranslateStruct from '../BaseTranslateStruct'
@@ -22,19 +23,6 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
     private outputPathJsonStr: string = '';
 
     private toCode: string = "";
-
-    private syntax = "syntax = \"proto3\"; \n\n";
-
-    private packageStart = "package CfgSpace; \n\n";
-
-    private intArray = "message IntArray {\n\t repeated int32 data = 1;\n}\n\n";
-
-    private boolArray = "message BoolArray {\n\t repeated bool data = 1;\n}\n\n";
-
-    private floatArray = "message FloatArray {\n\t repeated float data = 1;\n}\n\n";
-
-    private stringArray = "message StringArray {\n\t repeated string data = 1;\n}\n\n";
-
 
     public async BeforeTranslate(outputPathStr: string, params: any): Promise<void> {
         this.outputPathProtosStr = path.join(outputPathStr, "protos");
@@ -53,12 +41,12 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
     }
 
     private async TransferCommonProtos(): Promise<void> {
-        let protosContent = this.syntax;
-        protosContent += this.packageStart;
-        protosContent += this.intArray;
-        protosContent += this.boolArray;
-        protosContent += this.floatArray;
-        protosContent += this.stringArray;
+        let protosContent = ProtoDefine.syntax;
+        protosContent += ProtoDefine.packageStart;
+        protosContent += ProtoDefine.intArray;
+        protosContent += ProtoDefine.boolArray;
+        protosContent += ProtoDefine.floatArray;
+        protosContent += ProtoDefine.stringArray;
 
         // Add struct definitions from Struct.xlsx
         let structDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Struct.xlsx');
@@ -95,8 +83,8 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
         let enumHelper = new BaseTranslateEnum();
         await enumHelper.TranslateExcel(enumDefPath);
 
-        let protoContent = this.syntax;
-        protoContent += this.packageStart;
+        let protoContent = ProtoDefine.syntax;
+        protoContent += ProtoDefine.packageStart;
         for (let enumName in enumHelper.enumDefinitions) {
             let def = enumHelper.enumDefinitions[enumName];
             protoContent += 'enum ' + enumName + ' {\n';
@@ -107,7 +95,7 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
             protoContent += '}\n\n';
         }
 
-        if (protoContent.length > this.syntax.length + this.packageStart.length) {
+        if (protoContent.length > ProtoDefine.syntax.length + ProtoDefine.packageStart.length) {
             await this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, 'Enum'));
         }
     }

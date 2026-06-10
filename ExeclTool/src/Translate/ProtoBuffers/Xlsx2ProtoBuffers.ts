@@ -6,6 +6,7 @@ import _ from 'lodash';
 import { exec } from 'child_process'
 import os from "os";
 import Utils from '../../utils';
+import ProtoDefine from './ProtoDefine';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateEnum from '../BaseTranslateEnum';
 import BaseTranslateStruct from '../BaseTranslateStruct';
@@ -18,20 +19,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private outputPathCodeStr: string = '';
     private outputPathJsonStr: string = '';
     private toCode: string = "";
-    private syntax = "syntax = \"proto3\"; \n\n";
-    private packageStart = "package CfgSpace; \n\n";
-    private packageCommonImport = "import \"Common.proto\"; \n\n";
-    private messageStart = "message {0} {\n";
-    private messageEnd = "}\n\n";
-    private enumStart = "enum {0} {\n";
-    private enumEnd = "}\n\n";
-    private fieldEnumStr = "{0} = {1};\n";
-    private fieldMapStr = "\t Map<{0},{1}> {2} = {3};\n"
-    private fieldStr = "\t{0} {1} = {2};\n";
-    private intArray = "message IntArray {\n\t repeated int32 data = 1;\n}\n\n";
-    private boolArray = "message BoolArray {\n\t repeated bool data = 1;\n}\n\n";
-    private floatArray = "message FloatArray {\n\t repeated float data = 1;\n}\n\n";
-    private stringArray = "message StringArray {\n\t repeated string data = 1;\n}\n\n";
+
 
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
 
@@ -39,7 +27,6 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
         let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
         await this.enumHelper.TranslateExcel(enumPath);
-        //TODO ����ö�ٵ�protos�ļ�, �Լ�bytes�ļ� Code �ļ�, json�ļ�
 
         let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
@@ -139,12 +126,12 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private async TransferTableProtos(): Promise<void> {
         if (this.merge) {
             let protoContent = '';
-            protoContent += this.syntax;
-            protoContent += this.packageStart;
+            protoContent += ProtoDefine.syntax;
+            protoContent += ProtoDefine.packageStart;
 
-            // �������нṹ�嶨��
+            // Struct definitions from Struct.xlsx
             // Import Common.proto for struct definitions
-            protoContent += this.packageCommonImport;
+            protoContent += ProtoDefine.packageCommonImport;
 
 
 
@@ -159,12 +146,12 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let protoContent = '';
-                protoContent += this.syntax;
-                protoContent += this.packageStart;
+                protoContent += ProtoDefine.syntax;
+                protoContent += ProtoDefine.packageStart;
 
-                // �������нṹ�嶨��
+                // Struct definitions from Struct.xlsx
                 // Import Common.proto for struct definitions
-                protoContent += this.packageCommonImport;
+                protoContent += ProtoDefine.packageCommonImport;
 
 
 
@@ -175,15 +162,15 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     }
 
     private CreateProtoStruct(structDef: any): string {
-        let content = this.messageStart.replace('{0}', structDef.name);
+        let content = ProtoDefine.messageStart.replace('{0}', structDef.name);
         let fieldIndex = 1;
         for (let field of structDef.fields) {
-            content += this.fieldStr.replace('{0}', this.TransformType(field.type))
+            content += ProtoDefine.fieldStr.replace('{0}', this.TransformType(field.type))
                 .replace('{1}', field.name)
                 .replace('{2}', fieldIndex.toString());
             fieldIndex++;
         }
-        content += this.messageEnd;
+        content += ProtoDefine.messageEnd;
         return content;
     }
 
@@ -218,20 +205,20 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             let cap = parentName.charAt(0).toUpperCase() + parentName.slice(1);
             if (this.structHelper.IsStructType(cap)) continue;
             let subName = className + "_" + cap;
-            content += this.messageStart.replace("{0}", subName);
+            content += ProtoDefine.messageStart.replace("{0}", subName);
             let idx = 1;
             for (let fn in nestedMap[parentName].fields) {
                 let ft = nestedMap[parentName].fields[fn];
-                content += this.fieldStr.replace("{0}", this.TransformType(ft)).replace("{1}", fn).replace("{2}", idx.toString());
+                content += ProtoDefine.fieldStr.replace("{0}", this.TransformType(ft)).replace("{1}", fn).replace("{2}", idx.toString());
                 idx++;
             }
-            content += this.messageEnd;
+            content += ProtoDefine.messageEnd;
         }
         // Main message
-        content += this.messageStart.replace("{0}", className);
+        content += ProtoDefine.messageStart.replace("{0}", className);
         let fi = 1;
         for (let f of simpleKeys) {
-            content += this.fieldStr.replace("{0}", this.TransformType(f.type)).replace("{1}", f.key).replace("{2}", fi.toString());
+            content += ProtoDefine.fieldStr.replace("{0}", this.TransformType(f.type)).replace("{1}", f.key).replace("{2}", fi.toString());
             fi++;
         }
         // Add nested field references
@@ -242,14 +229,14 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             for (let k of keys) { if (k && (k.startsWith(parentName + "[") || k.startsWith(parentName + ".")) && k !== parentName) { isArr = k.includes("["); break; } }
             if (isArr) tn = "repeated " + tn;
             let fld = this.structHelper.IsStructType(cap) ? parentName.charAt(0).toLowerCase() + parentName.slice(1) : parentName;
-            content += this.fieldStr.replace("{0}", tn).replace("{1}", fld).replace("{2}", fi.toString());
+            content += ProtoDefine.fieldStr.replace("{0}", tn).replace("{1}", fld).replace("{2}", fi.toString());
             fi++;
         }
-        content += this.messageEnd;
+        content += ProtoDefine.messageEnd;
         // Add wrapper message XXXData { repeated XXX data = 1; }
-        content += this.messageStart.replace("{0}", className + "Data");
-        content += this.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
-        content += this.messageEnd;
+        content += ProtoDefine.messageStart.replace("{0}", className + "Data");
+        content += ProtoDefine.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
+        content += ProtoDefine.messageEnd;
         return content;
     }
 
@@ -265,7 +252,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // Ĭ�ϵ��㼶�������һ�����ݰ���Ƕ���ֶΣ�������ֶ����������Զ�����
+        // Default layerNum: first data layer may contain nested fields
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -408,7 +395,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // ת�������е��ֵ���Ӧ����������
+    // Transform type to corresponding field value type
     private _TransformBasicsValue(type: string, data: any) {
         let result;
         switch (type) {
@@ -443,7 +430,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // ���?type �Ƿ�Ϊ�ӽṹ
+    // Check if type is a struct type
     private TransformStructValue(type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
@@ -456,7 +443,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         if (type.includes('serialize')) {
             result = this._TransformBasicsValue(type, data);
         } else if (type.includes('[,]')) {
-            // ��ά����
+            // Two-dimensional array
             type = type.replace('[,]', '');
             result = [];
             let datas = data.substring(2, data.length - 2).split('],[');
@@ -478,7 +465,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             }
 
         } else {
-            // ��ֵͨ
+            // Ordinary value
             result = this._TransformBasicsValue(type, data);
         }
         return result;

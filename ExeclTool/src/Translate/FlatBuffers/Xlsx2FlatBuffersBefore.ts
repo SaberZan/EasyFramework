@@ -4,6 +4,7 @@ import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
+import FbsDefine from './FbsDefine';
 import BaseTranslateEnum from '../BaseTranslateEnum';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateBefore from '../BaseTranslateBefore';
@@ -22,15 +23,7 @@ export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
 
     private toCode: string = "";
 
-    private namespaceStart = "namespace CfgSpace; \n\n";
 
-    private intArray = "table IntArray { \n\t data : [int];\n}\n\n";
-
-    private boolArray = "table BoolArray { \n\t data : [bool];\n}\n\n";
-
-    private floatArray = "table FloatArray { \n\t data : [float];\n}\n\n";
-
-    private stringArray = "table StringArray { \n\t data : [string];\n}\n\n";
 
     private outputPathCsStr: string = '';
 
@@ -57,11 +50,11 @@ export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
     }
 
     private async TransferCommonFbs() : Promise<void> {
-        let fbsContent = this.namespaceStart;
-        fbsContent += this.intArray;
-        fbsContent += this.boolArray;
-        fbsContent += this.floatArray;
-        fbsContent += this.stringArray;
+        let fbsContent = FbsDefine.namespaceStart;
+        fbsContent += FbsDefine.intArray;
+        fbsContent += FbsDefine.boolArray;
+        fbsContent += FbsDefine.floatArray;
+        fbsContent += FbsDefine.stringArray;
 
         // Add struct definitions from Struct.xlsx
         let structDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Struct.xlsx');
@@ -88,7 +81,7 @@ export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
         let enumHelper = new BaseTranslateEnum();
         await enumHelper.TranslateExcel(enumDefPath);
         
-        let fbsContent = this.namespaceStart;
+        let fbsContent = FbsDefine.namespaceStart;
         for (let enumName in enumHelper.enumDefinitions) {
             let def = enumHelper.enumDefinitions[enumName];
             fbsContent += 'enum ' + enumName + ' : int {\n';

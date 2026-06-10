@@ -3,6 +3,7 @@ import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
+import CSDefine from '../CS/CSDefine';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateStruct from '../BaseTranslateStruct';
@@ -17,68 +18,15 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
     private outputPathJsonStr: string = '';
 
-    private namespaceStart = "";
-
-    private namespaceEnd = "";
-
-    private configHead = "\t[Easy.Config(\"{0}\")]\r\n";
-
-    private classStart = "\t[System.Serializable]\r\n\tpublic class {0}\r\n \t{\r\n";
-
-    private classDictionaryStart = "\t[System.Serializable]\r\n\tpublic class {0} : System.Collections.Generic.Dictionary<{1}, {2}>\r\n \t{\r\n";
-
-    private classEnd = "\t} \r\n";
-
-    private notes = "/**\r\n * {0}\r\n */\r\n";
-
-    private privateStr = "\t\t[Newtonsoft.Json.JsonProperty]\r\n \t\tprivate {0} {1};    //{2}\r\n\r\n";
-
-    private publicStr = "\t\t[Newtonsoft.Json.JsonIgnore]\r\n \t\tpublic {0} {1} => {2};\r\n\r\n";
-
-    private privateMergeStr = "\t\t[Newtonsoft.Json.JsonProperty]\r\n \t\tprivate System.Collections.Generic.Dictionary<{0}, {1}> {2}Dic;    //{3}\r\n\r\n";
-
-    private publicMergeStr = "\t\t[Newtonsoft.Json.JsonIgnore]\r\n \t\tpublic System.Collections.Generic.Dictionary<{0}, {1}> {2}Dic => {3}Dic;\r\n\r\n";
-
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
 
         await super.TranslateExcel(pathStr,outputPathStr,translate,params);
         
-        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
-        await this.enumHelper.TranslateExcel(enumPath);
-
-                // Generate CS enum files
-        let enumCsDir = path.join(outputPathStr, 'code', 'cs');
-        if (!fs.existsSync(enumCsDir)) {
-            await mkdir(enumCsDir, { recursive: true });
-        }
-        for (let enumName in this.enumHelper.enumDefinitions) {
-            let def = this.enumHelper.enumDefinitions[enumName];
-            let csContent = this.notes.replace('{0}', enumName);
-            csContent += '\tpublic enum ' + enumName + ' {\r\n';
-            let first = true;
-            for (let fieldName in def.fields) {
-                if (!first) csContent += ',\r\n';
-                csContent += '\t\t' + fieldName + ' = ' + def.fields[fieldName];
-                first = false;
-            }
-            if (!first) csContent += '\r\n';
-            csContent += '\t}\r\n';
-            await writeFile(path.join(enumCsDir, enumName + '.cs'), csContent, { flag: 'w', encoding: 'utf8' });
-        }
-        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
-        await this.structHelper.ParseStructDefinitions(structPath);
-
         this.outputPathCsStr = path.join(outputPathStr, "code", "cs");
         this.outputPathJsonStr = path.join(outputPathStr, "json");
 
         if(!fs.existsSync(this.outputPathCsStr)) {
             await mkdir(this.outputPathCsStr, { recursive: true });
-        }
-        // Generate standalone struct CS files from Struct.xlsx
-        for (let structName in this.structHelper.structDefinitions) {
-            let structDef = this.structHelper.structDefinitions[structName];
-            let content = this.BuildStructClassContent(structName, structDef.fields);
-            await this.SaveCsToFile(content, path.join(this.outputPathCsStr, structName));
         }
         if(!fs.existsSync(this.outputPathJsonStr)) {
             await mkdir(this.outputPathJsonStr, { recursive: true });
@@ -115,17 +63,17 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
     private async TransferTableCs() : Promise<void> {
         if(this.merge) {
-            let classContent = this.namespaceStart;
+            let classContent = CSDefine.namespaceStart;
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let csData = this.CreateCs(this.xlsxData[this.translateSheets[i][0]],this.translateSheets[i][1]);
                 classContent += csData;
             }
 
-            classContent += this.notes.replace('{0}', this.mergeName);
+            classContent += CSDefine.notes.replace('{0}', this.mergeName);
             if(!this.isDir) {
-                classContent += this.configHead.replace('{0}', this.mergeName);
+                classContent += CSDefine.configHead.replace('{0}', this.mergeName);
             }
-            classContent += this.classStart.replace('{0}', this.mergeName);
+            classContent += CSDefine.classStart.replace('{0}', this.mergeName);
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let type = this.xlsxData[this.translateSheets[i][0]][1][0];
                 let sheetName = this.translateSheets[i][0];
@@ -133,11 +81,11 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 let upperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
                 let translateNamekeyUpper = upperAndLower[0];
                 let translateNamekeyLower = upperAndLower[1];
-                classContent += Utils.FormatStr(this.privateMergeStr, type, translateNamekeyUpper, translateNamekeyLower);
-                classContent += Utils.FormatStr(this.publicMergeStr, type, translateNamekeyUpper, translateNamekeyUpper, translateNamekeyLower);
+                classContent += Utils.FormatStr(CSDefine.privateMergeStr, type, translateNamekeyUpper, translateNamekeyLower);
+                classContent += Utils.FormatStr(CSDefine.publicMergeStr, type, translateNamekeyUpper, translateNamekeyUpper, translateNamekeyLower);
             }
-            classContent += this.classEnd;
-            classContent += this.namespaceEnd;
+            classContent += CSDefine.classEnd;
+            classContent += CSDefine.namespaceEnd;
 
             await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, this.mergeName));
         }else{
@@ -148,14 +96,14 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
                 
                 
-                let classContent = this.namespaceStart;
-                classContent += this.notes.replace('{0}', translateName);
+                let classContent = CSDefine.namespaceStart;
+                classContent += CSDefine.notes.replace('{0}', translateName);
                 if(!this.isDir) {
-                    classContent += this.configHead.replace('{0}', translateName);
+                    classContent += CSDefine.configHead.replace('{0}', translateName);
                 }
                 let csData = this.CreateCs(this.xlsxData[sheetName], translateName, nestedFields);
                 classContent += csData;
-                classContent += this.namespaceEnd;
+                classContent += CSDefine.namespaceEnd;
                 await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
             }
         }
@@ -200,7 +148,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
         let keyUpper = keyUpperAndLower[0];
         let type = this.TransformType(types[0]);
-        let classContent = Utils.FormatStr(this.classDictionaryStart, className, type, className);
+        let classContent = Utils.FormatStr(CSDefine.classDictionaryStart, className, type, className);
 
         // Generate nested struct class definitions INSIDE the main class
         if (nestedFieldDefs) {
@@ -213,8 +161,8 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             }
         }
 
-        classContent += Utils.FormatStr(this.privateStr, "int", "_id", "id");
-        classContent += Utils.FormatStr(this.publicStr, "int", "id", "_id");
+        classContent += Utils.FormatStr(CSDefine.privateStr, "int", "_id", "id");
+        classContent += Utils.FormatStr(CSDefine.publicStr, "int", "id", "_id");
 
         // ???????????????
         let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
@@ -249,8 +197,8 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             let keyLower = keyUpperAndLower[1];
             let fieldType = this.TransformType(type);
             
-            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, key);
-            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, key);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
         }
 
         // ??????
@@ -261,11 +209,11 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             let fieldInfo = structFields[fieldName];
             let fieldType = fieldInfo.isArray ? fieldInfo.type + '[]' : fieldInfo.type;
             
-            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, fieldName);
-            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, fieldName);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
         }
 
-        classContent += this.classEnd;
+        classContent += CSDefine.classEnd;
         return classContent;
     }
 
@@ -320,23 +268,23 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
     }
     
     private BuildStructClassContent(structName: string, fields: { name: string; type: string }[]): string {
-        let content = this.notes.replace('{0}', structName);
-        content += this.classStart.replace('{0}', structName);
+        let content = CSDefine.notes.replace('{0}', structName);
+        content += CSDefine.classStart.replace('{0}', structName);
         for (let field of fields) {
             let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(field.name);
             let keyUpper = keyUpperAndLower[0];
             let keyLower = keyUpperAndLower[1];
             let fieldType = this.TransformType(field.type);
-            content += Utils.FormatStr(this.privateStr, fieldType, keyLower, field.name);
-            content += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+            content += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, field.name);
+            content += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
         }
-        content += this.classEnd;
+        content += CSDefine.classEnd;
         return content;
     }
 
     private async SaveStructClassToFile(structName: string, fields: { name: string; type: string }[]): Promise<void> {
-        let classContent = this.notes.replace('{0}', structName);
-        classContent += this.classStart.replace('{0}', structName);
+        let classContent = CSDefine.notes.replace('{0}', structName);
+        classContent += CSDefine.classStart.replace('{0}', structName);
         
         for (let field of fields) {
             let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(field.name);
@@ -344,11 +292,11 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             let keyLower = keyUpperAndLower[1];
             let fieldType = this.TransformType(field.type);
             
-            classContent += Utils.FormatStr(this.privateStr, fieldType, keyLower, field.name);
-            classContent += Utils.FormatStr(this.publicStr, fieldType, keyUpper, keyLower);
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, field.name);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
         }
         
-        classContent += this.classEnd;
+        classContent += CSDefine.classEnd;
         
         await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, structName));
     }

@@ -1,4 +1,4 @@
-﻿import xlsx from 'node-xlsx';
+import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
@@ -14,30 +14,6 @@ export default class Xlsx2Json extends BaseTranslateConfig {
 
         await super.TranslateExcel(pathStr, outputPathStr, translate, params);
         console.log('-- isDir ' + this.isDir + '    ' + this.translateSheets);
-
-        // 锟斤拷锟斤拷锟接结构锟斤拷锟斤拷
-        let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
-        await this.enumHelper.TranslateExcel(enumPath);
-
-        // Generate JSON for enum definitions
-        let enumJsonDir = path.join(outputPathStr, 'json');
-        if (!fs.existsSync(enumJsonDir)) {
-            await mkdir(enumJsonDir, { recursive: true });
-        }
-        
-        for (let enumName in this.enumHelper.enumDefinitions) {
-            let def = this.enumHelper.enumDefinitions[enumName];
-            let enumJson: any = {};
-            for (let fieldName in def.fields) {
-                let val = def.fields[fieldName];
-                let numVal = parseInt(val);
-                enumJson[fieldName] = isNaN(numVal) ? val : numVal;
-            }
-            await this.SaveJsonToFile(enumJson, path.join(enumJsonDir, enumName));
-        }
-
-        let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
-        await this.structHelper.ParseStructDefinitions(structPath);
 
         this.outputPathJsonStr = path.join(outputPathStr, 'json');
         if (!fs.existsSync(this.outputPathJsonStr)) {
