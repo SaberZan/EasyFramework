@@ -8,6 +8,26 @@
         "code": "./tmp/code/cs",
         "bin": "./tmp/bin"
     },
+    "enum": {
+        "Enum1": {
+            "sheets": [
+                [
+                    "EnumTest",
+                    "EnumTest"
+                ]
+            ]
+        }
+    },
+    "struct": {
+        "Struct1": {
+            "sheets": [
+                [
+                    "StructTest",
+                    "StructTest"
+                ]
+            ]
+        }
+    },
     "config": {
         "1_常量表.xlsx": {
             "sheets": [
@@ -31,13 +51,6 @@
                     "EquipmentConfig",
                     "EquipmentCfg"
                 ]
-            ]
-        }
-    },
-    "struct": {
-        "Struct1": {
-            "sheets": [
-                "StructTest"
             ]
         }
     }
