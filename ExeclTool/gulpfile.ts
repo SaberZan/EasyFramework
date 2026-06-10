@@ -85,13 +85,12 @@ gulp.task("genCfg",(cb)=>{
 
     if(isValid){
         async function trans() {
+            param.params.designPath = param.designPath;
+
             let before = new selectTranslateBefore();
             await before.BeforeTranslate(tmp_path, param.params);
 
             let promiseArr : Promise<void>[] = [];
-           
-            
-            
             // 处理 config
             for(let key in param.config) {
                 let tmpKey = key;
@@ -99,8 +98,6 @@ gulp.task("genCfg",(cb)=>{
                 let translateRule = new selectTranslateConfig();
                 promiseArr.push(translateRule.TranslateExcel(path.join(param.designPath, "cfg", tmpKey), tmp_path, tmpResult, param.params));
             }
-
-
 
             await Promise.all(promiseArr);
             let after = new selectTranslateAfter();

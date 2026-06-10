@@ -8,7 +8,6 @@ import Utils from '../../utils';
 import protobuf from 'protobufjs'
 import BaseTranslateEnum from '../BaseTranslateEnum'
 import BaseTranslateStruct from '../BaseTranslateStruct'
-import { pbjs, pbts } from 'protobufjs-cli';
 import BaseTranslateBefore from '../BaseTranslateBefore';
 
 export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
@@ -120,41 +119,27 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
     private async GenCode(protoPath: string, toCode: string, outputPath: string) : Promise<void> {
         let cmd = "";
         let parsedPath = path.parse(protoPath);
-        switch (toCode) {
-            case "ts":
-                parsedPath.dir = outputPath;
-                parsedPath.base = "";
-                parsedPath.ext = ".js";
-                let jsPath = path.format(parsedPath);
-                parsedPath.ext = ".d.ts";
-                let dtsPath = path.format(parsedPath);
-
-                return new Promise((resolve,reject)=>{
-                    pbjs.main(["-t", "static-module", "-w","commonjs", "-o", jsPath,  protoPath, "-p", path.dirname(protoPath)],(err, output)=>{
-                        if(err){
-                            console.log("err == " + err);
-                            reject(err);
-                            return;
-                        }
-                        pbts.main(["-o",dtsPath, jsPath]);
-                        resolve();
-                    });
-                })
-
-            default:
-                return new Promise((resolve,reject)=>{
-                    cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir +  " --" + toCode +"_out " + outputPath + " " + protoPath;
-                    console.log(cmd);
-                    exec(cmd, (err, stdout, stderr) => {
-                        if(err) {
-                            reject(err);
-                            return;
-                        }
-                        console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
-                        console.log(stderr);  // stderr为执行命令行操作后返回的错误提示    
-                        resolve();
-                    });
-                });
+        let plugin = "";
+        if(toCode == "ts") { 
+            plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts.ps1"
         }
-    }
+        else if(toCode == "js") { 
+            plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js.ps1"
+        }
+
+        return new Promise((resolve,reject)=>{
+            cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir  +  plugin  +  " --" + toCode +"_out " + outputPath + " " + protoPath;
+            console.log(cmd);
+            exec(cmd, (err, stdout, stderr) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+                console.log(stdout);  // stdout为执行命令行操作后返回的正常结果
+                console.log(stderr);  // stderr为执行命令行操作后返回的错误提示    
+                resolve();
+            });
+        });
+}
+    
 }

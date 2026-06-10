@@ -91,8 +91,6 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                     await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
                 }
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
-                await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr);
-
             }
         } else {
             let parsedPath = path.parse(pathStr);
@@ -483,7 +481,15 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
     private async GenCode(protoPath: string, toCode: string, outputPath: string) {
         let parsedPath = path.parse(protoPath);
-        let protocCmd = ".\\lib\\protoc\\protoc.exe -I " + parsedPath.dir + " --" + toCode + "_out " + outputPath + " " + protoPath;
+        let plugin = "";
+        if(toCode == "ts") { 
+            plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts.ps1"
+        }
+        else if(toCode == "js") { 
+            plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js.ps1"
+        }
+
+        let protocCmd = ".\\lib\\protoc\\protoc.exe -I " + parsedPath.dir +  plugin  + " --" + toCode + "_out " + outputPath + " " + protoPath;
         console.log(protocCmd);
         return new Promise<void>((resolve, reject) => {
             exec(protocCmd, (err, stdout, stderr) => {
