@@ -1,8 +1,11 @@
 import fs from "fs";
-// import { CfgSpace } from '../../../tmp/code/ts/MatchCfg'
+import path from "path";
+import { EquipmentCfgData } from "../../../tmp/code/ts/EquipmentCfg_pb";
 
-// let byts = fs.readFileSync("./tmp/bytes/MatchCfg.bytes");
+let byts = fs.readFileSync(path.join(__dirname, "../../../tmp/bytes/EquipmentCfg.bytes"));
 
-// let cfgs = CfgSpace.MatchCfgs.decode(byts);
-
-// console.log(JSON.stringify(cfgs));
+let wrapper = EquipmentCfgData.deserializeBinary(byts);
+let cfgs = wrapper.getDataList();
+for (let cfg of cfgs) {
+  console.log("id:", cfg.getId(), "name:", cfg.getName(), "price:", cfg.getPrice());
+}

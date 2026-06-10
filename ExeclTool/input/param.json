@@ -1,8 +1,7 @@
 {
-    "target": "CS",
+    "target": "ProtoBuffers",
     "params": {
-        "toCode": "csharp",
-        "designPath": "./design"
+        "toCode": "ts"
     },
     "designPath": "./design",
     "output": {

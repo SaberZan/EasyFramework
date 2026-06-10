@@ -1,9 +1,10 @@
-﻿import xlsx from 'node-xlsx';
+import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
+import os from "os";
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateEnum from '../BaseTranslateEnum';
@@ -32,63 +33,63 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private floatArray = "message FloatArray {\n\t repeated float data = 1;\n}\n\n";
     private stringArray = "message StringArray {\n\t repeated string data = 1;\n}\n\n";
 
-    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any) : Promise<void> {
+    public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
 
-        await super.TranslateExcel(pathStr,outputPathStr,translate,params);
+        await super.TranslateExcel(pathStr, outputPathStr, translate, params);
 
         let enumPath = path.join(params.designPath, 'define', "Enum.xlsx");
         await this.enumHelper.TranslateExcel(enumPath);
-        //TODO 生成枚举的protos文件, 以及bytes文件 Code 文件, json文件
+        //TODO ����ö�ٵ�protos�ļ�, �Լ�bytes�ļ� Code �ļ�, json�ļ�
 
         let structPath = path.join(params.designPath, 'define', "Struct.xlsx");
         await this.structHelper.ParseStructDefinitions(structPath);
 
-        this.outputPathProtosStr = path.join(outputPathStr , "protos");
-        this.outputPathBytesStr = path.join(outputPathStr , "bytes");
-        this.outputPathCodeStr = path.join(outputPathStr , "code" , params.toCode);
-        this.outputPathJsonStr = path.join(outputPathStr , "json");
+        this.outputPathProtosStr = path.join(outputPathStr, "protos");
+        this.outputPathBytesStr = path.join(outputPathStr, "bytes");
+        this.outputPathCodeStr = path.join(outputPathStr, "code", params.toCode);
+        this.outputPathJsonStr = path.join(outputPathStr, "json");
         this.toCode = params.toCode;
 
-        if(!fs.existsSync(this.outputPathProtosStr)) {
+        if (!fs.existsSync(this.outputPathProtosStr)) {
             await mkdir(this.outputPathProtosStr, { recursive: true });
         }
-        if(!fs.existsSync(this.outputPathBytesStr)) {
+        if (!fs.existsSync(this.outputPathBytesStr)) {
             await mkdir(this.outputPathBytesStr, { recursive: true });
         }
-        if(!fs.existsSync(this.outputPathCodeStr)) {
+        if (!fs.existsSync(this.outputPathCodeStr)) {
             await mkdir(this.outputPathCodeStr, { recursive: true });
         }
-        if(!fs.existsSync(this.outputPathJsonStr)) {
+        if (!fs.existsSync(this.outputPathJsonStr)) {
             await mkdir(this.outputPathJsonStr, { recursive: true });
         }
-        if(this.toDir != undefined) {
+        if (this.toDir != undefined) {
             this.outputPathJsonStr = path.join(this.outputPathJsonStr, this.toDir);
-            if(!fs.existsSync(this.outputPathJsonStr)) {
+            if (!fs.existsSync(this.outputPathJsonStr)) {
                 await mkdir(this.outputPathJsonStr);
             }
             this.outputPathBytesStr = path.join(this.outputPathBytesStr, this.toDir);
-            if(!fs.existsSync(this.outputPathBytesStr)) {
+            if (!fs.existsSync(this.outputPathBytesStr)) {
                 await mkdir(this.outputPathBytesStr);
             }
         }
 
-        if (this.isDir) { 
+        if (this.isDir) {
 
             let files = fs.readdirSync(pathStr);
-            for(let i in files) {
+            for (let i in files) {
                 let data = xlsx.parse(path.join(pathStr, files[i]));
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
-                let fileName = files[i].replace(path.extname(files[i]),"");
+                let fileName = files[i].replace(path.extname(files[i]), "");
                 let protoPath = path.join(this.outputPathProtosStr, this.mergeName + ".proto");
-                let jsonPath = path.join(this.outputPathJsonStr, this.mergeName + fileName+".json");
-                let bytesPath = path.join(this.outputPathBytesStr, this.mergeName + fileName+".bytes");
+                let jsonPath = path.join(this.outputPathJsonStr, this.mergeName + fileName + ".json");
+                let bytesPath = path.join(this.outputPathBytesStr, this.mergeName + fileName + ".bytes");
                 let messageName = "CfgSpace." + this.mergeName;
                 await this.TransferTableJson(fileName);
-                if(i == "0") {
+                if (i == "0") {
                     await this.TransferTableProtos();
-                    await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
+                    await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr);
                 }
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
             }
@@ -115,9 +116,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         }
 
     }
-    private async TransferTableJson(file: string = "") : Promise<void> {
-        if(this.merge) {
-            let all: {[key: string]: any} = {};
+    private async TransferTableJson(file: string = ""): Promise<void> {
+        if (this.merge) {
+            let all: { [key: string]: any } = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
@@ -125,7 +126,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 all[translateName] = jsonData;
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
-        }else{
+        } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
@@ -135,58 +136,58 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         }
     }
 
-    private async TransferTableProtos() : Promise<void> {
-        if(this.merge) {
+    private async TransferTableProtos(): Promise<void> {
+        if (this.merge) {
             let protoContent = '';
             protoContent += this.syntax;
             protoContent += this.packageStart;
-            
-            // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
+
+            // �������нṹ�嶨��
             // Import Common.proto for struct definitions
             protoContent += this.packageCommonImport;
 
 
-            
+
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
             }
             this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, this.mergeName));
-        }else{
+        } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let protoContent = '';
                 protoContent += this.syntax;
                 protoContent += this.packageStart;
-                
-                // 锟斤拷锟斤拷锟斤拷锟叫结构锟藉定锟斤拷
+
+                // �������нṹ�嶨��
                 // Import Common.proto for struct definitions
                 protoContent += this.packageCommonImport;
 
 
-                
+
                 protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
                 this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, translateName));
             }
         }
     }
 
-    private CreateProtoStruct(structDef: any) : string {
+    private CreateProtoStruct(structDef: any): string {
         let content = this.messageStart.replace('{0}', structDef.name);
         let fieldIndex = 1;
         for (let field of structDef.fields) {
             content += this.fieldStr.replace('{0}', this.TransformType(field.type))
-                                     .replace('{1}', field.name)
-                                     .replace('{2}', fieldIndex.toString());
+                .replace('{1}', field.name)
+                .replace('{2}', fieldIndex.toString());
             fieldIndex++;
         }
         content += this.messageEnd;
         return content;
     }
 
-    private CreateProto(data: any, className: string) : string {
+    private CreateProto(data: any, className: string): string {
         let dataArr = data;
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
@@ -245,6 +246,10 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             fi++;
         }
         content += this.messageEnd;
+        // Add wrapper message XXXData { repeated XXX data = 1; }
+        content += this.messageStart.replace("{0}", className + "Data");
+        content += this.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
+        content += this.messageEnd;
         return content;
     }
 
@@ -260,7 +265,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
 
-        // 默锟较碉拷锟姐级锟斤拷锟斤拷锟斤拷锟揭伙拷锟斤拷锟斤拷莅锟斤拷锟角讹拷锟斤拷侄危锟斤拷锟斤拷锟斤拷锟街讹拷锟斤拷锟斤拷锟斤拷锟斤拷锟皆讹拷锟斤拷锟斤拷
+        // Ĭ�ϵ��㼶�������һ�����ݰ���Ƕ���ֶΣ�������ֶ����������Զ�����
         let layerNum = 1;
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
@@ -287,7 +292,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 }
                 let type = types[colIndex] || 'string';
                 let value = _arrLine[colIndex];
-                if (_.isNil(value) || typeof(value) == "undefined") {
+                if (_.isNil(value) || typeof (value) == "undefined") {
                     continue;
                 }
 
@@ -337,11 +342,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             case 'int[]':
             case 'Int[]':
                 result = 'repeated int32';
-                break;   
+                break;
             case 'int[,]':
             case 'Int[,]':
                 result = 'repeated CfgSpace.IntArray';
-                break;   
+                break;
             case 'float':
             case 'Float':
                 result = 'float';
@@ -353,7 +358,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             case 'float[,]':
             case 'Float[,]':
                 result = 'repeated CfgSpace.FloatArray';
-                break;    
+                break;
             case 'bool':
             case 'Bool':
             case 'boolen':
@@ -385,17 +390,17 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 result = 'repeated CfgSpace.StringArray';
                 break;
             default:
-                if(type.includes('serialize')) {
+                if (type.includes('serialize')) {
                     result = "";
-                }else if (this.structHelper.IsStructType(type)) {
+                } else if (this.structHelper.IsStructType(type)) {
                     result = type;
-                } else if(type.includes('[,]')) {
+                } else if (type.includes('[,]')) {
                     let baseType = type.replace('[,]', '');
                     result = 'repeated CfgSpace.' + baseType + 'Array';
-                } else if(type.includes("[]")) {
-                    let baseType = type.replace("[]","");
+                } else if (type.includes("[]")) {
+                    let baseType = type.replace("[]", "");
                     result = "repeated " + this.TransformType(baseType);
-                }else{
+                } else {
                     result = type;
                 }
                 break;
@@ -403,8 +408,8 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // 转锟斤拷锟斤拷锟斤拷锟叫碉拷锟街碉拷锟斤拷应锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
-    private _TransformBasicsValue (type: string, data: any) {
+    // ת�������е��ֵ���Ӧ����������
+    private _TransformBasicsValue(type: string, data: any) {
         let result;
         switch (type) {
             case 'int':
@@ -438,42 +443,42 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         return result;
     }
 
-    // 锟斤拷锟?type 锟角凤拷为锟接结构
-    private TransformStructValue (type: string, data: string, row?: number, col?: number) {
+    // ���?type �Ƿ�Ϊ�ӽṹ
+    private TransformStructValue(type: string, data: string, row?: number, col?: number) {
         if (this.structHelper.IsStructType(type)) {
             return this.structHelper.TransformStructValue(type, data);
         }
 
         let result;
-        if(typeof(data) == 'string') {
+        if (typeof (data) == 'string') {
             data = data.replace(/[\r\n]/g, '');
         }
-        if(type.includes('serialize')) {
+        if (type.includes('serialize')) {
             result = this._TransformBasicsValue(type, data);
-        }else if(type.includes('[,]')) {
-            // 锟斤拷维锟斤拷锟斤拷
-            type = type.replace('[,]','');
+        } else if (type.includes('[,]')) {
+            // ��ά����
+            type = type.replace('[,]', '');
             result = [];
-            let datas = data.substring(2,data.length-2).split('],[');
+            let datas = data.substring(2, data.length - 2).split('],[');
             for (let i = 0; i < datas.length; ++i) {
                 let tmpResult = []
                 let _datas = datas[i].split(',');
                 for (let j = 0; j < _datas.length; ++j) {
                     tmpResult.push(this._TransformBasicsValue(type, _datas[j]));
                 }
-                result.push({data : tmpResult});
+                result.push({ data: tmpResult });
             }
 
-        }else if(type.includes('[]')) {   
-            type = type.replace('[]','');
+        } else if (type.includes('[]')) {
+            type = type.replace('[]', '');
             result = [];
-            let _datas = data.substring(1,data.length -1).split(',');
+            let _datas = data.substring(1, data.length - 1).split(',');
             for (let i = 0; i < _datas.length; ++i) {
                 result.push(this._TransformBasicsValue(type, _datas[i]));
             }
 
-        }else{
-            // 锟斤拷通值
+        } else {
+            // ��ֵͨ
             result = this._TransformBasicsValue(type, data);
         }
         return result;
@@ -482,18 +487,31 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private async GenCode(protoPath: string, toCode: string, outputPath: string) {
         let parsedPath = path.parse(protoPath);
         let plugin = "";
-        if(toCode == "ts") { 
-            plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts.ps1"
-        }
-        else if(toCode == "js") { 
-            plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js.ps1"
+        let outExtra = " ";
+        if (toCode == "ts") {
+            if (os.platform() == "win32") {
+                plugin = " --plugin=protoc-gen-ts=.\\node_modules\\.bin\\protoc-gen-ts.cmd"
+                    + " --js_out=import_style=commonjs,binary:" + outputPath;
+            }
+            else {
+                plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts"
+                    + " --js_out=import_style=commonjs,binary:" + outputPath;
+            }
+        } else if (toCode == "js") {
+            if (os.platform() == "win32") {
+                plugin = " --plugin=protoc-gen-js=.\\node_modules\\.bin\\protoc-gen-js.cmd";
+            }
+            else {
+                plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js";
+            }
+            outExtra = "=import_style=commonjs,binary:"
         }
 
-        let protocCmd = ".\\lib\\protoc\\protoc.exe -I " + parsedPath.dir +  plugin  + " --" + toCode + "_out " + outputPath + " " + protoPath;
+        let protocCmd = ".\\lib\\protoc\\protoc.exe -I " + parsedPath.dir + plugin + " --" + toCode + "_out" + outExtra + outputPath + " " + protoPath;
         console.log(protocCmd);
         return new Promise<void>((resolve, reject) => {
             exec(protocCmd, (err, stdout, stderr) => {
-                if(err) {
+                if (err) {
                     reject(err);
                     return;
                 }
@@ -502,9 +520,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 resolve();
             });
         });
-        
-    }   
-    
+
+    }
+
     private JsonToProtoText(data: any): string {
         function toText(v: any, ind: number): string[] {
             let p = "  ".repeat(ind);
@@ -548,34 +566,33 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private async GenBytes(protoPath: string, jsonPath: string, messageName: string, bytesPath: string) {
         let jsonStr = fs.readFileSync(jsonPath, "utf8");
         let jsonData = JSON.parse(jsonStr);
-        let allParts: Buffer[] = [];
-        let idx = 0;
+        // Build proto text for wrapper XXXData message containing all records
+        let dataContent = "";
         for (let key in jsonData) {
             let record = jsonData[key];
-            let protoText = this.JsonToProtoText(record);
-            let txtPath = bytesPath + "_" + idx + ".txt";
-            let binPath = bytesPath + "_" + idx + ".bin";
-            fs.writeFileSync(txtPath, protoText, "utf8");
-            let cmd = `.\\lib\\protoc\\protoc.exe --encode=${messageName} -I ${path.dirname(protoPath)} ${protoPath} < "${txtPath}" > "${binPath}"`;
+            dataContent += "data {\n";
+            dataContent += this.JsonToProtoText(record);
+            dataContent += "}\n";
+        }
+        if (dataContent.length > 0) {
+            let txtPath = bytesPath + ".txt";
+            let binPath = bytesPath + ".bin";
+            fs.writeFileSync(txtPath, dataContent, "utf8");
+            let wrapperMessage = messageName + "Data";
+            let cmd = `.\\lib\\protoc\\protoc.exe --encode=${wrapperMessage} -I ${path.dirname(protoPath)} ${protoPath} < "${txtPath}" > "${binPath}"`;
             try {
                 const execSync = require("child_process").execSync;
                 execSync(cmd);
                 if (fs.existsSync(binPath)) {
                     let binData = fs.readFileSync(binPath);
-                    let lenBuf = Buffer.alloc(4);
-                    lenBuf.writeUInt32LE(binData.length, 0);
-                    allParts.push(lenBuf, binData);
+                    fs.writeFileSync(bytesPath, binData);
+                    console.log("Generated:", bytesPath);
                 }
-            } catch(e) {
-                console.error("Record", key, "failed:", (e instanceof Error ? e.message : String(e)));
+            } catch (e) {
+                console.error("Failed to encode", messageName, "Data:", (e instanceof Error ? e.message : String(e)));
             }
-            try { fs.unlinkSync(txtPath); } catch(e2) {}
-            try { fs.unlinkSync(binPath); } catch(e2) {}
-            idx++;
-        }
-        if (allParts.length > 0) {
-            fs.writeFileSync(bytesPath, Buffer.concat(allParts));
-            console.log("Generated:", bytesPath);
+            try { fs.unlinkSync(txtPath); } catch (e2) { }
+            try { fs.unlinkSync(binPath); } catch (e2) { }
         }
     }
 }

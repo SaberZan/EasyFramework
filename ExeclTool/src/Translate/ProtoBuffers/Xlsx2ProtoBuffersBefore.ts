@@ -4,6 +4,7 @@ import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _, { reject } from 'lodash';
 import { exec } from 'child_process'
+import os from "os";
 import Utils from '../../utils';
 import protobuf from 'protobufjs'
 import BaseTranslateEnum from '../BaseTranslateEnum'
@@ -35,23 +36,23 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
     private stringArray = "message StringArray {\n\t repeated string data = 1;\n}\n\n";
 
 
-    public async BeforeTranslate(outputPathStr: string, params: any) : Promise<void> {
-        this.outputPathProtosStr = path.join(outputPathStr , "protos");
-        this.outputPathCodeStr = path.join(outputPathStr , "code" , params.toCode);
+    public async BeforeTranslate(outputPathStr: string, params: any): Promise<void> {
+        this.outputPathProtosStr = path.join(outputPathStr, "protos");
+        this.outputPathCodeStr = path.join(outputPathStr, "code", params.toCode);
         this.toCode = params.toCode;
-        if(!fs.existsSync(this.outputPathProtosStr)) {
+        if (!fs.existsSync(this.outputPathProtosStr)) {
             await mkdir(this.outputPathProtosStr, { recursive: true });
         }
-        if(!fs.existsSync(this.outputPathCodeStr)) {
+        if (!fs.existsSync(this.outputPathCodeStr)) {
             await mkdir(this.outputPathCodeStr, { recursive: true });
         }
         await this.TransferCommonProtos();
         await this.TransferEnumProtos();
         let protoPath = path.join(this.outputPathProtosStr, "Common.proto");
-        await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr); 
+        await this.GenCode(protoPath, this.toCode, this.outputPathCodeStr);
     }
 
-    private async TransferCommonProtos() : Promise<void> {
+    private async TransferCommonProtos(): Promise<void> {
         let protosContent = this.syntax;
         protosContent += this.packageStart;
         protosContent += this.intArray;
@@ -93,7 +94,7 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
         let enumDefPath = path.join(__dirname, '..', '..', '..', 'design', 'define', 'Enum.xlsx');
         let enumHelper = new BaseTranslateEnum();
         await enumHelper.TranslateExcel(enumDefPath);
-        
+
         let protoContent = this.syntax;
         protoContent += this.packageStart;
         for (let enumName in enumHelper.enumDefinitions) {
@@ -105,33 +106,46 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
             }
             protoContent += '}\n\n';
         }
-        
+
         if (protoContent.length > this.syntax.length + this.packageStart.length) {
             await this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, 'Enum'));
         }
     }
 
 
-    private async SaveProtosToFile(data: any, filePath: string) : Promise<void> {
+    private async SaveProtosToFile(data: any, filePath: string): Promise<void> {
         await writeFile(filePath + ".proto", data, { flag: 'w', encoding: 'utf8' });
     }
 
-    private async GenCode(protoPath: string, toCode: string, outputPath: string) : Promise<void> {
+    private async GenCode(protoPath: string, toCode: string, outputPath: string): Promise<void> {
         let cmd = "";
         let parsedPath = path.parse(protoPath);
         let plugin = "";
-        if(toCode == "ts") { 
-            plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts.ps1"
-        }
-        else if(toCode == "js") { 
-            plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js.ps1"
+        let outExtra = " ";
+        if (toCode == "ts") {
+            if (os.platform() == "win32") {
+                plugin = " --plugin=protoc-gen-ts=.\\node_modules\\.bin\\protoc-gen-ts.cmd"
+                         + " --js_out=import_style=commonjs,binary:" + outputPath;
+            }
+            else {
+                plugin = " --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts"
+                         + " --js_out=import_style=commonjs,binary:" + outputPath;
+            }
+        } else if (toCode == "js") {
+            if (os.platform() == "win32") {
+                plugin = " --plugin=protoc-gen-js=.\\node_modules\\.bin\\protoc-gen-js.cmd";
+            }
+            else {
+                plugin = " --plugin=protoc-gen-js=./node_modules/.bin/protoc-gen-js";
+            }
+            outExtra = "=import_style=commonjs,binary:"
         }
 
-        return new Promise((resolve,reject)=>{
-            cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir  +  plugin  +  " --" + toCode +"_out " + outputPath + " " + protoPath;
+        return new Promise((resolve, reject) => {
+            cmd = ".\\lib\\protoc\\protoc.exe" + " -I " + parsedPath.dir + plugin + " --" + toCode + "_out" + outExtra + outputPath + " " + protoPath;
             console.log(cmd);
             exec(cmd, (err, stdout, stderr) => {
-                if(err) {
+                if (err) {
                     reject(err);
                     return;
                 }
@@ -140,6 +154,6 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
                 resolve();
             });
         });
-}
-    
+    }
+
 }
