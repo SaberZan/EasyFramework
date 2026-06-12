@@ -17,6 +17,19 @@
                 ]
             ]
         },
+        "2_关卡表": {
+            "sheets": [
+                [
+                    "Map",
+                    "Map"
+                ],
+                [
+                    "Monster",
+                    "Monster"
+                ]
+            ],
+            "mergeName": "Level"
+        },
         "3_物品表": {
             "sheets": [
                 [

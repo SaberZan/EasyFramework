@@ -5,7 +5,6 @@ import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import { exec } from 'child_process'
 import os from "os";
-import Utils from '../../utils';
 import ProtoDefine from './ProtoDefine';
 import BaseTranslateConfig from '../BaseTranslateConfig';
 import BaseTranslateEnum from '../BaseTranslateEnum';
@@ -105,14 +104,21 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     }
     private async TransferTableJson(file: string = ""): Promise<void> {
         if (this.merge) {
-            let all: { [key: string]: any } = {};
+            let mergedRecord: { [key: string]: any } = {};
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
-                all[translateName] = jsonData;
+                // Convert {"id": record, ...} to {"data": [record, ...]} for *Data wrapper
+                let dataArray = [];
+                for (let id in jsonData) {
+                    dataArray.push(jsonData[id]);
+                }
+                mergedRecord[translateName + "Data"] = { "data": dataArray };
             }
-            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            let wrapper: { [key: string]: any } = {};
+            wrapper[this.mergeName] = mergedRecord;
+            await this.SaveJsonToFile(wrapper, path.join(this.outputPathJsonStr, this.mergeName + file));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
@@ -140,6 +146,26 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 let translateName = this.translateSheets[i][1];
                 protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
             }
+            // When merging multiple sheets, the generated .proto must also contain a
+            // top‑level message named after the merge (e.g., Level) with fields for
+            // each sheet's *Data type, and a corresponding wrapper (LevelData) so that
+            // the byte‑generation step can encode the data.
+            protoContent += ProtoDefine.messageStart.replace("{0}", this.mergeName);
+            let fieldIndex = 1;
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let translateName = this.translateSheets[i][1];
+                let dataTypeName = translateName + "Data";
+                protoContent += ProtoDefine.fieldStr.replace("{0}", dataTypeName)
+                    .replace("{1}", dataTypeName)
+                    .replace("{2}", fieldIndex.toString());
+                fieldIndex++;
+            }
+            protoContent += ProtoDefine.messageEnd;
+            protoContent += ProtoDefine.messageStart.replace("{0}", this.mergeName + "Data");
+            protoContent += ProtoDefine.fieldStr.replace("{0}", "repeated " + this.mergeName)
+                .replace("{1}", "data")
+                .replace("{2}", "1");
+            protoContent += ProtoDefine.messageEnd;
             this.SaveProtosToFile(protoContent, path.join(this.outputPathProtosStr, this.mergeName));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -297,8 +323,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 } else {
                     let result = this.TransformStructValue(type, value, rowIndex, colIndex);
                     if (!_.isNil(result) && !_.isNaN(result)) {
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
+                        subTmp[key] = result;
                     }
                 }
             }
