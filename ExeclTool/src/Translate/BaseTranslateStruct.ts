@@ -23,6 +23,16 @@ export interface FieldInfo {
     isArray: boolean;
     fieldPath: string[];
 }
+export interface IntoFieldInfo {
+    structName: string;
+    field: string;
+}
+export interface IndexedStructFieldInfo {
+    propertyName: string;
+    index: number;
+    structName: string;
+    field: string;
+}
 
 export default class BaseTranslateStruct extends BaseTranslateConfig {
     public structDefinitions: { [name: string]: StructDefinition } = {};
@@ -101,6 +111,63 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             };
         }
         return null;
+    }
+    /**
+     * Parse "into=structLower.field" format, e.g. "into=attr.name"
+     * Returns the struct name (capitalized) and the sub-field name, or null if not matching.
+     */
+    public ParseIntoFieldInfo(key: string): IntoFieldInfo | null {
+        let match = key.match(/^into=(\w+)\.(\w+)$/);
+        if (match) {
+            return {
+                structName: match[1].charAt(0).toUpperCase() + match[1].slice(1),
+                field: match[2]
+            };
+        }
+        return null;
+    }
+    /**
+     * Parse "propName[index]=StructName.field" format, e.g. "info[0]=StructTest.value1"
+     * Returns the property name, index, struct name, and field, or null if not matching.
+     */
+    public ParseIndexedStructFieldInfo(key: string): IndexedStructFieldInfo | null {
+        let match = key.match(/^(\w+)\[(\d+)\]=(\w+)\.(\w+)$/);
+        if (match) {
+            return {
+                propertyName: match[1],
+                index: parseInt(match[2]),
+                structName: match[3],
+                field: match[4]
+            };
+        }
+        return null;
+    }
+    /**
+     * Check if key is an "into=..." struct field
+     */
+    public IsIntoField(key: string): boolean {
+        return /^into=\w+\.\w+$/.test(key);
+    }
+    /**
+     * Check if key is an "X[N]=Y.Z" indexed struct field
+     */
+    public IsIndexedStructField(key: string): boolean {
+        return /^\w+\[\d+\]=\w+\.\w+$/.test(key);
+    }
+    /**
+     * Resolve a column header key to a field path for data output.
+     * Handles all formats: "into=X.Y", "X[N]=Y.Z", and the existing "X.Y" / "X[N].Y".
+     */
+    public ResolveFieldPath(key: string): (string | number)[] {
+        let intoInfo = this.ParseIntoFieldInfo(key);
+        if (intoInfo) {
+            return ["info", intoInfo.field];
+        }
+        let indexedInfo = this.ParseIndexedStructFieldInfo(key);
+        if (indexedInfo) {
+            return [indexedInfo.propertyName, indexedInfo.index, indexedInfo.field];
+        }
+        return this.ParseFieldPath(key);
     }
 
     /**
@@ -259,20 +326,35 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             isArray: false,
             fieldPath: []
         };
-
+        let intoInfo = this.ParseIntoFieldInfo(key);
+        if (intoInfo) {
+            result.name = "info";
+            result.isStruct = true;
+            result.structName = intoInfo.structName;
+            result.fieldPath = [intoInfo.field];
+            result.isArray = false;
+            return result;
+        }
+        let indexedInfo = this.ParseIndexedStructFieldInfo(key);
+        if (indexedInfo) {
+            result.name = indexedInfo.propertyName;
+            result.isStruct = true;
+            result.structName = indexedInfo.structName;
+            result.fieldPath = [indexedInfo.field];
+            result.isArray = true;
+            return result;
+        }
         if (key.includes('.')) {
             let parts = key.split('.');
             result.name = parts[0];
             result.fieldPath = parts.slice(1) as string[];
             result.isStruct = true;
-
             let arrayMatch = result.name.match(/(.+)\[(\d*)\]$/);
             if (arrayMatch) {
                 result.name = arrayMatch[1];
                 result.isArray = true;
             }
         }
-
         return result;
     }
 }

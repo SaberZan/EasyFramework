@@ -113,8 +113,7 @@ export default class Xlsx2Json extends BaseTranslateConfig {
                 if (_.isNil(value) || typeof (value) == "undefined") {
                     continue;
                 }
-
-                let fieldPath = this.structHelper.ParseFieldPath(key);
+                let fieldPath = this.structHelper.ResolveFieldPath(key);
 
                 if (fieldPath.length > 1) {
                     this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));

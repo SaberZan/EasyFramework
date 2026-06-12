@@ -173,7 +173,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let value = _arrLine[colIndex];
                 if (_.isNil(key) || _.isEmpty(key) || typeof value === 'undefined') continue;
 
-                let fieldPath = this.structHelper.ParseFieldPath(key);
+                let fieldPath = this.structHelper.ResolveFieldPath(key);
                 if (fieldPath.length > 1) {
                     // Lowercase first element if it matches a known struct type (flatc naming compatibility)
                     let firstField = fieldPath[0].toString();
@@ -227,9 +227,10 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         // Group nested fields by their top-level parent name.
         // e.g. 'attrs[0].value1' -> parentName='attrs', subField='value1'
         //      'attr.name'       -> parentName='attr',  subField='name'
-        interface NestedGroup {
-            fields: { [fieldName: string]: string };
-            isArray: boolean;
+       interface NestedGroup {
+           fields: { [fieldName: string]: string };
+           isArray: boolean;
+            structName: string;
         }
         let nestedGroups: { [parentName: string]: NestedGroup } = {};
         interface SimpleField {
@@ -248,8 +249,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
                 let parentName = fieldInfo.name;
 
-                if (!nestedGroups[parentName]) {
-                    nestedGroups[parentName] = { fields: {}, isArray: fieldInfo.isArray };
+               if (!nestedGroups[parentName]) {
+                    let resolvedStructName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
+                    nestedGroups[parentName] = { fields: {}, isArray: fieldInfo.isArray, structName: resolvedStructName };
                 }
 
                 if (fieldInfo.isArray) {
@@ -270,14 +272,14 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
         let content = '';
 
-        // 1. Generate sub-table definitions for each nested group (skip if matching Struct.xlsx type)
-        for (let parentName of Object.keys(nestedGroups)) {
-            let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
-            if (this.structHelper.IsStructType(capitalized)) {
+       // 1. Generate sub-table definitions for each nested group (skip if matching Struct.xlsx type)
+       for (let parentName of Object.keys(nestedGroups)) {
+           let group = nestedGroups[parentName];
+            let structName = group.structName;
+            if (this.structHelper.IsStructType(structName)) {
                 continue; // Skip - type is defined in Struct.xlsx
             }
-            let group = nestedGroups[parentName];
-            let subTableName = this.getSubTableName(className, parentName);
+            let subTableName = this.getSubTableName(className, structName);
 
             content += FbsDefine.tableStart.replace('{0}', subTableName);
             for (let [fieldName, fieldType] of Object.entries(group.fields)) {
@@ -299,21 +301,21 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
         }
 
-        // 3. Add nested field references with proper FlatBuffers types
-        for (let parentName of Object.keys(nestedGroups)) {
-            let group = nestedGroups[parentName];
-            let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
+       // 3. Add nested field references with proper FlatBuffers types
+       for (let parentName of Object.keys(nestedGroups)) {
+           let group = nestedGroups[parentName];
+            let structName = group.structName;
             
-            if (this.structHelper.IsStructType(capitalized)) {
+            if (this.structHelper.IsStructType(structName)) {
                 // Reference the struct type from Struct.xlsx directly (lowercase field name to avoid flatc naming conflict)
                 let fieldKey = parentName.charAt(0).toLowerCase() + parentName.slice(1);
                 if (group.isArray) {
-                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + capitalized + ']');
+                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + structName + ']');
                 } else {
-                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', capitalized);
+                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', structName);
                 }
             } else {
-                let subTableName = this.getSubTableName(className, parentName);
+                let subTableName = this.getSubTableName(className, structName);
                 if (group.isArray) {
                     content += FbsDefine.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
                 } else {
@@ -354,15 +356,15 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             let type = types[colIndex];
             if (_.isNil(key) || _.isEmpty(key)) continue;
 
-            let fieldPath = this.structHelper.ParseFieldPath(key);
-            if (fieldPath.length > 1) {
-                let parentName = fieldPath[0].toString();
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let parentName = fieldInfo.name;
                 if (!structFields[parentName]) {
-                    let capitalized = parentName.charAt(0).toUpperCase() + parentName.slice(1);
-                    let isArray = fieldPath.length > 2 && !isNaN(Number(fieldPath[1]));
-                    let typeName = this.structHelper.IsStructType(capitalized)
-                        ? 'CfgSpace.' + capitalized
-                        : 'CfgSpace.' + className + '_' + capitalized;
+                    let structName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
+                    let isArray = fieldInfo.isArray;
+                    let typeName = this.structHelper.IsStructType(structName)
+                        ? 'CfgSpace.' + structName
+                        : 'CfgSpace.' + className + '_' + structName;
                     structFields[parentName] = { typeName, isArray };
                 }
                 continue;

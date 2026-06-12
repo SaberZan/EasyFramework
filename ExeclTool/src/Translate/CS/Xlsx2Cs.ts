@@ -174,19 +174,18 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 continue;
             }
             
-            let fieldPath = this.structHelper.ParseFieldPath(key);
-            if (fieldPath.length > 1) {
-                // ?????????????? attrs[0].value1
-                // ?????????? attr.name
-                let fieldName = fieldPath[0].toString();
-                let isArrayStruct = fieldPath.length > 2 && !isNaN(Number(fieldPath[1]));
-                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                let structClassName = this.structHelper.IsStructType(capitalized) ? capitalized : className + capitalized;
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let fieldName = fieldInfo.name;
+                let structClassName = fieldInfo.structName || (fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
+                if (!this.structHelper.IsStructType(structClassName)) {
+                    structClassName = className + structClassName;
+                }
                 
                 if (!structFields[fieldName]) {
                     structFields[fieldName] = {
                         type: structClassName,
-                        isArray: isArrayStruct
+                        isArray: fieldInfo.isArray
                     };
                 }
                 continue;
@@ -234,13 +233,13 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 continue;
             }
             
-            let fieldPath = this.structHelper.ParseFieldPath(key);
-            if (fieldPath.length > 1) {
-                let parentField = fieldPath[0].toString();
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let parentField = fieldInfo.name;
                 if (!nestedFields[parentField]) {
                     nestedFields[parentField] = [];
                 }
-                let actualFieldName = fieldPath.slice(1).filter((p: any) => isNaN(parseInt(p.toString()))).join("_");
+                let actualFieldName = fieldInfo.fieldPath.filter((p: any) => isNaN(parseInt(p.toString()))).join("_");
                 if (actualFieldName) {
                     nestedFields[parentField].push({
                         name: actualFieldName,
@@ -343,7 +342,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ParseFieldPath(key);
+                let fieldPath = this.structHelper.ResolveFieldPath(key);
 
                 if (fieldPath.length > 1) {
                     this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
@@ -483,4 +482,5 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         await writeFile(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
     }
 }
+
 

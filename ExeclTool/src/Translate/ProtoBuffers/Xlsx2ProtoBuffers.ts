@@ -178,7 +178,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let dataArr = data;
         let keys = dataArr[0] || [];
         let types = dataArr[1] || [];
-        let nestedMap: { [parent: string]: { fields: { [name: string]: string }; isArray: boolean } } = {};
+        let nestedMap: { [parent: string]: { fields: { [name: string]: string }; isArray: boolean; structName: string } } = {};
         let simpleKeys: { key: string; type: string }[] = [];
         for (let i = 0; i < keys.length; ++i) {
             let key = keys[i];
@@ -188,8 +188,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
                 let parentName = fieldInfo.name;
                 let subFieldName = fieldInfo.fieldPath[fieldInfo.fieldPath.length - 1];
-                if (!nestedMap[parentName]) {
-                    nestedMap[parentName] = { fields: {}, isArray: fieldInfo.isArray };
+               if (!nestedMap[parentName]) {
+                    let resolvedStructName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
+                    nestedMap[parentName] = { fields: {}, isArray: fieldInfo.isArray, structName: resolvedStructName };
                 }
                 if (fieldInfo.isArray) nestedMap[parentName].isArray = true;
                 if (!nestedMap[parentName].fields[subFieldName]) {
@@ -200,11 +201,11 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             simpleKeys.push({ key, type });
         }
         let content = "";
-        // Generate sub-messages for non-Struct.xlsx types
-        for (let parentName in nestedMap) {
-            let cap = parentName.charAt(0).toUpperCase() + parentName.slice(1);
-            if (this.structHelper.IsStructType(cap)) continue;
-            let subName = className + "_" + cap;
+       // Generate sub-messages for non-Struct.xlsx types
+       for (let parentName in nestedMap) {
+            let structName = nestedMap[parentName].structName;
+            if (this.structHelper.IsStructType(structName)) continue;
+            let subName = className + "_" + structName;
             content += ProtoDefine.messageStart.replace("{0}", subName);
             let idx = 1;
             for (let fn in nestedMap[parentName].fields) {
@@ -221,14 +222,14 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             content += ProtoDefine.fieldStr.replace("{0}", this.TransformType(f.type)).replace("{1}", f.key).replace("{2}", fi.toString());
             fi++;
         }
-        // Add nested field references
-        for (let parentName in nestedMap) {
-            let cap = parentName.charAt(0).toUpperCase() + parentName.slice(1);
-            let tn = this.structHelper.IsStructType(cap) ? cap : className + "_" + cap;
+       // Add nested field references
+       for (let parentName in nestedMap) {
+            let structName = nestedMap[parentName].structName;
+            let tn = this.structHelper.IsStructType(structName) ? structName : className + "_" + structName;
             let isArr = false;
             for (let k of keys) { if (k && (k.startsWith(parentName + "[") || k.startsWith(parentName + ".")) && k !== parentName) { isArr = k.includes("["); break; } }
             if (isArr) tn = "repeated " + tn;
-            let fld = this.structHelper.IsStructType(cap) ? parentName.charAt(0).toLowerCase() + parentName.slice(1) : parentName;
+            let fld = this.structHelper.IsStructType(structName) ? parentName.charAt(0).toLowerCase() + parentName.slice(1) : parentName;
             content += ProtoDefine.fieldStr.replace("{0}", tn).replace("{1}", fld).replace("{2}", fi.toString());
             fi++;
         }
@@ -283,7 +284,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ParseFieldPath(key);
+                let fieldPath = this.structHelper.ResolveFieldPath(key);
 
                 let firstField = fieldPath[0].toString();
                 let capitalized = firstField.charAt(0).toUpperCase() + firstField.slice(1);

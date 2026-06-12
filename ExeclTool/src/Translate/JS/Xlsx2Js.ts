@@ -112,7 +112,7 @@ export default class Xlsx2Js extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ParseFieldPath(key);
+                let fieldPath = this.structHelper.ResolveFieldPath(key);
 
                 if (fieldPath.length > 1) {
                     this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));

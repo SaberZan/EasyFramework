@@ -1,32 +1,12 @@
 {
     "target": "ProtoBuffers",
     "params": {
-        "toCode": "ts"
+        "toCode": "csharp"
     },
     "designPath": "./design",
     "output": {
         "code": "../Client/Assets/Scripts/Game/Rumtime/HotFix/Cfg",
         "bin": "../Client/Assets/GameResources/Cfg"
-    },
-    "enum": {
-        "Enum1": {
-            "sheets": [
-                [
-                    "EnumTest",
-                    "EnumTest"
-                ]
-            ]
-        }
-    },
-    "struct": {
-        "Struct1": {
-            "sheets": [
-                [
-                    "StructTest",
-                    "StructTest"
-                ]
-            ]
-        }
     },
     "config": {
         "1_常量表": {
