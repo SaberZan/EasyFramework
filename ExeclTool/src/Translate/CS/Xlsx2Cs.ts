@@ -1,4 +1,5 @@
 ﻿import xlsx from 'node-xlsx';
+import DataParser from '../../DataParser';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
@@ -42,17 +43,20 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         if (this.isDir) { 
             let files = await readdir(pathStr);
             for(let i in files) {
-                let data = xlsx.parse(path.join(pathStr, files[i]));
-                for (let i = 0; i < data.length; ++i) {
-                    this.xlsxData[data[i].name] = data[i].data;
+                let data = DataParser.parse(path.join(pathStr, files[i]), params.format);
+                for (let j = 0; j < data.length; ++j) {
+                    this.xlsxData[data[j].name] = data[j].data;
                 }
-                await this.TransferTableJson(files[i].replace(path.extname(files[i]),""));
-                if(i == "0") {
-                    await this.TransferTableCs();
+                if (this.merge) {
+                    await this.TransferTableJson(files[i].replace(path.extname(files[i]),""));
                 }
             }
+            if (!this.merge) {
+                await this.TransferTableJson();
+            }
+            await this.TransferTableCs();
         } else {
-            let data = xlsx.parse(pathStr + ".xlsx");
+            let data = DataParser.parseWithOptionalExtension(pathStr, params.format);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -64,25 +68,37 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
     private async TransferTableCs() : Promise<void> {
         if(this.merge) {
             let classContent = CSDefine.namespaceStart;
+            // Generate only the record class for each sheet (no individual Dictionary classes)
             for (let i = 0; i < this.translateSheets.length; ++i) {
-                let csData = this.CreateCs(this.xlsxData[this.translateSheets[i][0]],this.translateSheets[i][1]);
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
+                let csData = this.CreateCsRecordOnly(this.xlsxData[sheetName], translateName, nestedFields);
                 classContent += csData;
             }
 
+            // Generate merge wrapper class with Dictionary fields
             classContent += CSDefine.notes.replace('{0}', this.mergeName);
-            if(!this.isDir) {
-                classContent += CSDefine.configHead.replace('{0}', this.mergeName);
-            }
+            classContent += CSDefine.configHead.replace('{0}', this.mergeName);
             classContent += CSDefine.classStart.replace('{0}', this.mergeName);
             for (let i = 0; i < this.translateSheets.length; ++i) {
-                let type = this.xlsxData[this.translateSheets[i][0]][1][0];
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let upperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
-                let translateNamekeyUpper = upperAndLower[0];
-                let translateNamekeyLower = upperAndLower[1];
-                classContent += Utils.FormatStr(CSDefine.privateMergeStr, type, translateNamekeyUpper, translateNamekeyLower);
-                classContent += Utils.FormatStr(CSDefine.publicMergeStr, type, translateNamekeyUpper, translateNamekeyUpper, translateNamekeyLower);
+                let data = this.xlsxData[sheetName];
+                let keyType = 'int';
+                // Check for array mode (@ prefix)
+                let isArrayMode = data && data.length > 0 && data[0] && data[0].length > 0 && typeof data[0][0] === 'string' && data[0][0].startsWith('@');
+                let valueType = translateName;
+                if (isArrayMode) {
+                    let atFieldName = data[0][0].substring(1);
+                    valueType = translateName + atFieldName;
+                }
+                let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(translateName);
+                let keyLower = keyUpperAndLower[1];
+                let keyUpper = keyUpperAndLower[0];
+                // Generate Dictionary field
+                classContent += Utils.FormatStr(CSDefine.privateMergeStr, keyType, valueType, keyLower, '');
+                classContent += Utils.FormatStr(CSDefine.publicMergeStr, keyType, valueType, keyUpper, keyLower);
             }
             classContent += CSDefine.classEnd;
             classContent += CSDefine.namespaceEnd;
@@ -95,13 +111,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 
                 let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
                 
-                
                 let classContent = CSDefine.namespaceStart;
-                classContent += CSDefine.notes.replace('{0}', translateName);
-                if(!this.isDir) {
-                    classContent += CSDefine.configHead.replace('{0}', translateName);
-                }
                 let csData = this.CreateCs(this.xlsxData[sheetName], translateName, nestedFields);
+                
                 classContent += csData;
                 classContent += CSDefine.namespaceEnd;
                 await this.SaveCsToFile(classContent, path.join(this.outputPathCsStr, translateName));
@@ -116,7 +128,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
-                all[translateName] = jsonData;
+                // Use lowercase start + Dic suffix to match C# private field name for JSON deserialization
+                let keyLower = translateName.charAt(0).toLowerCase() + translateName.slice(1);
+                all[keyLower + 'Dic'] = jsonData;
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         }else{
@@ -136,21 +150,33 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
-        
+        // Copy keys so stripping the @ prefix does not mutate the shared sheet data.
+        let keys = (dataArr[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
+
         if (keys.length === 0) {
             console.warn('No keys found for CS generation:', className);
             return '';
         }
 
         let key = keys[0];
-        let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
-        let keyUpper = keyUpperAndLower[0];
-        let type = this.TransformType(types[0]);
-        let classContent = Utils.FormatStr(CSDefine.classDictionaryStart, className, type, className);
+        // Array mode: first column key starts with @, e.g. @ItemSeries.
+        // The table becomes Dictionary<key, List<Record>> instead of Dictionary<key, Record>.
+        let isArrayMode = false;
+        if (typeof key === 'string' && key.startsWith('@')) {
+            isArrayMode = true;
+            key = key.substring(1);
+            keys[0] = key;
+        }
+        let keyType = this.TransformType(types[0]);
+        let valueType = isArrayMode
+            ? 'System.Collections.Generic.List<' + className + '>'
+            : className;
 
-        // Generate nested struct class definitions INSIDE the main class
+        let classContent = '';
+
+        // Generate nested struct class definitions BEFORE the main class
         if (nestedFieldDefs) {
             for (let fieldName in nestedFieldDefs) {
                 let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
@@ -161,16 +187,17 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             }
         }
 
-        classContent += Utils.FormatStr(CSDefine.privateStr, "int", "_id", "id");
-        classContent += Utils.FormatStr(CSDefine.publicStr, "int", "id", "_id");
+        // Record class: plain data class (not a Dictionary)
+        classContent += CSDefine.notes.replace('{0}', className);
+        classContent += CSDefine.classStart.replace('{0}', className);
 
-        // ???????????????
+        // Collect struct fields for nested struct support.
         let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
 
-        for (let colIndex = 1; colIndex < keys.length; ++colIndex) {
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key)) {
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                 continue;
             }
             
@@ -213,6 +240,119 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
 
         classContent += CSDefine.classEnd;
+
+        // Array mode: create List wrapper class (e.g., MergeUpgradeDataItemSeries : List<MergeUpgradeData>)
+        let listClassName = '';
+        if (isArrayMode) {
+            listClassName = className + key;
+            classContent += "\t[System.Serializable]\r\n\tpublic class " + listClassName + " : System.Collections.Generic.List<" + className + ">\r\n\t{\r\n\t}\r\n\r\n";
+        }
+
+        // Dictionary class: Dictionary<int, className> or Dictionary<int, ListClassName>
+        let dictValueType = isArrayMode ? listClassName : className;
+        classContent += Utils.FormatStr(CSDefine.classDictionaryStartWithConfig, className, keyType, dictValueType);
+
+        return classContent;
+    }
+
+    private CreateCsRecordOnly(data: any, className: string, nestedFieldDefs?: { [parentField: string]: { name: string; type: string }[] }) {
+        if (!data || data.length < 2) {
+            console.warn('Invalid data for CS generation:', className);
+            return '';
+        }
+
+        let dataArr = data;
+        let keys = (dataArr[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
+
+        if (keys.length === 0) {
+            console.warn('No keys found for CS generation:', className);
+            return '';
+        }
+
+        let key = keys[0];
+        let isArrayMode = false;
+        if (typeof key === 'string' && key.startsWith('@')) {
+            isArrayMode = true;
+            key = key.substring(1);
+            keys[0] = key;
+        }
+        let keyType = this.TransformType(types[0]);
+
+        let classContent = '';
+
+        // Generate nested struct class definitions BEFORE the main class
+        if (nestedFieldDefs) {
+            for (let fieldName in nestedFieldDefs) {
+                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                if (this.structHelper.IsStructType(capitalized)) { continue; }
+                let structClassName = className + capitalized;
+                let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
+                classContent += this.BuildStructClassContent(structClassName, fields);
+            }
+        }
+
+        // Record class: plain data class (not a Dictionary)
+        classContent += CSDefine.notes.replace('{0}', className);
+        classContent += CSDefine.classStart.replace('{0}', className);
+
+        // Collect struct fields for nested struct support.
+        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
+                continue;
+            }
+            
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let fieldName = fieldInfo.name;
+                let structClassName = fieldInfo.structName || (fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
+                if (!this.structHelper.IsStructType(structClassName)) {
+                    structClassName = className + structClassName;
+                }
+                
+                if (!structFields[fieldName]) {
+                    structFields[fieldName] = {
+                        type: structClassName,
+                        isArray: fieldInfo.isArray
+                    };
+                }
+                continue;
+            }
+            
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldType = this.TransformType(type);
+            
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, key);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
+        }
+
+        // Add nested struct fields
+        for (let fieldName in structFields) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(fieldName);
+            let keyUpper = keyUpperAndLower[0];
+            let keyLower = keyUpperAndLower[1];
+            let fieldInfo = structFields[fieldName];
+            let fieldType = fieldInfo.isArray ? fieldInfo.type + '[]' : fieldInfo.type;
+            
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, fieldName);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
+        }
+
+        classContent += CSDefine.classEnd;
+
+        // Array mode: create List wrapper class (e.g., MergeUpgradeDataItemSeries : List<MergeUpgradeData>)
+        if (isArrayMode) {
+            let listClassName = className + key;
+            classContent += "\t[System.Serializable]\r\n\tpublic class " + listClassName + " : System.Collections.Generic.List<" + className + ">\r\n\t{\r\n\t}\r\n\r\n";
+        }
+
         return classContent;
     }
 
@@ -223,13 +363,14 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             return nestedFields;
         }
         
-        let keys = data[0] || [];
-        let types = data[1] || [];
-        
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+       let keys = data[0] || [];
+        let typeRowIndex = this.FindTypeRowIndex(data);
+        let types = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
+       
+       for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key)) {
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                 continue;
             }
             
@@ -309,21 +450,35 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
+        // Copy keys so stripping the '@' prefix does not mutate the shared sheet data.
+        let keys = (dataArr[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
         let layerNum = 1;
 
-        for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
+        // Array mode: first column key starts with '@', e.g. @ItemSeries.
+        // Rows are grouped into arrays keyed by the first column value.
+        let isArrayMode = false;
+        let arrayKey = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            keys[0] = arrayKey;
+        }
+
+        // Both header layouts (keys/types/desc and keys/desc/types) keep data at row 3.
+        let dataStartRow = 3;
+        for (let rowIndex = dataStartRow; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
 
-            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] == '') {
+            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] === '') {
                 continue;
             }
 
             let tmp = jsonOut;
             for (let layIndex = 0; layIndex < layerNum - 1; ++layIndex) {
-                if (!tmp[_arrLine[layIndex]]) {
+                if (!(_arrLine[layIndex] in tmp)) {
                     tmp[_arrLine[layIndex]] = {};
                 }
                 tmp = tmp[_arrLine[layIndex]];
@@ -333,7 +488,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                if (_.isNil(key) || _.isEmpty(key)) {
+                if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                     continue;
                 }
                 let type = types[colIndex] || 'string';
@@ -360,7 +515,16 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
 
             subTmp["$type"] = className + ", Assembly-CSharp";
 
-            tmp[_arrLine[layerNum - 1]] = subTmp;
+            if (isArrayMode) {
+                //                                                 
+                let groupKey = _arrLine[layerNum - 1].toString();
+                if (!(groupKey in tmp)) {
+                    tmp[groupKey] = [];
+                }
+                tmp[groupKey].push(subTmp);
+            } else {
+                tmp[_arrLine[layerNum - 1]] = subTmp;
+            }
 
         }
 
@@ -482,5 +646,6 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         await writeFile(filePath + ".cs", data, { flag: 'w', encoding: 'utf8' });
     }
 }
+
 
 

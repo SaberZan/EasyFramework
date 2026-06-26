@@ -1,10 +1,11 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from 'fs';
 import { mkdir, readdir, writeFile } from 'fs/promises';
 import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import DataParser from '../../DataParser';
 
 export default class Xlsx2Ts extends BaseTranslateConfig {
 
@@ -29,17 +30,14 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         if (this.isDir) {
             let files = await readdir(pathStr);
             for (let i in files) {
-                let data = xlsx.parse(path.join(pathStr, files[i]));
+                let data = DataParser.parse(path.join(pathStr, files[i]), params.format);
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
                 await this.TransferTable(files[i].replace(path.extname(files[i]), ''));
             }
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += '.xlsx';
-            parsedPath.ext = '.xlsx';
-            let data = xlsx.parse(path.format(parsedPath));
+            let data = DataParser.parseWithOptionalExtension(pathStr, params.format);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -77,10 +75,20 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
 
         let dataArr = data;
         let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // Default layerNum: the first data layer may contain nested fields
+        // 榛樿鐨勫眰绾х粨鏋勬槸绗竴灞傦紝鍗砶ey鐨勪綅缃?
         let layerNum = 1;
+
+        // 检查是否是数组模式（第一列以@开头）
+        let isArrayMode = false;
+        let arrayKey = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            keys[0] = arrayKey; // 去掉@前缀
+        }
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -101,12 +109,12 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
 
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                if (_.isNil(key) || _.isEmpty(key)) {
+                if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                     continue;
                 }
                 let type = types[colIndex] || 'string';
                 let value = _arrLine[colIndex];
-                if (_.isNil(value) || typeof (value) == 'undefined') {
+                if (_.isNil(value) || typeof (value) == "undefined") {
                     continue;
                 }
 
@@ -123,7 +131,16 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                 }
             }
 
-            tmp[_arrLine[layerNum - 1]] = subTmp;
+            if (isArrayMode) {
+                // 数组模式：按第一列的值分组，相同值的行放在数组中
+                let groupKey = _arrLine[layerNum - 1].toString();
+                if (!tmp[groupKey]) {
+                    tmp[groupKey] = [];
+                }
+                tmp[groupKey].push(subTmp);
+            } else {
+                tmp[_arrLine[layerNum - 1]] = subTmp;
+            }
         }
 
         return jsonOut;
@@ -135,43 +152,6 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         _str_all += JSON.stringify(data, null, 4);
         _str_all += ';';
         await writeFile(filePath + '.ts', _str_all, { flag: 'w', encoding: 'utf8' });
-    }
-
-    private TransformType(type: any) {
-        if (typeof type !== 'string') return type;
-        let result;
-        switch (type) {
-            case 'int':
-            case 'Int':
-                result = 'int';
-                break;
-            case 'float':
-            case 'Float':
-                result = 'float';
-                break;
-            case 'bool':
-            case 'Bool':
-            case 'boolen':
-            case 'Boolen':
-                result = 'bool';
-                break;
-            case 'string':
-            case 'String':
-                result = 'string';
-                break;
-            case 'json':
-            case 'Json':
-                result = 'JSONObject';
-                break;
-            default:
-                if (type.includes('serialize')) {
-                    result = undefined;
-                } else {
-                    result = type;
-                }
-                break;
-        }
-        return result;
     }
 
     // Transform type to corresponding field value type
@@ -252,3 +232,5 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return result;
     }
 }
+
+

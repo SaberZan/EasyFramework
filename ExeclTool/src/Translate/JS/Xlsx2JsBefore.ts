@@ -20,10 +20,6 @@ export default class Xlsx2JsBefore extends BaseTranslateBefore {
         let enumHelper = new BaseTranslateEnum();
         await enumHelper.TranslateExcel(enumPath);
         //        // Generate JS enum files
-        let enumJsDir = path.join(outputPathStr, 'js');
-        if (!fs.existsSync(enumJsDir)) {
-            await mkdir(enumJsDir, { recursive: true });
-        }
         for (let enumName in enumHelper.enumDefinitions) {
             let def = enumHelper.enumDefinitions[enumName];
             let jsContent = 'var ' + enumName + ' = {\n';
@@ -34,7 +30,7 @@ export default class Xlsx2JsBefore extends BaseTranslateBefore {
             jsContent += parts.join(',\n');
             if (parts.length > 0) jsContent += '\n';
             jsContent += '};\n';
-            await writeFile(path.join(enumJsDir, enumName + '.js'), jsContent, { flag: 'w', encoding: 'utf8' });
+            await writeFile(path.join(outputPathStr, enumName + '.js'), jsContent, { flag: 'w', encoding: 'utf8' });
         }
 
     }

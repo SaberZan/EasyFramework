@@ -5,6 +5,7 @@ import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../utils';
 import BaseTranslateConfig from './BaseTranslateConfig';
+import CsvParser from '../CsvParser';
 
 export interface StructField {
     name: string;
@@ -38,15 +39,20 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     public structDefinitions: { [name: string]: StructDefinition } = {};
 
     /**
-     * Parse struct definitions from the specified Excel file
+     * Parse struct definitions from the specified Excel or CSV file
      */
     public async ParseStructDefinitions(definePath: string): Promise<void> {
-        if (!fs.existsSync(definePath)) {
-            console.warn('Struct define path not found:', definePath);
-            return;
+        let data: any[] = [];
+        
+        // Try CSV first, then fall back to xlsx
+        if (CsvParser.canParseAsCsv(definePath)) {
+            data = CsvParser.parse(definePath);
         }
-
-        let data = xlsx.parse(definePath);
+        
+        // If no CSV data found, try xlsx
+        if (data.length === 0 && fs.existsSync(definePath)) {
+            data = xlsx.parse(definePath);
+        }
 
         for (let sheet of data) {
             let structName = sheet.name;
@@ -358,6 +364,3 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
         return result;
     }
 }
-
-
-

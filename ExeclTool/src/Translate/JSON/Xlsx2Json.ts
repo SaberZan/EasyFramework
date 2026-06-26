@@ -1,14 +1,31 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
 import _ from 'lodash';
 import Utils from '../../utils';
 import BaseTranslateConfig from '../BaseTranslateConfig';
+import CsvParser from '../../CsvParser';
 
 export default class Xlsx2Json extends BaseTranslateConfig {
 
     private outputPathJsonStr: string = '';
+
+    private parseDataFile(filePath: string): any[] {
+        let data: any[] = [];
+        
+        // Try CSV first, then fall back to xlsx
+        if (CsvParser.canParseAsCsv(filePath)) {
+            data = CsvParser.parse(filePath);
+        }
+        
+        // If no CSV data found, try xlsx
+        if (data.length === 0 && fs.existsSync(filePath)) {
+            data = xlsx.parse(filePath);
+        }
+        
+        return data;
+    }
 
     public async TranslateExcel(pathStr: string, outputPathStr: string, translate: any, params: any): Promise<void> {
 
@@ -30,7 +47,7 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         if (this.isDir) {
             let files = await readdir(pathStr);
             for (let i in files) {
-                let data = xlsx.parse(path.join(pathStr, files[i]));
+                let data = this.parseDataFile(path.join(pathStr, files[i]));
                 for (let j = 0; j < data.length; ++j) {
                     this.xlsxData[data[j].name] = data[j].data;
                 }
@@ -38,9 +55,16 @@ export default class Xlsx2Json extends BaseTranslateConfig {
             }
         } else {
             let parsedPath = path.parse(pathStr);
-            parsedPath.base += '.xlsx';
-            parsedPath.ext = '.xlsx';
-            let data = xlsx.parse(path.format(parsedPath));
+            // Try both with and without .xlsx extension for CSV directories
+            let data = this.parseDataFile(pathStr);
+            
+            // If not found, try with xlsx extension
+            if (data.length === 0) {
+                parsedPath.base += '.xlsx';
+                parsedPath.ext = '.xlsx';
+                data = this.parseDataFile(path.format(parsedPath));
+            }
+            
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -81,10 +105,20 @@ export default class Xlsx2Json extends BaseTranslateConfig {
 
         let dataArr = data;
         let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // 默锟较碉拷锟姐级锟斤拷锟斤拷锟斤拷锟揭伙拷锟斤拷锟斤拷莅锟斤拷锟角讹拷锟斤拷侄危锟斤拷锟斤拷锟斤拷锟街讹拷锟斤拷锟斤拷锟斤拷锟斤拷锟皆讹拷锟斤拷锟斤拷
+        // 榛樿鐨勫眰绾х粨鏋勬槸绗竴灞傦紝鍗砶ey鐨勪綅缃?
         let layerNum = 1;
+
+        // 检查是否是数组模式（第一列以@开头）
+        let isArrayMode = false;
+        let arrayKey = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            keys[0] = arrayKey; // 去掉@前缀
+        }
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -105,7 +139,7 @@ export default class Xlsx2Json extends BaseTranslateConfig {
 
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                if (_.isNil(key) || _.isEmpty(key)) {
+                if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                     continue;
                 }
                 let type = types[colIndex] || 'string';
@@ -126,7 +160,16 @@ export default class Xlsx2Json extends BaseTranslateConfig {
                 }
             }
 
-            tmp[_arrLine[layerNum - 1]] = subTmp;
+            if (isArrayMode) {
+                // 数组模式：按第一列的值分组，相同值的行放在数组中
+                let groupKey = _arrLine[layerNum - 1].toString();
+                if (!tmp[groupKey]) {
+                    tmp[groupKey] = [];
+                }
+                tmp[groupKey].push(subTmp);
+            } else {
+                tmp[_arrLine[layerNum - 1]] = subTmp;
+            }
         }
 
         return jsonOut;
@@ -136,43 +179,6 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         var _str_all = '';
         _str_all += JSON.stringify(data, null, 4);
         return writeFile(filePath + '.json', _str_all, { flag: 'w', encoding: 'utf8' });
-    }
-
-    private TransformType(type: any) {
-        if (typeof type !== 'string') return type;
-        let result;
-        switch (type) {
-            case 'int':
-            case 'Int':
-                result = 'int';
-                break;
-            case 'float':
-            case 'Float':
-                result = 'float';
-                break;
-            case 'bool':
-            case 'Bool':
-            case 'boolen':
-            case 'Boolen':
-                result = 'bool';
-                break;
-            case 'string':
-            case 'String':
-                result = 'string';
-                break;
-            case 'json':
-            case 'Json':
-                result = 'JSONObject';
-                break;
-            default:
-                if (type.includes('serialize')) {
-                    result = undefined;
-                } else {
-                    result = type;
-                }
-                break;
-        }
-        return result;
     }
 
     private _TransformBasicsValue(type: string, data: any) {
@@ -247,3 +253,4 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         return result;
     }
 }
+

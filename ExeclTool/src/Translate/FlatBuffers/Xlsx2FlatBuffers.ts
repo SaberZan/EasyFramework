@@ -1,4 +1,5 @@
-﻿import xlsx from 'node-xlsx';
+import xlsx from 'node-xlsx';
+import DataParser from '../../DataParser';
 import path from 'path';
 import fs from 'fs';
 import { mkdir, readdir, writeFile } from 'fs/promises';
@@ -43,34 +44,36 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         if (this.isDir) {
             let files = await readdir(pathStr);
             for (let i in files) {
-                let data = xlsx.parse(path.join(pathStr, files[i]));
+                let data = DataParser.parse(path.join(pathStr, files[i]), params.format);
                 for (let j = 0; j < data.length; ++j) {
                     this.xlsxData[data[j].name] = data[j].data;
                 }
+            }
+            for (let i in files) {
                 let fileName = files[i].replace(path.extname(files[i]), '');
                 await this.TransferTableJson(fileName);
-                if (i == '0') {
-                    await this.TransferTableFbs();
-                    if(this.toCode == "csharp") { 
-                        await this.TransferTableCs();
-                    }
-                    await this.GenCode(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), this.toCode, this.outputPathCodeStr);
-                }
+            }
+            await this.TransferTableFbs();
+            await this.GenCode(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), this.toCode, this.outputPathCodeStr);
+            for (let i in files) {
+                let fileName = files[i].replace(path.extname(files[i]), '');
                 await this.GenBin(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), path.join(this.outputPathJsonStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + fileName + '.json'), path.join(this.outputPathBinStr, (this.merge ? this.mergeName : this.translateSheets[0][1])));
             }
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += '.xlsx';
-            parsedPath.ext = '.xlsx';
-            let data = xlsx.parse(path.format(parsedPath));
+            // First try the path as-is (handles CSV directories without .xlsx extension)
+            let data = DataParser.parse(pathStr, params.format);
+            // If no data, try with .xlsx extension (legacy xlsx files)
+            if (data.length === 0) {
+                let parsedPath = path.parse(pathStr);
+                parsedPath.base += '.xlsx';
+                parsedPath.ext = '.xlsx';
+                data = DataParser.parse(path.format(parsedPath), params.format);
+            }
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
             await this.TransferTableJson();
             await this.TransferTableFbs();
-            if(this.toCode == "csharp") { 
-                await this.TransferTableCs();
-            }
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
@@ -87,7 +90,10 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
-                all[translateName] = jsonData;
+                // Use lowercase field name to match FBS field names
+                let fieldName = translateName.charAt(0).toLowerCase() + translateName.slice(1);
+                // Wrap in records to match _Array table structure
+                all[fieldName] = { records: jsonData };
             }
             await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
         } else {
@@ -102,51 +108,47 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
     }
 
     private async TransferTableFbs(): Promise<void> {
-        let fbsContent = FbsDefine.packageCommonImport + FbsDefine.namespaceStart;
-
-
         if (this.merge) {
+            let fbsContent = FbsDefine.packageCommonImport + FbsDefine.namespaceStart;
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
             }
+            // Generate merge wrapper table
+            fbsContent += FbsDefine.tableStart.replace('{0}', this.mergeName);
+            for (let i = 0; i < this.translateSheets.length; ++i) {
+                let sheetName = this.translateSheets[i][0];
+                let translateName = this.translateSheets[i][1];
+                let data = this.xlsxData[sheetName];
+                let rootType = translateName + '_Array';
+                if (data && data.length > 0 && data[0] && data[0].length > 0 && typeof data[0][0] === 'string' && data[0][0].startsWith('@')) {
+                    let atFieldName = data[0][0].substring(1);
+                    let subTableName = this.getSubTableName(translateName, atFieldName);
+                    rootType = subTableName + '_Array';
+                }
+                // Use lowercase field name to avoid conflict with table names
+                let fieldName = translateName.charAt(0).toLowerCase() + translateName.slice(1);
+                fbsContent += FbsDefine.fieldStr.replace('{0}', fieldName).replace('{1}', rootType);
+            }
+            fbsContent += FbsDefine.tableEnd;
             fbsContent += FbsDefine.rootType.replace('{0}', this.mergeName);
+            fs.writeFileSync(path.join(this.outputPathFbsStr, this.mergeName + '.fbs'), fbsContent, 'utf8');
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
+                let fbsContent = FbsDefine.packageCommonImport + FbsDefine.namespaceStart;
                 fbsContent += this.CreateFbs(this.xlsxData[sheetName], translateName);
-                fbsContent += FbsDefine.rootType.replace('{0}', translateName + '_Array');
-            }
-        }
-
-        fs.writeFileSync(path.join(this.outputPathFbsStr, (this.merge ? this.mergeName : this.translateSheets[0][1]) + '.fbs'), fbsContent, 'utf8');
-    }
-
-    private async TransferTableCs(): Promise<void> {
-        if (this.merge) {
-            let content = '';
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                content += this.CreateCs(this.xlsxData[sheetName], translateName, this.mergeName);
-            }
-            content += Utils.FormatStr(FbsDefine.csNotes, this.mergeName);
-            if (!this.isDir) content += Utils.FormatStr(FbsDefine.csConfigHead, this.mergeName);
-            content += Utils.FormatStr(FbsDefine.csClassDictionaryStart, this.mergeName, 'int', this.mergeName);
-            content += Utils.FormatStr(FbsDefine.csPrivateStr, 'int', 'id');
-            content += Utils.FormatStr(FbsDefine.csPublicStr, 'int', 'id');
-            content += FbsDefine.csClassEnd;
-            this.SaveCsToFile(content, path.join(this.outputPathCsStr, this.mergeName));
-        } else {
-            for (let i = 0; i < this.translateSheets.length; ++i) {
-                let sheetName = this.translateSheets[i][0];
-                let translateName = this.translateSheets[i][1];
-                let content = Utils.FormatStr(FbsDefine.csNotes, translateName);
-                content += Utils.FormatStr(FbsDefine.csConfigHead, translateName);
-                content += this.CreateCs(this.xlsxData[sheetName], translateName, '');
-                this.SaveCsToFile(content, path.join(this.outputPathCsStr, translateName));
+                let data = this.xlsxData[sheetName];
+                let rootType = translateName + '_Array';
+                if (data && data.length > 0 && data[0] && data[0].length > 0 && typeof data[0][0] === 'string' && data[0][0].startsWith('@')) {
+                    let atFieldName = data[0][0].substring(1);
+                    let subTableName = this.getSubTableName(translateName, atFieldName);
+                    rootType = subTableName + '_Array';
+                }
+                fbsContent += FbsDefine.rootType.replace('{0}', rootType);
+                fs.writeFileSync(path.join(this.outputPathFbsStr, translateName + '.fbs'), fbsContent, 'utf8');
             }
         }
     }
@@ -159,8 +161,19 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             return jsonOut;
         }
 
-        let keys = data[0] || [];
-        let types = data[1] || [];
+        let dataArr = data;
+        let keys = (dataArr[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
+
+        // Check if first key has @ prefix for array mode grouping
+        let isArrayMode = false;
+        let atFieldLower = '';
+        let firstKey = keys.length > 0 ? keys[0] : '';
+        if (typeof firstKey === 'string' && firstKey.startsWith('@')) {
+            isArrayMode = true;
+            atFieldLower = Utils.GetFristUpperAndLowerStr(firstKey.substring(1))[1];
+        }
 
         for (let rowIndex = 3; rowIndex < data.length; ++rowIndex) {
             let _arrLine = data[rowIndex];
@@ -171,7 +184,11 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let key = keys[colIndex];
                 let type = types[colIndex];
                 let value = _arrLine[colIndex];
-                if (_.isNil(key) || _.isEmpty(key) || typeof value === 'undefined') continue;
+                // Strip @ prefix for flatc compatibility
+                if (typeof key === 'string' && key.startsWith('@')) {
+                    key = key.substring(1);
+                }
+                if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#') || typeof value === 'undefined') continue;
 
                 let fieldPath = this.structHelper.ResolveFieldPath(key);
                 if (fieldPath.length > 1) {
@@ -192,6 +209,32 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             }
 
             jsonOut.push(subTmp);
+        }
+
+        // If @ mode, group rows by the first field value
+        if (isArrayMode) {
+            let groups: { [key: string]: any[] } = {};
+            for (let item of jsonOut) {
+                let groupVal = item[atFieldLower];
+                let groupStr = String(groupVal);
+                if (!groups[groupStr]) {
+                    groups[groupStr] = [];
+                }
+                groups[groupStr].push(item);
+            }
+            let result: any[] = [];
+            let keysOrder = Object.keys(groups);
+            let allNumbers = keysOrder.every(k => !isNaN(Number(k)));
+            if (allNumbers) {
+                keysOrder.sort((a, b) => Number(a) - Number(b));
+            } else {
+                keysOrder.sort();
+            }
+            for (let gk of keysOrder) {
+                let keyVal = allNumbers ? Number(gk) : gk;
+                result.push({ key: keyVal, records: groups[gk] });
+            }
+            return result;
         }
 
         return jsonOut;
@@ -221,8 +264,24 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             return '';
         }
 
-        let keys: string[] = data[0] || [];
-        let types: string[] = data[1] || [];
+        let keys: string[] = (data[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(data);
+        let types: string[] = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
+        
+        // Check @ mode before stripping
+        let isArrayMode = false;
+        let atFieldName = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith("@")) {
+            isArrayMode = true;
+            atFieldName = keys[0].substring(1);
+        }
+        
+        // Strip @ prefix from all keys for flatc compatibility
+        for (let i = 0; i < keys.length; ++i) {
+            if (keys[i] && keys[i].startsWith('@')) {
+                keys[i] = keys[i].substring(1);
+            }
+        }
 
         // Group nested fields by their top-level parent name.
         // e.g. 'attrs[0].value1' -> parentName='attrs', subField='value1'
@@ -242,7 +301,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
             let key = keys[colIndex];
             let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key)) continue;
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) continue;
 
             let fieldInfo = this.structHelper.AnalyzeField(key, type);
 
@@ -294,10 +353,12 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
         for (let field of simpleFields) {
             let fbsType = this.TransformType(field.type);
+            // Use lowercase-first letter to match CreateJson output (flatc is case-sensitive)
+            let fieldNameLower = Utils.GetFristUpperAndLowerStr(field.key)[1];
             if (this.structHelper.IsStructType(field.type)) {
-                content += FbsDefine.fieldStr.replace('{0}', field.key).replace('{1}', field.type);
+                content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', field.type);
             } else {
-                content += FbsDefine.fieldStr.replace('{0}', field.key).replace('{1}', fbsType);
+                content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', fbsType);
             }
         }
 
@@ -326,72 +387,27 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
 
         content += FbsDefine.tableEnd;
 
-        // 3. Generate wrapper table for flatc binary generation (array root type)
-        content += FbsDefine.tableStart.replace('{0}', className + '_Array');
-        content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
-        content += FbsDefine.tableEnd;
-
-        return content;
-    }
-
-    private CreateCs(data: any, className: string, mergeName: string): string {
-        if (!data || data.length < 2) {
-            console.warn('Invalid data for FlatBuffers CS', className);
-            return '';
+        // Generate wrapper table(s) based on @ mode
+        if (isArrayMode) {
+            let subTableName = this.getSubTableName(className, atFieldName);
+            let keyFbsType = types[0] ? this.TransformType(types[0]) : 'int';
+            // Generate group sub-table: ClassName_AtFieldName { key:type; records:[ClassName]; }
+            content += FbsDefine.tableStart.replace('{0}', subTableName);
+            content += FbsDefine.fieldStr.replace('{0}', 'key').replace('{1}', keyFbsType);
+            content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
+            content += FbsDefine.tableEnd;
+            
+            // Generate wrapper for the sub-table array
+            content += FbsDefine.tableStart.replace('{0}', subTableName + '_Array');
+            content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + subTableName + ']');
+            content += FbsDefine.tableEnd;
+        } else {
+            // Generate wrapper table for flatc binary generation (array root type)
+            content += FbsDefine.tableStart.replace('{0}', className + '_Array');
+            content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
+            content += FbsDefine.tableEnd;
         }
 
-        let keys = data[0] || [];
-        let types = data[1] || [];
-        let content = '';
-
-        if (mergeName !== className) {
-            content += Utils.FormatStr(FbsDefine.csNotes, className);
-        }
-        content += Utils.FormatStr(FbsDefine.csClassDictionaryStart, className, 'int', className);
-
-        let structFields: { [fieldName: string]: { typeName: string; isArray: boolean } } = {};
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key)) continue;
-
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let parentName = fieldInfo.name;
-                if (!structFields[parentName]) {
-                    let structName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
-                    let isArray = fieldInfo.isArray;
-                    let typeName = this.structHelper.IsStructType(structName)
-                        ? 'CfgSpace.' + structName
-                        : 'CfgSpace.' + className + '_' + structName;
-                    structFields[parentName] = { typeName, isArray };
-                }
-                continue;
-            }
-
-            let csType = this.TransformCsType(type);
-            let keyUpperLower = Utils.GetFristUpperAndLowerStr(key);
-            let keyUpper = keyUpperLower[0];
-            let keyLower = keyUpperLower[1];
-
-            content += Utils.FormatStr(FbsDefine.csPrivateStr, csType, keyLower);
-            content += Utils.FormatStr(FbsDefine.csPublicStr, csType, keyUpper, keyLower);
-        }
-
-        // Add struct field references
-        for (let fieldName in structFields) {
-            let info = structFields[fieldName];
-            let keyUpperLower = Utils.GetFristUpperAndLowerStr(fieldName);
-            let keyUpper = keyUpperLower[0];
-            let keyLower = keyUpperLower[1];
-            let fieldType = info.isArray ? info.typeName + "[]" : info.typeName;
-
-            content += Utils.FormatStr(FbsDefine.csPrivateStr, fieldType, keyLower);
-            content += Utils.FormatStr(FbsDefine.csPublicStr, fieldType, keyUpper, keyLower);
-        }
-
-        content += FbsDefine.csClassEnd;
         return content;
     }
 
@@ -483,6 +499,11 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
             return this.structHelper.TransformStructValue(type, data);
         }
 
+        // Ensure data is a string before calling string methods
+        if (typeof data !== 'string') {
+            data = String(data);
+        }
+
         let result;
         if (typeof data === 'string') {
             data = data.replace(/[\r\n]/g, '');
@@ -545,4 +566,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         });
     }
 }
+
+
+
+
+
 

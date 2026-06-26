@@ -20,10 +20,6 @@ export default class Xlsx2TsBefore extends BaseTranslateBefore {
         let enumHelper = new BaseTranslateEnum();
         await enumHelper.TranslateExcel(enumPath);
         //        // Generate TS enum files
-        let enumTsDir = path.join(outputPathStr, 'ts');
-        if (!fs.existsSync(enumTsDir)) {
-            await mkdir(enumTsDir, { recursive: true });
-        }
         for (let enumName in enumHelper.enumDefinitions) {
             let def = enumHelper.enumDefinitions[enumName];
             let tsContent = 'export enum ' + enumName +' {\n';
@@ -35,7 +31,7 @@ export default class Xlsx2TsBefore extends BaseTranslateBefore {
             if (parts.length > 0) tsContent += '\n';
             tsContent += '}\n';
             tsContent += 'export default ' + enumName + ';\n';
-            await writeFile(path.join(enumTsDir, enumName + '.ts'), tsContent, { flag: 'w', encoding: 'utf8' });
+            await writeFile(path.join(outputPathStr, enumName + '.ts'), tsContent, { flag: 'w', encoding: 'utf8' });
         }
         
     }

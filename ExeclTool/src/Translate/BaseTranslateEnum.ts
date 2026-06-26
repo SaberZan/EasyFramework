@@ -1,10 +1,11 @@
 import fs from "fs";
 import _ from "lodash";
 import xlsx from 'node-xlsx';
+import CsvParser from '../CsvParser';
 
 export interface EnumDefinition {
     name: string;
-    fields: {[key :string] : number};
+    fields: {[key :string] :number};
 }
 
 
@@ -13,19 +14,20 @@ export default class BaseTranslateEnum {
     public enumDefinitions: { [name: string]: EnumDefinition } = {};
     
     /**
-     * 
-     * @param pathStr 表的路径
-     * @param outputPathStr 输出路径
-     * @param translate 转换规则
-     * @param params 转换参数
+     * Parse enum definitions from Excel or CSV files
      */
     public async TranslateExcel(definePath: string) : Promise<void> {
-        if (!fs.existsSync(definePath)) {
-            console.warn('Struct define path not found:', definePath);
-            return;
+        let data: any[] = [];
+        
+        // Try CSV first, then fall back to xlsx
+        if (CsvParser.canParseAsCsv(definePath)) {
+            data = CsvParser.parse(definePath);
         }
-
-        let data = xlsx.parse(definePath);
+        
+        // If no CSV data found, try xlsx
+        if (data.length === 0 && fs.existsSync(definePath)) {
+            data = xlsx.parse(definePath);
+        }
 
         for (let sheet of data) {
             let enumName = sheet.name;
@@ -35,7 +37,7 @@ export default class BaseTranslateEnum {
                 continue;
             }
 
-            let fields: {[key :string] : number} = {};
+            let fields: {[key :string] :number} = {};
 
             for (let row = 1; row < sheetData.length; ++row) {
                 let fieldName = sheetData[row][0];

@@ -1,4 +1,5 @@
-import xlsx from 'node-xlsx';
+﻿import xlsx from 'node-xlsx';
+import DataParser from '../../DataParser';
 import path from 'path';
 import fs from "fs";
 import { mkdir, readdir, writeFile } from "fs/promises";
@@ -63,7 +64,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
             let files = fs.readdirSync(pathStr);
             for (let i in files) {
-                let data = xlsx.parse(path.join(pathStr, files[i]));
+                let data = DataParser.parse(path.join(pathStr, files[i]), params.format);
                 for (let i = 0; i < data.length; ++i) {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
@@ -83,7 +84,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             let parsedPath = path.parse(pathStr);
             parsedPath.base += ".xlsx";
             parsedPath.ext = ".xlsx";
-            let data = xlsx.parse(path.format(parsedPath));
+            let data = DataParser.parse(path.format(parsedPath), params.format);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -147,9 +148,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 protoContent += this.CreateProto(this.xlsxData[sheetName], translateName);
             }
             // When merging multiple sheets, the generated .proto must also contain a
-            // top‑level message named after the merge (e.g., Level) with fields for
+            // top鈥憀evel message named after the merge (e.g., Level) with fields for
             // each sheet's *Data type, and a corresponding wrapper (LevelData) so that
-            // the byte‑generation step can encode the data.
+            // the byte鈥慻eneration step can encode the data.
             protoContent += ProtoDefine.messageStart.replace("{0}", this.mergeName);
             let fieldIndex = 1;
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -203,13 +204,25 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
     private CreateProto(data: any, className: string): string {
         let dataArr = data;
         let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
+        
+        // 检测数组模式（第一列以@开头）
+        let isArrayMode = false;
+        let arrayKey = '';
+        let arrayKeyType = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            arrayKeyType = types[0] || 'int';
+            keys[0] = arrayKey;
+        }
         let nestedMap: { [parent: string]: { fields: { [name: string]: string }; isArray: boolean; structName: string } } = {};
         let simpleKeys: { key: string; type: string }[] = [];
         for (let i = 0; i < keys.length; ++i) {
             let key = keys[i];
             let type = types[i];
-            if (_.isNil(key) || _.isEmpty(key)) continue;
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) continue;
             let fieldInfo = this.structHelper.AnalyzeField(key, type);
             if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
                 let parentName = fieldInfo.name;
@@ -260,10 +273,21 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             fi++;
         }
         content += ProtoDefine.messageEnd;
-        // Add wrapper message XXXData { repeated XXX data = 1; }
-        content += ProtoDefine.messageStart.replace("{0}", className + "Data");
-        content += ProtoDefine.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
-        content += ProtoDefine.messageEnd;
+        if (isArrayMode) {
+            let groupMsgName = className + arrayKey;
+            content += ProtoDefine.messageStart.replace("{0}", groupMsgName);
+            content += ProtoDefine.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
+            content += ProtoDefine.messageEnd;
+            content += ProtoDefine.messageStart.replace("{0}", className + "Data");
+            let mapType = "map<" + this.TransformType(arrayKeyType) + "," + groupMsgName + ">";
+            content += ProtoDefine.fieldStr.replace("{0}", mapType).replace("{1}", "data").replace("{2}", "1");
+            content += ProtoDefine.messageEnd;
+        } else {
+            // Add wrapper message XXXData { repeated XXX data = 1; }
+            content += ProtoDefine.messageStart.replace("{0}", className + "Data");
+            content += ProtoDefine.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
+            content += ProtoDefine.messageEnd;
+        }
         return content;
     }
 
@@ -276,16 +300,26 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
-        let types = dataArr[1] || [];
+        let keys = dataArr[0] ? dataArr[0].slice() : []; // 创建副本，避免修改共享数据
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
         // Default layerNum: first data layer may contain nested fields
         let layerNum = 1;
 
+        // 检查是否是数组模式（第一列以@开头）
+        let isArrayMode = false;
+        let arrayKey = '';
+        if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            keys[0] = arrayKey; // 去掉@前缀
+        }
+
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
 
-            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] == '') {
+            if (_.isNil(_arrLine) || _.isNil(_arrLine[0]) || _arrLine[0] === '') {
                 continue;
             }
 
@@ -301,7 +335,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
             for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
                 let key = keys[colIndex];
-                if (_.isNil(key) || _.isEmpty(key)) {
+                if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
                     continue;
                 }
                 let type = types[colIndex] || 'string';
@@ -328,7 +362,16 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 }
             }
 
-            tmp[_arrLine[layerNum - 1]] = subTmp;
+            if (isArrayMode) {
+                // 数组模式：按第一列的值分组，相同值的行放在数组中
+                let groupKey = _arrLine[layerNum - 1].toString();
+                if (!(groupKey in tmp)) {
+                    tmp[groupKey] = [];
+                }
+                tmp[groupKey].push(subTmp);
+            } else {
+                tmp[_arrLine[layerNum - 1]] = subTmp;
+            }
         }
 
         return jsonOut;
@@ -581,11 +624,37 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let jsonData = JSON.parse(jsonStr);
         // Build proto text for wrapper XXXData message containing all records
         let dataContent = "";
-        for (let key in jsonData) {
-            let record = jsonData[key];
-            dataContent += "data {\n";
-            dataContent += this.JsonToProtoText(record);
-            dataContent += "}\n";
+        // 检测数组模式：JSON值是否为数组
+        let firstValue = Object.values(jsonData)[0];
+        let isArrayMode = Array.isArray(firstValue);
+        if (isArrayMode) {
+            // 数组模式：map<key, group> 结构，每个key对应一个value包含repeated data
+            for (let key in jsonData) {
+                let records = jsonData[key];
+                dataContent += "data {\n";
+                dataContent += `  key: ${key}\n`;
+                dataContent += "  value {\n";
+                for (let record of records) {
+                    dataContent += "    data {\n";
+                    let textLines = this.JsonToProtoText(record).split("\n");
+                    for (let line of textLines) {
+                        if (line.trim()) {
+                            dataContent += "      " + line + "\n";
+                        }
+                    }
+                    dataContent += "    }\n";
+                }
+                dataContent += "  }\n";
+                dataContent += "}\n";
+            }
+        } else {
+            // 普通模式：repeated 结构
+            for (let key in jsonData) {
+                let record = jsonData[key];
+                dataContent += "data {\n";
+                dataContent += this.JsonToProtoText(record);
+                dataContent += "}\n";
+            }
         }
         if (dataContent.length > 0) {
             let txtPath = bytesPath + ".txt";
@@ -609,3 +678,5 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         }
     }
 }
+
+

@@ -1,4 +1,5 @@
 {
+    "format" : "xlsx",
     "target": "ProtoBuffers",
     "params": {
         "toCode": "csharp"
