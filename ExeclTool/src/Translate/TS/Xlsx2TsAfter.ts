@@ -57,6 +57,7 @@ export default class Xlsx2TsAfter extends BaseTranslateAfter {
         _contents = _contents.concat(_format_before_this_module);
         files_ts.forEach(function(item){
             let _basename: string = path.basename(item,".ts");
+            if (_basename.endsWith("Class")) { return; }
             _contents.push(_format_ts.replace("$1",_basename).replace("$1",_basename))
         });
         _contents.push("\n");

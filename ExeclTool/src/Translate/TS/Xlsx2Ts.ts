@@ -36,6 +36,9 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                 }
                 await this.TransferTable(files[i].replace(path.extname(files[i]), ''));
             }
+            if (this.merge) {
+                await this.SaveClassMergeToFile(path.join(this.outputTsPathStr, this.mergeName + 'Class'));
+            }
         } else {
             let data = DataParser.parseWithOptionalExtension(pathStr, params.format);
             for (let i = 0; i < data.length; ++i) {
@@ -55,12 +58,16 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                 all[translateName] = jsonData;
             }
             await this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + file));
+            if (!this.isDir) {
+                await this.SaveClassMergeToFile(path.join(this.outputTsPathStr, this.mergeName + file + 'Class'));
+            }
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 let jsonData = this.CreateJson(this.xlsxData[sheetName]);
                 await this.SaveTsToFile(jsonData, path.join(this.outputTsPathStr, translateName));
+                await this.SaveClassToFile(this.xlsxData[sheetName], translateName, path.join(this.outputTsPathStr, translateName + 'Class'));
             }
         }
     }
@@ -152,6 +159,248 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         _str_all += JSON.stringify(data, null, 4);
         _str_all += ';';
         await writeFile(filePath + '.ts', _str_all, { flag: 'w', encoding: 'utf8' });
+    }
+
+    private CollectNestedFields(data: any): { [parentField: string]: { name: string; type: string }[] } {
+        let nestedFields: { [parentField: string]: { name: string; type: string }[] } = {};
+        if (!data || data.length < 2) {
+            return nestedFields;
+        }
+
+        let keys = data[0] || [];
+        let typeRowIndex = this.FindTypeRowIndex(data);
+        let types = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
+                continue;
+            }
+
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let parentField = fieldInfo.name;
+                if (!nestedFields[parentField]) {
+                    nestedFields[parentField] = [];
+                }
+                let actualFieldName = fieldInfo.fieldPath.filter((p: any) => isNaN(parseInt(p.toString()))).join('_');
+                if (actualFieldName) {
+                    nestedFields[parentField].push({
+                        name: actualFieldName,
+                        type: type
+                    });
+                }
+            }
+        }
+
+        return nestedFields;
+    }
+
+    private DeduplicateFields(fields: { name: string; type: string }[]): { name: string; type: string }[] {
+        let seen: { [name: string]: boolean } = {};
+        let result: { name: string; type: string }[] = [];
+        for (let field of fields) {
+            if (!seen[field.name]) {
+                seen[field.name] = true;
+                result.push(field);
+            }
+        }
+        return result;
+    }
+
+    private TransformTsType(type: any): string {
+        if (typeof type !== 'string') return 'any';
+        let baseType = type.replace('[]', '').replace('[,]', '');
+        let tsBase: string;
+        switch (baseType) {
+            case 'int':
+            case 'Int':
+            case 'float':
+            case 'Float':
+                tsBase = 'number';
+                break;
+            case 'bool':
+            case 'Bool':
+            case 'boolen':
+            case 'Boolen':
+            case 'boolean':
+            case 'Boolean':
+                tsBase = 'boolean';
+                break;
+            case 'string':
+            case 'String':
+                tsBase = 'string';
+                break;
+            case 'json':
+            case 'Json':
+                tsBase = 'any';
+                break;
+            default:
+                tsBase = baseType;
+                break;
+        }
+        if (type.includes('[,]')) return tsBase + '[][]';
+        if (type.includes('[]')) return tsBase + '[]';
+        return tsBase;
+    }
+
+    private DefaultValueForType(tsType: string): string {
+        if (tsType.endsWith('[]')) return '[]';
+        switch (tsType) {
+            case 'number': return '0';
+            case 'string': return '""';
+            case 'boolean': return 'false';
+            case 'any': return 'null';
+            default:
+                if (this.enumHelper && this.enumHelper.enumDefinitions && this.enumHelper.enumDefinitions[tsType]) {
+                    return '0 as ' + tsType;
+                }
+                return 'new ' + tsType + '()';
+        }
+    }
+
+    private BuildClassContent(className: string, fields: { name: string; type: string }[], imports?: Set<string>): string {
+        let content = 'export class ' + className + ' {\n';
+        for (let field of fields) {
+            let keyLower = Utils.GetFristUpperAndLowerStr(field.name)[1];
+            let tsType = this.TransformTsType(field.type);
+            let defVal = this.DefaultValueForType(tsType);
+            if (imports) { this.CollectImport(tsType, imports); }
+            content += '    public ' + keyLower + ' : ' + tsType + ' = ' + defVal + ';\n';
+        }
+        content += '}\n';
+        return content;
+    }
+
+    private CollectImport(tsType: string, imports: Set<string>): void {
+        let baseType = tsType.replace(/\[\]/g, '');
+        if (baseType === 'number' || baseType === 'string' || baseType === 'boolean' || baseType === 'any') return;
+        if (this.structHelper.IsStructType(baseType)) {
+            imports.add(baseType);
+        } else if (this.enumHelper && this.enumHelper.enumDefinitions && this.enumHelper.enumDefinitions[baseType]) {
+            imports.add(baseType);
+        }
+    }
+
+    private BuildImportStatements(imports: Set<string>): string {
+        let lines: string[] = [];
+        imports.forEach((name) => {
+            if (this.structHelper.IsStructType(name)) {
+                lines.push("import { " + name + " } from './" + name + "Class';");
+            } else if (this.enumHelper && this.enumHelper.enumDefinitions && this.enumHelper.enumDefinitions[name]) {
+                lines.push("import { " + name + " } from './" + name + "';");
+            }
+        });
+        return lines.length > 0 ? lines.join('\n') + '\n\n' : '';
+    }
+
+    private BuildRecordClass(data: any, className: string, nestedFieldDefs: { [parentField: string]: { name: string; type: string }[] }, imports?: Set<string>): string {
+        if (!data || data.length < 2) {
+            return '';
+        }
+
+        let dataArr = data;
+        let keys = (dataArr[0] || []).slice();
+        let typeRowIndex = this.FindTypeRowIndex(dataArr);
+        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
+
+        if (keys.length === 0) {
+            return '';
+        }
+
+        let firstKey = keys[0];
+        let isArrayMode = false;
+        if (typeof firstKey === 'string' && firstKey.startsWith('@')) {
+            isArrayMode = true;
+            firstKey = firstKey.substring(1);
+            keys[0] = firstKey;
+        }
+
+        let content = '';
+
+        // Nested struct classes: {ClassName}_{FieldName}
+        for (let fieldName in nestedFieldDefs) {
+            let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+            if (this.structHelper.IsStructType(capitalized)) { continue; }
+            let structClassName = className + '_' + capitalized;
+            let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
+            content += this.BuildClassContent(structClassName, fields, imports);
+            content += '\n';
+        }
+
+        content += 'export class ' + className + ' {\n';
+
+        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
+                continue;
+            }
+
+            let fieldInfo = this.structHelper.AnalyzeField(key, type);
+            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
+                let fieldName = fieldInfo.name;
+                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                let structClassName = className + '_' + capitalized;
+                if (fieldInfo.structName && this.structHelper.IsStructType(fieldInfo.structName)) {
+                    structClassName = fieldInfo.structName;
+                    if (imports) { imports.add(structClassName); }
+                }
+                if (!structFields[fieldName]) {
+                    structFields[fieldName] = {
+                        type: structClassName,
+                        isArray: fieldInfo.isArray
+                    };
+                }
+                continue;
+            }
+
+            let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
+            let tsType = this.TransformTsType(type);
+            let defVal = this.DefaultValueForType(tsType);
+            if (imports) { this.CollectImport(tsType, imports); }
+            content += '    public ' + keyLower + ' : ' + tsType + ' = ' + defVal + ';\n';
+        }
+
+        for (let fieldName in structFields) {
+            let keyLower = Utils.GetFristUpperAndLowerStr(fieldName)[1];
+            let info = structFields[fieldName];
+            let tsType = info.isArray ? info.type + '[]' : info.type;
+            let defVal = info.isArray ? '[]' : ('new ' + info.type + '()');
+            content += '    public ' + keyLower + ' : ' + tsType + ' = ' + defVal + ';\n';
+        }
+
+        content += '}\n';
+        return content;
+    }
+
+    private async SaveClassToFile(data: any, className: string, filePath: string): Promise<void> {
+        let nestedFields = this.CollectNestedFields(data);
+        let imports = new Set<string>();
+        let content = this.BuildRecordClass(data, className, nestedFields, imports);
+        if (!content) return;
+        let importStr = this.BuildImportStatements(imports);
+        await writeFile(filePath + '.ts', importStr + content, { flag: 'w', encoding: 'utf8' });
+    }
+
+    private async SaveClassMergeToFile(filePath: string): Promise<void> {
+        let content = '';
+        let imports = new Set<string>();
+        for (let i = 0; i < this.translateSheets.length; ++i) {
+            let sheetName = this.translateSheets[i][0];
+            let translateName = this.translateSheets[i][1];
+            let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
+            let recordContent = this.BuildRecordClass(this.xlsxData[sheetName], translateName, nestedFields, imports);
+            if (recordContent) {
+                content += recordContent + '\n';
+            }
+        }
+        if (!content) return;
+        let importStr = this.BuildImportStatements(imports);
+        await writeFile(filePath + '.ts', importStr + content, { flag: 'w', encoding: 'utf8' });
     }
 
     // Transform type to corresponding field value type
