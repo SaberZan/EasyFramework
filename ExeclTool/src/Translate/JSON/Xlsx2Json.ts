@@ -231,21 +231,41 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         if (type.includes('[]')) {
             type = type.replace('[]', '');
             result = [];
-            let _datas = data.substring(1, data.length - 1).split(',');
-            for (let i = 0; i < _datas.length; ++i) {
-                result.push(this._TransformBasicsValue(type, _datas[i]));
+            if(data.length > 2) {
+                let splitChar = ',';
+                if(data.includes('|')) {
+                    splitChar = '|'
+                }
+                if(data.startsWith("[")) {
+                    data = data.substring(1,data.length-1)
+                }
+                let _datas = data.split(splitChar);
+                for (let i = 0; i < _datas.length; ++i) {
+                    result.push(this._TransformBasicsValue(type, _datas[i]));
+                }
             }
         } else if (type.includes('[,]')) {
             type = type.replace('[,]', '');
             result = [];
-            let datas = data.substring(2, data.length - 2).split('],[');
-            for (let i = 0; i < datas.length; ++i) {
-                let tmpResult = [];
-                let _datas = datas[i].split(',');
-                for (let j = 0; j < _datas.length; ++j) {
-                    tmpResult.push(this._TransformBasicsValue(type, _datas[j]));
+            if(data.length > 4) {
+                let splitChar = ',';
+                if(data.includes('|')) {
+                    splitChar = '|'
                 }
-                result.push(tmpResult);
+                if(data.startsWith("[[")) {
+                    data = data.substring(2,data.length-2);
+                } else if(data.startsWith("[")) {
+                    data = data.substring(1,data.length-1)
+                }
+                let datas = data.split(`]${splitChar}[`);
+                for (let i = 0; i < datas.length; ++i) {
+                    let tmpResult = []
+                    let _datas = datas[i].split(splitChar);
+                    for (let j = 0; j < _datas.length; ++j) {
+                        tmpResult.push(this._TransformBasicsValue(type, _datas[j]));
+                    }
+                    result.push(tmpResult);
+                }
             }
         } else {
             result = this._TransformBasicsValue(type, data);

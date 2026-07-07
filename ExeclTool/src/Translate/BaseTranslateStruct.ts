@@ -149,6 +149,21 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
         return null;
     }
     /**
+     * Parse "propName=StructName.field" format (no index), e.g. "feed_cost=ItemData.itemId"
+     * Represents a single (non-array) struct field bound to a known struct type.
+     */
+    public ParseNamedStructFieldInfo(key: string): { propertyName: string; structName: string; field: string } | null {
+        let match = key.match(/^(\w+)=(\w+)\.(\w+)$/);
+        if (match) {
+            return {
+                propertyName: match[1],
+                structName: match[2],
+                field: match[3]
+            };
+        }
+        return null;
+    }
+    /**
      * Check if key is an "into=..." struct field
      */
     public IsIntoField(key: string): boolean {
@@ -161,8 +176,14 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
         return /^\w+\[\d+\]=\w+\.\w+$/.test(key);
     }
     /**
+     * Check if key is an "X=Y.Z" named struct field (no index)
+     */
+    public IsNamedStructField(key: string): boolean {
+        return /^\w+=\w+\.\w+$/.test(key);
+    }
+    /**
      * Resolve a column header key to a field path for data output.
-     * Handles all formats: "into=X.Y", "X[N]=Y.Z", and the existing "X.Y" / "X[N].Y".
+     * Handles all formats: "into=X.Y", "X[N]=Y.Z", "X=Y.Z" and the existing "X.Y" / "X[N].Y".
      */
     public ResolveFieldPath(key: string): (string | number)[] {
         let intoInfo = this.ParseIntoFieldInfo(key);
@@ -172,6 +193,10 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
         let indexedInfo = this.ParseIndexedStructFieldInfo(key);
         if (indexedInfo) {
             return [indexedInfo.propertyName, indexedInfo.index, indexedInfo.field];
+        }
+        let namedInfo = this.ParseNamedStructFieldInfo(key);
+        if (namedInfo) {
+            return [namedInfo.propertyName, namedInfo.field];
         }
         return this.ParseFieldPath(key);
     }
@@ -348,6 +373,15 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             result.structName = indexedInfo.structName;
             result.fieldPath = [indexedInfo.field];
             result.isArray = true;
+            return result;
+        }
+        let namedInfo = this.ParseNamedStructFieldInfo(key);
+        if (namedInfo) {
+            result.name = namedInfo.propertyName;
+            result.isStruct = true;
+            result.structName = namedInfo.structName;
+            result.fieldPath = [namedInfo.field];
+            result.isArray = false;
             return result;
         }
         if (key.includes('.')) {
