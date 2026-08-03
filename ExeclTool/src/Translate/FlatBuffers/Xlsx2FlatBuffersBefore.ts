@@ -64,12 +64,29 @@ export default class Xlsx2FlatBuffersBefore extends BaseTranslateBefore {
             let def = structHelper.structDefinitions[structName];
             fbsContent += 'table ' + structName + ' {\n';
             for (let field of def.fields) {
-                fbsContent += '    ' + field.name + ' : ' + field.type + ';\n';
+                fbsContent += '    ' + field.name + ' : ' + this.TransformFbsType(field.type) + ';\n';
             }
             fbsContent += '}\n\n';
         }
 
         await this.SaveFbsToFile(fbsContent, path.join(this.outputPathFbsStr, "Common"));
+    }
+
+    /**
+     * 把表里的类型转换成 fbs 类型
+     */
+    private TransformFbsType(type: string): string {
+        switch (type) {
+            case 'int': case 'Int': return 'int';
+            case 'float': case 'Float': return 'float';
+            case 'bool': case 'Bool': case 'boolen': case 'Boolen': return 'bool';
+            case 'string': case 'String': return 'string';
+            default:
+                if (typeof type === 'string' && type.includes('[]')) {
+                    return '[' + this.TransformFbsType(type.replace('[]', '')) + ']';
+                }
+                return type;
+        }
     }
 
     private async SaveFbsToFile(data: any, filePath: string) : Promise<void> {

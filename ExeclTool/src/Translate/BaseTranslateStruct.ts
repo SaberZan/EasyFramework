@@ -18,38 +18,56 @@ export interface StructDefinition {
 }
 
 export interface FieldInfo {
+    /** 输出字段名，取等号左边（去掉 [N] 索引） */
     name: string;
     isStruct: boolean;
+    /** 结构名，取等号右边 */
+    structName: string;
+    /** 是否数组（带 [N] 索引，或内联类型带 [] 后缀） */
+    isArray: boolean;
+    /** 子字段路径，取类型行 */
+    fieldPath: string[];
+    /** 数组索引，无索引为 -1 */
+    index: number;
+    /** 内联结构字段定义（类型行写成 {a:int,b:string} 时才有） */
+    inlineFields: StructField[];
+    /** 内联结构类型是否带 [] 后缀（整格是一组结构值） */
+    inlineIsArray: boolean;
+    /** 该列自身的值类型（普通字段或单个子字段） */
+    valueType: string;
+}
+
+/** 结构属性：表头等号左边的属性名，及其引用的结构与数组信息 */
+export interface StructProperty {
+    propertyName: string;
     structName: string;
     isArray: boolean;
-    fieldPath: string[];
 }
-export interface IntoFieldInfo {
-    structName: string;
-    field: string;
-}
-export interface IndexedStructFieldInfo {
+
+/** 表头解析结果：等号左边的属性名与等号右边的结构名 */
+export interface StructHeaderInfo {
+    /** 输出字段名，等号左边（已去掉 [N]） */
     propertyName: string;
-    index: number;
+    /** 结构名，等号右边 */
     structName: string;
-    field: string;
+    /** 数组索引，无索引为 -1 */
+    index: number;
 }
 
 export default class BaseTranslateStruct extends BaseTranslateConfig {
     public structDefinitions: { [name: string]: StructDefinition } = {};
 
     /**
-     * Parse struct definitions from the specified Excel or CSV file
+     * 解析 define 目录下的结构定义（Excel 或 CSV）
      */
     public async ParseStructDefinitions(definePath: string): Promise<void> {
         let data: any[] = [];
-        
-        // Try CSV first, then fall back to xlsx
+
+        // 先尝试 CSV，再回退到 xlsx
         if (CsvParser.canParseAsCsv(definePath)) {
             data = CsvParser.parse(definePath);
         }
-        
-        // If no CSV data found, try xlsx
+
         if (data.length === 0 && fs.existsSync(definePath)) {
             data = xlsx.parse(definePath);
         }
@@ -88,7 +106,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * Check if the given type is a struct type
+     * 判断类型是否是 Struct.xlsx 中定义的结构类型
      */
     public IsStructType(type: string): boolean {
         if (typeof type !== 'string') return false;
@@ -97,112 +115,217 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * Check if the key represents an array field, e.g. items[0].name
+     * 解析表头中的结构声明，格式为 `属性名=结构名` 或 `属性名[索引]=结构名`
+     * 例如 `into=attr`、`info[0]=StructTest`
      */
-    public IsArrayField(key: string): boolean {
-        return key.includes('[') && key.includes(']');
+    public ParseStructHeader(key: string): StructHeaderInfo | null {
+        if (typeof key !== 'string') return null;
+        let match = key.match(/^(\w+)(?:\[(\d+)\])?=(\w+)$/);
+        if (!match) return null;
+        return {
+            propertyName: match[1],
+            index: match[2] !== undefined ? parseInt(match[2]) : -1,
+            structName: match[3]
+        };
     }
 
     /**
-     * e.g. "items[0].name" -> { fieldName: "items", index: 0, subField: "name" }
-     * e.g. "items[0].name" -> { fieldName: "items", index: 0, subField: "name" }
+     * 判断表头是否是结构字段声明
      */
-    public ParseArrayField(key: string): { fieldName: string; index: number; subField?: string } | null {
-        let arrayMatch = key.match(/^(.+?)\[(\d+)\](?:\.(.+))?$/);
-        if (arrayMatch) {
-            return {
-                fieldName: arrayMatch[1],
-                index: parseInt(arrayMatch[2]),
-                subField: arrayMatch[3]
-            };
-        }
-        return null;
-    }
-    /**
-     * Parse "into=structLower.field" format, e.g. "into=attr.name"
-     * Returns the struct name (capitalized) and the sub-field name, or null if not matching.
-     */
-    public ParseIntoFieldInfo(key: string): IntoFieldInfo | null {
-        let match = key.match(/^into=(\w+)\.(\w+)$/);
-        if (match) {
-            return {
-                structName: match[1].charAt(0).toUpperCase() + match[1].slice(1),
-                field: match[2]
-            };
-        }
-        return null;
-    }
-    /**
-     * Parse "propName[index]=StructName.field" format, e.g. "info[0]=StructTest.value1"
-     * Returns the property name, index, struct name, and field, or null if not matching.
-     */
-    public ParseIndexedStructFieldInfo(key: string): IndexedStructFieldInfo | null {
-        let match = key.match(/^(\w+)\[(\d+)\]=(\w+)\.(\w+)$/);
-        if (match) {
-            return {
-                propertyName: match[1],
-                index: parseInt(match[2]),
-                structName: match[3],
-                field: match[4]
-            };
-        }
-        return null;
-    }
-    /**
-     * Parse "propName=StructName.field" format (no index), e.g. "feed_cost=ItemData.itemId"
-     * Represents a single (non-array) struct field bound to a known struct type.
-     */
-    public ParseNamedStructFieldInfo(key: string): { propertyName: string; structName: string; field: string } | null {
-        let match = key.match(/^(\w+)=(\w+)\.(\w+)$/);
-        if (match) {
-            return {
-                propertyName: match[1],
-                structName: match[2],
-                field: match[3]
-            };
-        }
-        return null;
-    }
-    /**
-     * Check if key is an "into=..." struct field
-     */
-    public IsIntoField(key: string): boolean {
-        return /^into=\w+\.\w+$/.test(key);
-    }
-    /**
-     * Check if key is an "X[N]=Y.Z" indexed struct field
-     */
-    public IsIndexedStructField(key: string): boolean {
-        return /^\w+\[\d+\]=\w+\.\w+$/.test(key);
-    }
-    /**
-     * Check if key is an "X=Y.Z" named struct field (no index)
-     */
-    public IsNamedStructField(key: string): boolean {
-        return /^\w+=\w+\.\w+$/.test(key);
-    }
-    /**
-     * Resolve a column header key to a field path for data output.
-     * Handles all formats: "into=X.Y", "X[N]=Y.Z", "X=Y.Z" and the existing "X.Y" / "X[N].Y".
-     */
-    public ResolveFieldPath(key: string): (string | number)[] {
-        let intoInfo = this.ParseIntoFieldInfo(key);
-        if (intoInfo) {
-            return ["info", intoInfo.field];
-        }
-        let indexedInfo = this.ParseIndexedStructFieldInfo(key);
-        if (indexedInfo) {
-            return [indexedInfo.propertyName, indexedInfo.index, indexedInfo.field];
-        }
-        let namedInfo = this.ParseNamedStructFieldInfo(key);
-        if (namedInfo) {
-            return [namedInfo.propertyName, namedInfo.field];
-        }
-        return this.ParseFieldPath(key);
+    public IsStructHeader(key: string): boolean {
+        return this.ParseStructHeader(key) !== null;
     }
 
     /**
-     * Transform a struct value from string format into the appropriate type
+     * 判断类型行是否是内联结构写法，例如 `{name:string,value:int}` 或 `{name:string}[]`
+     */
+    public IsInlineStructType(type: string): boolean {
+        if (typeof type !== 'string') return false;
+        return /^\{.*\}(\[\])?$/.test(type.trim());
+    }
+
+    /**
+     * 解析内联结构类型定义。
+     * 例如 `{name:string,value:int,coeff:float}`   -> 字段列表，isArray = false
+     * 例如 `{name:string,value:int,coeff:float}[]` -> 字段列表，isArray = true
+     * 未写类型的字段（如 `{name,value}`）类型留空，交由调用方按数据推断或报错。
+     */
+    public ParseInlineStructType(type: string): { fields: StructField[]; isArray: boolean } | null {
+        if (!this.IsInlineStructType(type)) return null;
+        let trimmed = type.trim();
+        let isArray = trimmed.endsWith('[]');
+        let body = isArray ? trimmed.slice(1, -3) : trimmed.slice(1, -1);
+
+        let fields: StructField[] = [];
+        for (let part of body.split(',')) {
+            let seg = part.trim();
+            if (seg === '') continue;
+            let colonIndex = seg.indexOf(':');
+            if (colonIndex >= 0) {
+                fields.push({
+                    name: seg.substring(0, colonIndex).trim(),
+                    type: seg.substring(colonIndex + 1).trim()
+                });
+            } else {
+                fields.push({ name: seg, type: '' });
+            }
+        }
+
+        return { fields: fields, isArray: isArray };
+    }
+
+    /**
+     * 解析一列的字段信息。新格式下结构名在表头（等号右边），
+     * 子字段名或内联结构定义在类型行。
+     * @param key 表头单元格，例如 `id`、`into=attr`、`info[0]=StructTest`
+     * @param type 类型行单元格，例如 `int`、`name:string`、`{name:string,value:int}[]`
+     */
+    public AnalyzeField(key: string, type: string): FieldInfo {
+        let result: FieldInfo = {
+            name: key,
+            isStruct: false,
+            structName: '',
+            isArray: false,
+            fieldPath: [],
+            index: -1,
+            inlineFields: [],
+            inlineIsArray: false,
+            valueType: type
+        };
+
+        let header = this.ParseStructHeader(key);
+        if (!header) {
+            return result;
+        }
+
+        result.name = header.propertyName;
+        result.structName = header.structName;
+        result.isStruct = true;
+        result.index = header.index;
+        result.isArray = header.index >= 0;
+
+        // 类型行写成内联结构：整格承载一个（或一组）结构值
+        let inline = this.ParseInlineStructType(type);
+        if (inline) {
+            result.inlineFields = inline.fields;
+            result.inlineIsArray = inline.isArray;
+            if (inline.isArray) {
+                result.isArray = true;
+            }
+            result.valueType = type;
+            return result;
+        }
+
+        // 类型行写成子字段名：`name` 或 `name:string`
+        let cell = typeof type === 'string' ? type.trim() : '';
+        let colonIndex = cell.indexOf(':');
+        if (colonIndex >= 0) {
+            result.fieldPath = [cell.substring(0, colonIndex).trim()];
+            result.valueType = cell.substring(colonIndex + 1).trim();
+        } else if (cell !== '') {
+            result.fieldPath = [cell];
+            result.valueType = '';
+        }
+
+        return result;
+    }
+
+    /**
+     * 解析某列在输出对象中的路径。
+     * `into=attr`  + 类型 `name:string`  -> ["attr", "name"]
+     * `info[0]=X`  + 类型 `value1`       -> ["info", 0, "value1"]
+     * `infoNew=attr` + 内联结构类型      -> ["infoNew"]（整格是一个结构值）
+     */
+    public ResolveFieldPath(key: string, type?: string): (string | number)[] {
+        let info = this.AnalyzeField(key, type as string);
+        if (!info.isStruct) {
+            return [info.name];
+        }
+
+        let result: (string | number)[] = [info.name];
+        if (info.index >= 0) {
+            result.push(info.index);
+        }
+        for (let sub of info.fieldPath) {
+            result.push(sub);
+        }
+        return result;
+    }
+
+    /**
+     * 按结构定义解析内联结构文本值。
+     * 单个结构：`{攻击,10,1.5}`
+     * 结构数组：`[{攻击,10,1.5},{防御,20,2}]`，元素间也支持 `|` 分隔
+     */
+    public TransformInlineStructValue(fields: StructField[], isArray: boolean, data: any): any {
+        let text = _.isNil(data) ? '' : String(data).replace(/[\r\n]/g, '').trim();
+
+        if (!isArray) {
+            return this.ParseInlineStructBody(fields, text);
+        }
+
+        let result: any[] = [];
+        // 剥掉最外层的 []
+        if (text.startsWith('[') && text.endsWith(']')) {
+            text = text.substring(1, text.length - 1).trim();
+        }
+        if (text === '') {
+            return result;
+        }
+
+        for (let item of this.SplitInlineStructItems(text)) {
+            result.push(this.ParseInlineStructBody(fields, item));
+        }
+        return result;
+    }
+
+    /**
+     * 把 `{a,1},{b,2}` 或 `{a,1}|{b,2}` 切成单个 `{...}` 文本，忽略花括号内的分隔符
+     */
+    private SplitInlineStructItems(text: string): string[] {
+        let items: string[] = [];
+        let depth = 0;
+        let current = '';
+        for (let i = 0; i < text.length; ++i) {
+            let ch = text[i];
+            if (ch === '{') {
+                depth++;
+                current += ch;
+            } else if (ch === '}') {
+                depth--;
+                current += ch;
+            } else if ((ch === ',' || ch === '|') && depth === 0) {
+                if (current.trim() !== '') items.push(current.trim());
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+        if (current.trim() !== '') items.push(current.trim());
+        return items;
+    }
+
+    /**
+     * 解析单个 `{值1,值2,...}` 文本，按字段顺序与类型赋值
+     */
+    private ParseInlineStructBody(fields: StructField[], text: string): any {
+        let body = text.trim();
+        if (body.startsWith('{') && body.endsWith('}')) {
+            body = body.substring(1, body.length - 1);
+        }
+
+        let values = this.SplitInlineStructItems(body);
+        let result: any = {};
+        for (let i = 0; i < fields.length; ++i) {
+            let field = fields[i];
+            let raw = i < values.length ? values[i] : undefined;
+            result[field.name] = this.TransformBasicValue(field.type, raw);
+        }
+        return result;
+    }
+
+    /**
+     * 按结构定义把 JSON 文本转换为结构对象（Struct.xlsx 中定义的类型）
      */
     public TransformStructValue(type: string, data: string): any {
         if (type.includes('[]')) {
@@ -233,7 +356,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * Parse a struct object from the given row data
+     * 从行数据中解析结构对象
      */
     private ParseStructObject(structDef: StructDefinition, data: any): any {
         let result: any = {};
@@ -252,9 +375,9 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * Transform a basic value from string into the specified type
+     * 按指定类型转换基础值
      */
-    private TransformBasicValue(type: string, data: any): any {
+    public TransformBasicValue(type: string, data: any): any {
         let result;
 
         switch (type) {
@@ -287,29 +410,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
     }
 
     /**
-     * e.g. "attr.value" -> ["attr", "value"]
-     * e.g. "attrs[0].value" -> ["attrs", "0", "value"]
-     * e.g. "items[0].name" -> ["items", "0", "name"]
-     * e.g. "items[0].name" -> ["items", "0", "name"]
-     */
-    public ParseFieldPath(key: string): (string | number)[] {
-        let result: (string | number)[] = [];
-        let parts = key.split('.');
-
-        for (let part of parts) {
-            // Handle array index, e.g. field[0] -> field and 0
-            let arrayMatches = part.split(/[\[\]]/).filter(s => s !== '');
-            for (let match of arrayMatches) {
-                result.push(match);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Set the value at the given path in the nested object
-     * Set the value at the given path in the nested object
+     * 按路径写入嵌套对象，路径中的数字视为数组下标
      */
     public SetNestedValue(obj: any, path: (string | number)[], value: any): void {
         let current = obj;
@@ -318,7 +419,7 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             let key = path[i];
             let nextKey = path[i + 1];
 
-            // Check if the next key is an array index
+            // 下一级是数字则当前节点应为数组
             let isNextArrayIndex = typeof nextKey === "number" || (!isNaN(parseInt(nextKey.toString())));
 
             if (current[key] === undefined || current[key] === null) {
@@ -332,69 +433,204 @@ export default class BaseTranslateStruct extends BaseTranslateConfig {
             current = current[key];
         }
 
-        // Handle the last key in the path
-        let lastKey = path[path.length - 1];
-        let arrayMatch = lastKey.toString().match(/(.+)\[(\d*)\]$/);
-        if (arrayMatch) {
-            let arrKey = arrayMatch[1];
-            let index = parseInt(arrayMatch[2]) || 0;
-
-            if (!current[arrKey]) { current[arrKey] = []; }
-            current[arrKey][index] = value;
-        } else {
-            current[lastKey] = value;
-        }
+        current[path[path.length - 1]] = value;
     }
 
     /**
-     * Analyze a field and return field info
+     * 收集一张表中所有结构字段的定义，并校验同名结构的字段类型一致。
+     * @param keys 表头行
+     * @param types 类型行
+     * @param sheetName 表名，仅用于报错信息
      */
-    public AnalyzeField(key: string, type: string): FieldInfo {
-        let result: FieldInfo = {
-            name: key,
-            isStruct: false,
-            structName: '',
-            isArray: false,
-            fieldPath: []
-        };
-        let intoInfo = this.ParseIntoFieldInfo(key);
-        if (intoInfo) {
-            result.name = "info";
-            result.isStruct = true;
-            result.structName = intoInfo.structName;
-            result.fieldPath = [intoInfo.field];
-            result.isArray = false;
-            return result;
-        }
-        let indexedInfo = this.ParseIndexedStructFieldInfo(key);
-        if (indexedInfo) {
-            result.name = indexedInfo.propertyName;
-            result.isStruct = true;
-            result.structName = indexedInfo.structName;
-            result.fieldPath = [indexedInfo.field];
-            result.isArray = true;
-            return result;
-        }
-        let namedInfo = this.ParseNamedStructFieldInfo(key);
-        if (namedInfo) {
-            result.name = namedInfo.propertyName;
-            result.isStruct = true;
-            result.structName = namedInfo.structName;
-            result.fieldPath = [namedInfo.field];
-            result.isArray = false;
-            return result;
-        }
-        if (key.includes('.')) {
-            let parts = key.split('.');
-            result.name = parts[0];
-            result.fieldPath = parts.slice(1) as string[];
-            result.isStruct = true;
-            let arrayMatch = result.name.match(/(.+)\[(\d*)\]$/);
-            if (arrayMatch) {
-                result.name = arrayMatch[1];
-                result.isArray = true;
+    public CollectStructFields(keys: any[], types: any[], sheetName: string): { [structName: string]: StructDefinition } {
+        let collected: { [structName: string]: StructDefinition } = {};
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key) || String(key).startsWith('#')) {
+                continue;
+            }
+
+            let info = this.AnalyzeField(key, type);
+            if (!info.isStruct) continue;
+
+            // Struct.xlsx 中已定义的结构直接引用，不参与推断
+            if (this.IsStructType(info.structName)) continue;
+
+            let fields: StructField[] = info.inlineFields.length > 0
+                ? info.inlineFields
+                : (info.fieldPath.length > 0 ? [{ name: info.fieldPath[0], type: info.valueType }] : []);
+
+            if (fields.length === 0) continue;
+
+            if (!collected[info.structName]) {
+                collected[info.structName] = { name: info.structName, fields: [] };
+            }
+            let target = collected[info.structName];
+
+            for (let field of fields) {
+                if (!field.type) {
+                    throw new Error(`表 ${sheetName} 中结构 ${info.structName} 的字段 ${field.name} 未声明类型，请在类型行写成 ${field.name}:类型`);
+                }
+                let exist = target.fields.find(f => f.name === field.name);
+                if (!exist) {
+                    target.fields.push({ name: field.name, type: field.type });
+                } else if (exist.type !== field.type) {
+                    throw new Error(`表 ${sheetName} 中结构 ${info.structName} 的字段 ${field.name} 类型不一致：${exist.type} 与 ${field.type}`);
+                }
             }
         }
-        return result;
+
+        return collected;
+    }
+
+    /**
+     * 汇总一张表的列布局，供各语言生成器共用，避免每种格式各写一遍表头解析。
+     * @param data 整张表的二维数据
+     * @param className 生成的类名，用于给未定义结构拼局部类名
+     * @param typeRowIndex 类型行下标
+     * @param sheetName 表名，仅用于报错信息
+     */
+    public AnalyzeSheet(data: any, className: string, typeRowIndex: number, sheetName: string): {
+        /** 普通字段（非结构） */
+        simpleFields: { key: string; type: string; colIndex: number }[];
+        /** 结构属性，按表头出现顺序 */
+        structProperties: StructProperty[];
+        /** 需要为本表生成的局部结构类：类名 -> 字段定义 */
+        localStructs: { [className: string]: StructDefinition };
+        /** 引用到的 Struct.xlsx 全局结构名 */
+        globalStructs: string[];
+    } {
+        let keys = (data && data[0]) ? data[0] : [];
+        let types = (data && data[typeRowIndex]) ? data[typeRowIndex] : [];
+
+        let simpleFields: { key: string; type: string; colIndex: number }[] = [];
+        let structProperties: StructProperty[] = [];
+        let localStructs: { [className: string]: StructDefinition } = {};
+        let globalStructs: string[] = [];
+
+        // 先校验并收集同名结构的字段定义（类型不一致会在此抛错）
+        let collected = this.CollectStructFields(keys, types, sheetName);
+
+        let seenProperty: { [name: string]: StructProperty } = {};
+
+        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
+            let key = keys[colIndex];
+            let type = types[colIndex];
+            if (_.isNil(key) || _.isEmpty(key) || String(key).startsWith('#')) {
+                continue;
+            }
+
+            let info = this.AnalyzeField(key, type);
+
+            if (!info.isStruct) {
+                simpleFields.push({ key: info.name, type: info.valueType, colIndex: colIndex });
+                continue;
+            }
+
+            let isGlobal = this.IsStructType(info.structName);
+            // 未在 Struct.xlsx 定义的结构生成局部类，类名为 表类名 + 结构名首字母大写
+            let typeName = isGlobal
+                ? info.structName
+                : className + Utils.GetFristUpperAndLowerStr(info.structName)[0];
+
+            if (isGlobal) {
+                if (globalStructs.indexOf(info.structName) < 0) {
+                    globalStructs.push(info.structName);
+                }
+            } else if (collected[info.structName]) {
+                localStructs[typeName] = {
+                    name: typeName,
+                    fields: collected[info.structName].fields
+                };
+            }
+
+            let exist = seenProperty[info.name];
+            if (!exist) {
+                let prop: StructProperty = {
+                    propertyName: info.name,
+                    structName: typeName,
+                    isArray: info.isArray
+                };
+                seenProperty[info.name] = prop;
+                structProperties.push(prop);
+            } else if (info.isArray) {
+                exist.isArray = true;
+            }
+        }
+
+        return {
+            simpleFields: simpleFields,
+            structProperties: structProperties,
+            localStructs: localStructs,
+            globalStructs: globalStructs
+        };
+    }
+
+    /**
+     * 解析一行中某列的值，并写入输出对象。结构列会按新格式规则归并。
+     * @param target 输出对象
+     * @param key 表头单元格
+     * @param type 类型行单元格
+     * @param value 数据单元格
+     * @param transformBasic 基础类型/数组的转换回调，由各生成器提供
+     * @param lowerCaseKey 普通字段名是否首字母小写
+     */
+    public ApplyCellValue(
+        target: any,
+        key: string,
+        type: string,
+        value: any,
+        transformBasic: (type: string, data: any) => any,
+        lowerCaseKey: boolean = true
+    ): void {
+        let info = this.AnalyzeField(key, type);
+        let fieldName = lowerCaseKey ? Utils.GetFristUpperAndLowerStr(info.name)[1] : info.name;
+
+        if (!info.isStruct) {
+            let result = transformBasic(info.valueType, value);
+            if (!_.isNil(result) && !_.isNaN(result)) {
+                target[fieldName] = result;
+            }
+            return;
+        }
+
+        // 内联结构：整格是一个结构值或一组结构值
+        if (info.inlineFields.length > 0) {
+            let parsed = this.TransformInlineStructValue(info.inlineFields, info.inlineIsArray, value);
+            if (info.index >= 0) {
+                if (!Array.isArray(target[fieldName])) target[fieldName] = [];
+                target[fieldName][info.index] = parsed;
+            } else {
+                target[fieldName] = parsed;
+            }
+            return;
+        }
+
+        // 子字段列：按 结构名/索引/子字段名 归并
+        let subField = info.fieldPath.length > 0 ? info.fieldPath[0] : '';
+        if (subField === '') return;
+
+        let subType = info.valueType;
+        if (!subType && this.IsStructType(info.structName)) {
+            // Struct.xlsx 已定义类型时，子字段类型从定义中取
+            let def = this.structDefinitions[info.structName];
+            let defField = def.fields.find(f => f.name === subField);
+            if (defField) subType = defField.type;
+        }
+
+        let parsed = subType
+            ? this.TransformBasicValue(subType, value)
+            : transformBasic(subType, value);
+
+        if (info.index >= 0) {
+            if (!Array.isArray(target[fieldName])) target[fieldName] = [];
+            if (!target[fieldName][info.index]) target[fieldName][info.index] = {};
+            target[fieldName][info.index][subField] = parsed;
+        } else {
+            if (!target[fieldName] || typeof target[fieldName] !== 'object') target[fieldName] = {};
+            target[fieldName][subField] = parsed;
+        }
     }
 }

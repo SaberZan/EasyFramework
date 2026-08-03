@@ -81,10 +81,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                 await this.GenBytes(protoPath, jsonPath, messageName, bytesPath);
             }
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += ".xlsx";
-            parsedPath.ext = ".xlsx";
-            let data = DataParser.parse(path.format(parsedPath), params.format);
+            let data = DataParser.parseWithOptionalExtension(pathStr, params.format);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -203,10 +200,10 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
 
     private CreateProto(data: any, className: string): string {
         let dataArr = data;
-        let keys = dataArr[0] || [];
+        let keys = (dataArr[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
-        
+
         // 检测数组模式（第一列以@开头）
         let isArrayMode = false;
         let arrayKey = '';
@@ -217,62 +214,47 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             arrayKeyType = types[0] || 'int';
             keys[0] = arrayKey;
         }
-        let nestedMap: { [parent: string]: { fields: { [name: string]: string }; isArray: boolean; structName: string } } = {};
-        let simpleKeys: { key: string; type: string }[] = [];
-        for (let i = 0; i < keys.length; ++i) {
-            let key = keys[i];
-            let type = types[i];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) continue;
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let parentName = fieldInfo.name;
-                let subFieldName = fieldInfo.fieldPath[fieldInfo.fieldPath.length - 1];
-               if (!nestedMap[parentName]) {
-                    let resolvedStructName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
-                    nestedMap[parentName] = { fields: {}, isArray: fieldInfo.isArray, structName: resolvedStructName };
-                }
-                if (fieldInfo.isArray) nestedMap[parentName].isArray = true;
-                if (!nestedMap[parentName].fields[subFieldName]) {
-                    nestedMap[parentName].fields[subFieldName] = type;
-                }
-                continue;
-            }
-            simpleKeys.push({ key, type });
-        }
+
+        let layout = this.structHelper.AnalyzeSheet([keys, types], className, 1, className);
+
         let content = "";
-       // Generate sub-messages for non-Struct.xlsx types
-       for (let parentName in nestedMap) {
-            let structName = nestedMap[parentName].structName;
-            if (this.structHelper.IsStructType(structName)) continue;
-            let subName = className + "_" + structName;
-            content += ProtoDefine.messageStart.replace("{0}", subName);
+
+        // 1. 为本表未定义的结构生成子 message
+        for (let structMsgName in layout.localStructs) {
+            content += ProtoDefine.messageStart.replace("{0}", structMsgName);
             let idx = 1;
-            for (let fn in nestedMap[parentName].fields) {
-                let ft = nestedMap[parentName].fields[fn];
-                content += ProtoDefine.fieldStr.replace("{0}", this.TransformType(ft)).replace("{1}", fn).replace("{2}", idx.toString());
+            for (let field of layout.localStructs[structMsgName].fields) {
+                content += ProtoDefine.fieldStr
+                    .replace("{0}", this.TransformType(field.type))
+                    .replace("{1}", field.name)
+                    .replace("{2}", idx.toString());
                 idx++;
             }
             content += ProtoDefine.messageEnd;
         }
-        // Main message
+
+        // 2. 主 message
         content += ProtoDefine.messageStart.replace("{0}", className);
         let fi = 1;
-        for (let f of simpleKeys) {
-            content += ProtoDefine.fieldStr.replace("{0}", this.TransformType(f.type)).replace("{1}", f.key).replace("{2}", fi.toString());
+        for (let field of layout.simpleFields) {
+            content += ProtoDefine.fieldStr
+                .replace("{0}", this.TransformType(field.type))
+                .replace("{1}", field.key)
+                .replace("{2}", fi.toString());
             fi++;
         }
-       // Add nested field references
-       for (let parentName in nestedMap) {
-            let structName = nestedMap[parentName].structName;
-            let tn = this.structHelper.IsStructType(structName) ? structName : className + "_" + structName;
-            let isArr = false;
-            for (let k of keys) { if (k && (k.startsWith(parentName + "[") || k.startsWith(parentName + ".")) && k !== parentName) { isArr = k.includes("["); break; } }
-            if (isArr) tn = "repeated " + tn;
-            let fld = this.structHelper.IsStructType(structName) ? parentName.charAt(0).toLowerCase() + parentName.slice(1) : parentName;
-            content += ProtoDefine.fieldStr.replace("{0}", tn).replace("{1}", fld).replace("{2}", fi.toString());
+
+        // 3. 结构字段引用
+        for (let prop of layout.structProperties) {
+            let typeName = prop.isArray ? "repeated " + prop.structName : prop.structName;
+            content += ProtoDefine.fieldStr
+                .replace("{0}", typeName)
+                .replace("{1}", prop.propertyName)
+                .replace("{2}", fi.toString());
             fi++;
         }
         content += ProtoDefine.messageEnd;
+
         if (isArrayMode) {
             let groupMsgName = className + arrayKey;
             content += ProtoDefine.messageStart.replace("{0}", groupMsgName);
@@ -283,7 +265,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             content += ProtoDefine.fieldStr.replace("{0}", mapType).replace("{1}", "data").replace("{2}", "1");
             content += ProtoDefine.messageEnd;
         } else {
-            // Add wrapper message XXXData { repeated XXX data = 1; }
+            // 包装 message：XXXData { repeated XXX data = 1; }
             content += ProtoDefine.messageStart.replace("{0}", className + "Data");
             content += ProtoDefine.fieldStr.replace("{0}", "repeated " + className).replace("{1}", "data").replace("{2}", "1");
             content += ProtoDefine.messageEnd;
@@ -304,7 +286,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // Default layerNum: first data layer may contain nested fields
+        // 默认单层级，结构字段由表头等号声明，统一交给 structHelper 处理
         let layerNum = 1;
 
         // 检查是否是数组模式（第一列以@开头）
@@ -315,6 +297,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             arrayKey = keys[0].substring(1);
             keys[0] = arrayKey; // 去掉@前缀
         }
+
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -344,22 +329,9 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-
-                let firstField = fieldPath[0].toString();
-                let capitalized = firstField.charAt(0).toUpperCase() + firstField.slice(1);
-                if (this.structHelper.IsStructType(capitalized)) {
-                    fieldPath[0] = firstField.charAt(0).toLowerCase() + firstField.slice(1);
-                }
-
-                if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        subTmp[key] = result;
-                    }
-                }
+                // proto 字段名与表头保持一致，不做首字母小写
+                this.structHelper.ApplyCellValue(subTmp, key, type, value,
+                    (t: string, d: any) => this.TransformStructValue(t, d), false);
             }
 
             if (isArrayMode) {

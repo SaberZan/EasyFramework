@@ -72,8 +72,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
-                let csData = this.CreateCsRecordOnly(this.xlsxData[sheetName], translateName, nestedFields);
+                let csData = this.CreateCsRecordOnly(this.xlsxData[sheetName], translateName);
                 classContent += csData;
             }
 
@@ -109,10 +108,9 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
                 
-                let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
                 
                 let classContent = CSDefine.namespaceStart;
-                let csData = this.CreateCs(this.xlsxData[sheetName], translateName, nestedFields);
+                let csData = this.CreateCs(this.xlsxData[sheetName], translateName);
                 
                 classContent += csData;
                 classContent += CSDefine.namespaceEnd;
@@ -143,255 +141,130 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
     }
 
-    private CreateCs(data: any, className: string, nestedFieldDefs?: { [parentField: string]: { name: string; type: string }[] }) {
+    /**
+     * 生成单表的 C# 代码：局部结构类 + 记录类 + Dictionary 配置类
+     */
+    private CreateCs(data: any, className: string) {
         if (!data || data.length < 2) {
             console.warn('Invalid data for CS generation:', className);
             return '';
         }
 
-        let dataArr = data;
-        // Copy keys so stripping the @ prefix does not mutate the shared sheet data.
-        let keys = (dataArr[0] || []).slice();
-        let typeRowIndex = this.FindTypeRowIndex(dataArr);
-        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
-
-        if (keys.length === 0) {
+        let layout = this.GetSheetLayout(data, className);
+        if (!layout) {
             console.warn('No keys found for CS generation:', className);
             return '';
         }
 
-        let key = keys[0];
-        // Array mode: first column key starts with @, e.g. @ItemSeries.
-        // The table becomes Dictionary<key, List<Record>> instead of Dictionary<key, Record>.
-        let isArrayMode = false;
-        if (typeof key === 'string' && key.startsWith('@')) {
-            isArrayMode = true;
-            key = key.substring(1);
-            keys[0] = key;
-        }
-        let keyType = this.TransformType(types[0]);
-        let valueType = isArrayMode
-            ? 'System.Collections.Generic.List<' + className + '>'
-            : className;
+        let keyType = this.TransformType(layout.keyType);
+        let classContent = this.BuildRecordContent(layout, className);
 
-        let classContent = '';
-
-        // Generate nested struct class definitions BEFORE the main class
-        if (nestedFieldDefs) {
-            for (let fieldName in nestedFieldDefs) {
-                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                if (this.structHelper.IsStructType(capitalized)) { continue; }
-                let structClassName = className + capitalized;
-                let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
-                classContent += this.BuildStructClassContent(structClassName, fields);
-            }
-        }
-
-        // Record class: plain data class (not a Dictionary)
-        classContent += CSDefine.notes.replace('{0}', className);
-        classContent += CSDefine.classStart.replace('{0}', className);
-
-        // Collect struct fields for nested struct support.
-        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
-                continue;
-            }
-            
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let fieldName = fieldInfo.name;
-                let structClassName = fieldInfo.structName || (fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
-                if (!this.structHelper.IsStructType(structClassName)) {
-                    structClassName = className + structClassName;
-                }
-                
-                if (!structFields[fieldName]) {
-                    structFields[fieldName] = {
-                        type: structClassName,
-                        isArray: fieldInfo.isArray
-                    };
-                }
-                continue;
-            }
-            
-            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
-            let keyUpper = keyUpperAndLower[0];
-            let keyLower = keyUpperAndLower[1];
-            let fieldType = this.TransformType(type);
-            
-            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, key);
-            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
-        }
-
-        // ??????
-        for (let fieldName in structFields) {
-            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(fieldName);
-            let keyUpper = keyUpperAndLower[0];
-            let keyLower = keyUpperAndLower[1];
-            let fieldInfo = structFields[fieldName];
-            let fieldType = fieldInfo.isArray ? fieldInfo.type + '[]' : fieldInfo.type;
-            
-            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, fieldName);
-            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
-        }
-
-        classContent += CSDefine.classEnd;
-
-        // Array mode: create List wrapper class (e.g., MergeUpgradeDataItemSeries : List<MergeUpgradeData>)
+        // 数组模式：生成 List 包装类，如 ItemCfgItemSeries : List<ItemCfg>
         let listClassName = '';
-        if (isArrayMode) {
-            listClassName = className + key;
+        if (layout.isArrayMode) {
+            listClassName = className + layout.arrayKey;
             classContent += "\t[System.Serializable]\r\n\tpublic class " + listClassName + " : System.Collections.Generic.List<" + className + ">\r\n\t{\r\n\t}\r\n\r\n";
         }
 
-        // Dictionary class: Dictionary<int, className> or Dictionary<int, ListClassName>
-        let dictValueType = isArrayMode ? listClassName : className;
+        // Dictionary 配置类：Dictionary<key, 记录类> 或 Dictionary<key, List 包装类>
+        let dictValueType = layout.isArrayMode ? listClassName : className;
         classContent += Utils.FormatStr(CSDefine.classDictionaryStartWithConfig, className, keyType, dictValueType);
 
         return classContent;
     }
 
-    private CreateCsRecordOnly(data: any, className: string, nestedFieldDefs?: { [parentField: string]: { name: string; type: string }[] }) {
+    /**
+     * 合表模式下只生成记录类（Dictionary 字段由外层合并类统一生成）
+     */
+    private CreateCsRecordOnly(data: any, className: string) {
         if (!data || data.length < 2) {
             console.warn('Invalid data for CS generation:', className);
             return '';
         }
 
-        let dataArr = data;
-        let keys = (dataArr[0] || []).slice();
-        let typeRowIndex = this.FindTypeRowIndex(dataArr);
-        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
-
-        if (keys.length === 0) {
+        let layout = this.GetSheetLayout(data, className);
+        if (!layout) {
             console.warn('No keys found for CS generation:', className);
             return '';
         }
 
-        let key = keys[0];
-        let isArrayMode = false;
-        if (typeof key === 'string' && key.startsWith('@')) {
-            isArrayMode = true;
-            key = key.substring(1);
-            keys[0] = key;
-        }
-        let keyType = this.TransformType(types[0]);
+        let classContent = this.BuildRecordContent(layout, className);
 
-        let classContent = '';
-
-        // Generate nested struct class definitions BEFORE the main class
-        if (nestedFieldDefs) {
-            for (let fieldName in nestedFieldDefs) {
-                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                if (this.structHelper.IsStructType(capitalized)) { continue; }
-                let structClassName = className + capitalized;
-                let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
-                classContent += this.BuildStructClassContent(structClassName, fields);
-            }
-        }
-
-        // Record class: plain data class (not a Dictionary)
-        classContent += CSDefine.notes.replace('{0}', className);
-        classContent += CSDefine.classStart.replace('{0}', className);
-
-        // Collect struct fields for nested struct support.
-        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
-                continue;
-            }
-            
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let fieldName = fieldInfo.name;
-                let structClassName = fieldInfo.structName || (fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
-                if (!this.structHelper.IsStructType(structClassName)) {
-                    structClassName = className + structClassName;
-                }
-                
-                if (!structFields[fieldName]) {
-                    structFields[fieldName] = {
-                        type: structClassName,
-                        isArray: fieldInfo.isArray
-                    };
-                }
-                continue;
-            }
-            
-            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(key);
-            let keyUpper = keyUpperAndLower[0];
-            let keyLower = keyUpperAndLower[1];
-            let fieldType = this.TransformType(type);
-            
-            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, key);
-            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
-        }
-
-        // Add nested struct fields
-        for (let fieldName in structFields) {
-            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(fieldName);
-            let keyUpper = keyUpperAndLower[0];
-            let keyLower = keyUpperAndLower[1];
-            let fieldInfo = structFields[fieldName];
-            let fieldType = fieldInfo.isArray ? fieldInfo.type + '[]' : fieldInfo.type;
-            
-            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyLower, fieldName);
-            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpper, keyLower);
-        }
-
-        classContent += CSDefine.classEnd;
-
-        // Array mode: create List wrapper class (e.g., MergeUpgradeDataItemSeries : List<MergeUpgradeData>)
-        if (isArrayMode) {
-            let listClassName = className + key;
+        if (layout.isArrayMode) {
+            let listClassName = className + layout.arrayKey;
             classContent += "\t[System.Serializable]\r\n\tpublic class " + listClassName + " : System.Collections.Generic.List<" + className + ">\r\n\t{\r\n\t}\r\n\r\n";
         }
 
         return classContent;
     }
 
-    private CollectNestedFields(data: any): { [parentField: string]: { name: string; type: string }[] } {
-        let nestedFields: { [parentField: string]: { name: string; type: string }[] } = {};
-        
-        if (!data || data.length < 2) {
-            return nestedFields;
+    /**
+     * 解析表的列布局，供 CS 代码生成复用。返回 null 表示表头为空。
+     */
+    private GetSheetLayout(data: any, className: string) {
+        let keys = (data[0] || []).slice();
+        if (keys.length === 0) {
+            return null;
         }
-        
-       let keys = data[0] || [];
+
         let typeRowIndex = this.FindTypeRowIndex(data);
-        let types = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
-       
-       for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
-                continue;
-            }
-            
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let parentField = fieldInfo.name;
-                if (!nestedFields[parentField]) {
-                    nestedFields[parentField] = [];
-                }
-                let actualFieldName = fieldInfo.fieldPath.filter((p: any) => isNaN(parseInt(p.toString()))).join("_");
-                if (actualFieldName) {
-                    nestedFields[parentField].push({
-                        name: actualFieldName,
-                        type: type
-                    });
-                }
-            }
+        let types = data[typeRowIndex] || [];
+
+        // 数组模式：第一列以 @ 开头
+        let isArrayMode = false;
+        let arrayKey = '';
+        if (typeof keys[0] === 'string' && keys[0].startsWith('@')) {
+            isArrayMode = true;
+            arrayKey = keys[0].substring(1);
+            keys[0] = arrayKey;
         }
-        
-        return nestedFields;
+
+        let analyzed = this.structHelper.AnalyzeSheet([keys, types], className, 1, className);
+
+        return {
+            simpleFields: analyzed.simpleFields,
+            structProperties: analyzed.structProperties,
+            localStructs: analyzed.localStructs,
+            isArrayMode: isArrayMode,
+            arrayKey: arrayKey,
+            keyType: types[0]
+        };
     }
+
+    /**
+     * 生成局部结构类与记录类本体
+     */
+    private BuildRecordContent(layout: any, className: string): string {
+        let classContent = '';
+
+        // 1. 本表的局部结构类（未在 Struct.xlsx 定义的结构）
+        for (let structClassName in layout.localStructs) {
+            let fields = this.DeduplicateFields(layout.localStructs[structClassName].fields);
+            classContent += this.BuildStructClassContent(structClassName, fields);
+        }
+
+        // 2. 记录类
+        classContent += CSDefine.notes.replace('{0}', className);
+        classContent += CSDefine.classStart.replace('{0}', className);
+
+        for (let field of layout.simpleFields) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(field.key);
+            let fieldType = this.TransformType(field.type);
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyUpperAndLower[1], field.key);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpperAndLower[0], keyUpperAndLower[1]);
+        }
+
+        for (let prop of layout.structProperties) {
+            let keyUpperAndLower = Utils.GetFristUpperAndLowerStr(prop.propertyName);
+            let fieldType = prop.isArray ? prop.structName + '[]' : prop.structName;
+            classContent += Utils.FormatStr(CSDefine.privateStr, fieldType, keyUpperAndLower[1], prop.propertyName);
+            classContent += Utils.FormatStr(CSDefine.publicStr, fieldType, keyUpperAndLower[0], keyUpperAndLower[1]);
+        }
+
+        classContent += CSDefine.classEnd;
+        return classContent;
+    }
+
     
     private DeduplicateFields(fields: { name: string; type: string }[]): { name: string; type: string }[] {
         let seen: { [name: string]: boolean } = {};
@@ -450,15 +323,14 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        // Copy keys so stripping the '@' prefix does not mutate the shared sheet data.
+        // 复制表头，避免去掉 @ 前缀时污染共享的表数据
         let keys = (dataArr[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
         let layerNum = 1;
 
-        // Array mode: first column key starts with '@', e.g. @ItemSeries.
-        // Rows are grouped into arrays keyed by the first column value.
+        // 数组模式：第一列以 @ 开头，如 @ItemSeries，按第一列的值把行分组成数组
         let isArrayMode = false;
         let arrayKey = '';
         if (keys.length > 0 && keys[0] && keys[0].startsWith('@')) {
@@ -467,7 +339,10 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
             keys[0] = arrayKey;
         }
 
-        // Both header layouts (keys/types/desc and keys/desc/types) keep data at row 3.
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
+
+        // 两种表头布局（类型在前或注释在前）数据都从第 3 行开始
         let dataStartRow = 3;
         for (let rowIndex = dataStartRow; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -497,26 +372,19 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-
-                if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        if(type == "json" || type == "Json") {
-                            result["$type"] = "JSONObject, Assembly-CSharp";
-                        }
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
+                this.structHelper.ApplyCellValue(subTmp, key, type, value, (t: string, d: any) => {
+                    let result = this.TransformStructValue(t, d);
+                    if (!_.isNil(result) && (t == "json" || t == "Json")) {
+                        result["$type"] = "JSONObject, Assembly-CSharp";
                     }
-                }
+                    return result;
+                });
             }
 
             subTmp["$type"] = className + ", Assembly-CSharp";
 
             if (isArrayMode) {
-                //                                                 
+                // 数组模式：按第一列的值分组，相同值的行放在数组中
                 let groupKey = _arrLine[layerNum - 1].toString();
                 if (!(groupKey in tmp)) {
                     tmp[groupKey] = [];

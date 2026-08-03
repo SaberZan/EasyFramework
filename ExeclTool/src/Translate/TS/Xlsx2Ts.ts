@@ -54,7 +54,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName]);
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 all[translateName] = jsonData;
             }
             await this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + file));
@@ -65,27 +65,27 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
                 let translateName = this.translateSheets[i][1];
-                let jsonData = this.CreateJson(this.xlsxData[sheetName]);
+                let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 await this.SaveTsToFile(jsonData, path.join(this.outputTsPathStr, translateName));
                 await this.SaveClassToFile(this.xlsxData[sheetName], translateName, path.join(this.outputTsPathStr, translateName + 'Class'));
             }
         }
     }
 
-    private CreateJson(data: any) {
+    private CreateJson(data: any, className: string) {
         let jsonOut: { [key: string]: any } = {};
 
         if (!data || data.length < 3) {
-            console.warn('Invalid data for TS');
+            console.warn('Invalid data for TS', className);
             return jsonOut;
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
+        let keys = (dataArr[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // 榛樿鐨勫眰绾х粨鏋勬槸绗竴灞傦紝鍗砶ey鐨勪綅缃?
+        // 默认单层级，结构字段由表头等号声明，统一交给 structHelper 处理
         let layerNum = 1;
 
         // 检查是否是数组模式（第一列以@开头）
@@ -96,6 +96,9 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
             arrayKey = keys[0].substring(1);
             keys[0] = arrayKey; // 去掉@前缀
         }
+
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -125,17 +128,8 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-
-                if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
-                    }
-                }
+                this.structHelper.ApplyCellValue(subTmp, key, type, value,
+                    (t: string, d: any) => this.TransformStructValue(t, d));
             }
 
             if (isArrayMode) {
@@ -159,45 +153,6 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         _str_all += JSON.stringify(data, null, 4);
         _str_all += ';';
         await writeFile(filePath + '.ts', _str_all, { flag: 'w', encoding: 'utf8' });
-    }
-
-    private CollectNestedFields(data: any): { [parentField: string]: { name: string; type: string }[] } {
-        let nestedFields: { [parentField: string]: { name: string; type: string }[] } = {};
-        if (!data || data.length < 2) {
-            return nestedFields;
-        }
-
-        let keys = data[0] || [];
-        let typeRowIndex = this.FindTypeRowIndex(data);
-        let types = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
-                continue;
-            }
-
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                if (fieldInfo.structName && this.structHelper.IsStructType(fieldInfo.structName)) {
-                    continue;
-                }
-                let parentField = fieldInfo.name;
-                if (!nestedFields[parentField]) {
-                    nestedFields[parentField] = [];
-                }
-                let actualFieldName = fieldInfo.fieldPath.filter((p: any) => isNaN(parseInt(p.toString()))).join('_');
-                if (actualFieldName) {
-                    nestedFields[parentField].push({
-                        name: actualFieldName,
-                        type: type
-                    });
-                }
-            }
-        }
-
-        return nestedFields;
     }
 
     private DeduplicateFields(fields: { name: string; type: string }[]): { name: string; type: string }[] {
@@ -298,81 +253,56 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         return lines.length > 0 ? lines.join('\n') + '\n\n' : '';
     }
 
-    private BuildRecordClass(data: any, className: string, nestedFieldDefs: { [parentField: string]: { name: string; type: string }[] }, imports?: Set<string>): string {
+    /**
+     * 生成一张表对应的记录类。未在 Struct.xlsx 定义的结构会先生成局部类，
+     * 已定义的结构直接引用并加 import。
+     */
+    private BuildRecordClass(data: any, className: string, imports?: Set<string>): string {
         if (!data || data.length < 2) {
             return '';
         }
 
-        let dataArr = data;
-        let keys = (dataArr[0] || []).slice();
-        let typeRowIndex = this.FindTypeRowIndex(dataArr);
-        let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
-
+        let keys = (data[0] || []).slice();
         if (keys.length === 0) {
             return '';
         }
 
-        let firstKey = keys[0];
-        let isArrayMode = false;
-        if (typeof firstKey === 'string' && firstKey.startsWith('@')) {
-            isArrayMode = true;
-            firstKey = firstKey.substring(1);
-            keys[0] = firstKey;
+        let typeRowIndex = this.FindTypeRowIndex(data);
+
+        // 数组模式：第一列以 @ 开头，去掉前缀后按普通字段处理
+        if (typeof keys[0] === 'string' && keys[0].startsWith('@')) {
+            keys[0] = keys[0].substring(1);
         }
+        let normalized = [keys, data[typeRowIndex] || []];
+        let layout = this.structHelper.AnalyzeSheet(normalized, className, 1, className);
 
         let content = '';
 
-        // Nested struct classes: {ClassName}_{FieldName}
-        for (let fieldName in nestedFieldDefs) {
-            let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-            if (this.structHelper.IsStructType(capitalized)) { continue; }
-            let structClassName = className + '_' + capitalized;
-            let fields = this.DeduplicateFields(nestedFieldDefs[fieldName]);
+        // 1. 本表的局部结构类
+        for (let structClassName in layout.localStructs) {
+            let fields = this.DeduplicateFields(layout.localStructs[structClassName].fields);
             content += this.BuildClassContent(structClassName, fields, imports);
             content += '\n';
         }
 
+        // 2. 记录类本体
         content += 'export class ' + className + ' {\n';
 
-        let structFields: { [fieldName: string]: { type: string; isArray: boolean } } = {};
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) {
-                continue;
-            }
-
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let fieldName = fieldInfo.name;
-                let capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-                let structClassName = className + '_' + capitalized;
-                if (fieldInfo.structName && this.structHelper.IsStructType(fieldInfo.structName)) {
-                    structClassName = fieldInfo.structName;
-                    if (imports) { imports.add(structClassName); }
-                }
-                if (!structFields[fieldName]) {
-                    structFields[fieldName] = {
-                        type: structClassName,
-                        isArray: fieldInfo.isArray
-                    };
-                }
-                continue;
-            }
-
-            let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-            let tsType = this.TransformTsType(type);
+        for (let field of layout.simpleFields) {
+            let keyLower = Utils.GetFristUpperAndLowerStr(field.key)[1];
+            let tsType = this.TransformTsType(field.type);
             let defVal = this.DefaultValueForType(tsType);
             if (imports) { this.CollectImport(tsType, imports); }
             content += '    public ' + keyLower + ' : ' + tsType + ' = ' + defVal + ';\n';
         }
 
-        for (let fieldName in structFields) {
-            let keyLower = Utils.GetFristUpperAndLowerStr(fieldName)[1];
-            let info = structFields[fieldName];
-            let tsType = info.isArray ? info.type + '[]' : info.type;
-            let defVal = info.isArray ? '[]' : ('new ' + info.type + '()');
+        for (let prop of layout.structProperties) {
+            let keyLower = Utils.GetFristUpperAndLowerStr(prop.propertyName)[1];
+            if (imports && this.structHelper.IsStructType(prop.structName)) {
+                imports.add(prop.structName);
+            }
+            let tsType = prop.isArray ? prop.structName + '[]' : prop.structName;
+            let defVal = prop.isArray ? '[]' : ('new ' + prop.structName + '()');
             content += '    public ' + keyLower + ' : ' + tsType + ' = ' + defVal + ';\n';
         }
 
@@ -381,9 +311,8 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
     }
 
     private async SaveClassToFile(data: any, className: string, filePath: string): Promise<void> {
-        let nestedFields = this.CollectNestedFields(data);
         let imports = new Set<string>();
-        let content = this.BuildRecordClass(data, className, nestedFields, imports);
+        let content = this.BuildRecordClass(data, className, imports);
         if (!content) return;
         let importStr = this.BuildImportStatements(imports);
         await writeFile(filePath + '.ts', importStr + content, { flag: 'w', encoding: 'utf8' });
@@ -395,8 +324,7 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
         for (let i = 0; i < this.translateSheets.length; ++i) {
             let sheetName = this.translateSheets[i][0];
             let translateName = this.translateSheets[i][1];
-            let nestedFields = this.CollectNestedFields(this.xlsxData[sheetName]);
-            let recordContent = this.BuildRecordClass(this.xlsxData[sheetName], translateName, nestedFields, imports);
+            let recordContent = this.BuildRecordClass(this.xlsxData[sheetName], translateName, imports);
             if (recordContent) {
                 content += recordContent + '\n';
             }

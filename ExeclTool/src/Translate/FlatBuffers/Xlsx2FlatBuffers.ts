@@ -166,14 +166,17 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // Check if first key has @ prefix for array mode grouping
+        // 数组模式：第一列以 @ 开头，按第一列的值把行分组
         let isArrayMode = false;
         let atFieldLower = '';
-        let firstKey = keys.length > 0 ? keys[0] : '';
-        if (typeof firstKey === 'string' && firstKey.startsWith('@')) {
+        if (typeof keys[0] === 'string' && keys[0].startsWith('@')) {
             isArrayMode = true;
-            atFieldLower = Utils.GetFristUpperAndLowerStr(firstKey.substring(1))[1];
+            atFieldLower = Utils.GetFristUpperAndLowerStr(keys[0].substring(1))[1];
+            keys[0] = keys[0].substring(1);
         }
+
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
 
         for (let rowIndex = 3; rowIndex < data.length; ++rowIndex) {
             let _arrLine = data[rowIndex];
@@ -184,34 +187,16 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 let key = keys[colIndex];
                 let type = types[colIndex];
                 let value = _arrLine[colIndex];
-                // Strip @ prefix for flatc compatibility
-                if (typeof key === 'string' && key.startsWith('@')) {
-                    key = key.substring(1);
-                }
                 if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#') || typeof value === 'undefined') continue;
 
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-                if (fieldPath.length > 1) {
-                    // Lowercase first element if it matches a known struct type (flatc naming compatibility)
-                    let firstField = fieldPath[0].toString();
-                    let capitalized = firstField.charAt(0).toUpperCase() + firstField.slice(1);
-                    if (this.structHelper.IsStructType(capitalized)) {
-                        fieldPath[0] = firstField.charAt(0).toLowerCase() + firstField.slice(1);
-                    }
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
-                    }
-                }
+                this.structHelper.ApplyCellValue(subTmp, key, type, value,
+                    (t: string, d: any) => this.TransformStructValue(t, d));
             }
 
             jsonOut.push(subTmp);
         }
 
-        // If @ mode, group rows by the first field value
+        // @ 模式下按首列值分组
         if (isArrayMode) {
             let groups: { [key: string]: any[] } = {};
             for (let item of jsonOut) {
@@ -249,9 +234,9 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         return content;
     }
 
+
     /**
-     * Generate a sub-table name for a nested field within a parent table.
-     * e.g. (EquipmentCfg, attrs) -> EquipmentCfg_Attrs
+     * 为父表中的嵌套字段生成子 table 名，例如 (EquipmentCfg, attrs) -> EquipmentCfg_Attrs
      */
     private getSubTableName(className: string, fieldName: string): string {
         let parts = Utils.GetFristUpperAndLowerStr(fieldName);
@@ -267,142 +252,66 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
         let keys: string[] = (data[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(data);
         let types: string[] = typeRowIndex >= 0 ? (data[typeRowIndex] || []) : [];
-        
-        // Check @ mode before stripping
+
+        // 数组模式检测，需在去掉 @ 前缀之前判断
         let isArrayMode = false;
         let atFieldName = '';
         if (keys.length > 0 && keys[0] && keys[0].startsWith("@")) {
             isArrayMode = true;
             atFieldName = keys[0].substring(1);
-        }
-        
-        // Strip @ prefix from all keys for flatc compatibility
-        for (let i = 0; i < keys.length; ++i) {
-            if (keys[i] && keys[i].startsWith('@')) {
-                keys[i] = keys[i].substring(1);
-            }
+            keys[0] = atFieldName;
         }
 
-        // Group nested fields by their top-level parent name.
-        // e.g. 'attrs[0].value1' -> parentName='attrs', subField='value1'
-        //      'attr.name'       -> parentName='attr',  subField='name'
-       interface NestedGroup {
-           fields: { [fieldName: string]: string };
-           isArray: boolean;
-            structName: string;
-        }
-        let nestedGroups: { [parentName: string]: NestedGroup } = {};
-        interface SimpleField {
-            key: string;
-            type: string;
-        }
-        let simpleFields: SimpleField[] = [];
-
-        for (let colIndex = 0; colIndex < keys.length; ++colIndex) {
-            let key = keys[colIndex];
-            let type = types[colIndex];
-            if (_.isNil(key) || _.isEmpty(key) || key.startsWith('#')) continue;
-
-            let fieldInfo = this.structHelper.AnalyzeField(key, type);
-
-            if (fieldInfo.isStruct && fieldInfo.fieldPath.length > 0) {
-                let parentName = fieldInfo.name;
-
-               if (!nestedGroups[parentName]) {
-                    let resolvedStructName = fieldInfo.structName || (parentName.charAt(0).toUpperCase() + parentName.slice(1));
-                    nestedGroups[parentName] = { fields: {}, isArray: fieldInfo.isArray, structName: resolvedStructName };
-                }
-
-                if (fieldInfo.isArray) {
-                    nestedGroups[parentName].isArray = true;
-                }
-
-                let subFieldName = fieldInfo.fieldPath[fieldInfo.fieldPath.length - 1];
-
-                if (!nestedGroups[parentName].fields[subFieldName]) {
-                    nestedGroups[parentName].fields[subFieldName] = type;
-                }
-
-                continue;
-            }
-
-            simpleFields.push({ key, type });
-        }
+        let layout = this.structHelper.AnalyzeSheet([keys, types], className, 1, className);
 
         let content = '';
 
-       // 1. Generate sub-table definitions for each nested group (skip if matching Struct.xlsx type)
-       for (let parentName of Object.keys(nestedGroups)) {
-           let group = nestedGroups[parentName];
-            let structName = group.structName;
-            if (this.structHelper.IsStructType(structName)) {
-                continue; // Skip - type is defined in Struct.xlsx
-            }
-            let subTableName = this.getSubTableName(className, structName);
-
-            content += FbsDefine.tableStart.replace('{0}', subTableName);
-            for (let [fieldName, fieldType] of Object.entries(group.fields)) {
-                let fbsType = this.TransformType(fieldType);
-                content += FbsDefine.fieldStr.replace('{0}', fieldName).replace('{1}', fbsType);
+        // 1. 为本表未定义的结构生成子 table
+        for (let structTableName in layout.localStructs) {
+            content += FbsDefine.tableStart.replace('{0}', structTableName);
+            for (let field of layout.localStructs[structTableName].fields) {
+                content += FbsDefine.fieldStr.replace('{0}', field.name).replace('{1}', this.TransformType(field.type));
             }
             content += FbsDefine.tableEnd;
         }
 
-        // 2. Generate the main table
+        // 2. 主 table
         content += FbsDefine.tableStart.replace('{0}', className);
 
-        for (let field of simpleFields) {
-            let fbsType = this.TransformType(field.type);
-            // Use lowercase-first letter to match CreateJson output (flatc is case-sensitive)
+        for (let field of layout.simpleFields) {
+            // 字段名首字母小写，与 CreateJson 输出保持一致（flatc 区分大小写）
             let fieldNameLower = Utils.GetFristUpperAndLowerStr(field.key)[1];
-            if (this.structHelper.IsStructType(field.type)) {
-                content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', field.type);
-            } else {
-                content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', fbsType);
-            }
+            let fbsType = this.structHelper.IsStructType(field.type)
+                ? field.type
+                : this.TransformType(field.type);
+            content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', fbsType);
         }
 
-       // 3. Add nested field references with proper FlatBuffers types
-       for (let parentName of Object.keys(nestedGroups)) {
-           let group = nestedGroups[parentName];
-            let structName = group.structName;
-            
-            if (this.structHelper.IsStructType(structName)) {
-                // Reference the struct type from Struct.xlsx directly (lowercase field name to avoid flatc naming conflict)
-                let fieldKey = parentName.charAt(0).toLowerCase() + parentName.slice(1);
-                if (group.isArray) {
-                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', '[' + structName + ']');
-                } else {
-                    content += FbsDefine.fieldStr.replace('{0}', fieldKey).replace('{1}', structName);
-                }
-            } else {
-                let subTableName = this.getSubTableName(className, structName);
-                if (group.isArray) {
-                    content += FbsDefine.fieldStr.replace('{0}', parentName).replace('{1}', '[' + subTableName + ']');
-                } else {
-                    content += FbsDefine.fieldStr.replace('{0}', parentName).replace('{1}', subTableName);
-                }
-            }
+        // 3. 结构字段引用
+        for (let prop of layout.structProperties) {
+            let fieldNameLower = Utils.GetFristUpperAndLowerStr(prop.propertyName)[1];
+            let fbsType = prop.isArray ? '[' + prop.structName + ']' : prop.structName;
+            content += FbsDefine.fieldStr.replace('{0}', fieldNameLower).replace('{1}', fbsType);
         }
 
         content += FbsDefine.tableEnd;
 
-        // Generate wrapper table(s) based on @ mode
+        // 按 @ 模式生成包装 table
         if (isArrayMode) {
             let subTableName = this.getSubTableName(className, atFieldName);
             let keyFbsType = types[0] ? this.TransformType(types[0]) : 'int';
-            // Generate group sub-table: ClassName_AtFieldName { key:type; records:[ClassName]; }
+            // 分组子 table：ClassName_AtFieldName { key:type; records:[ClassName]; }
             content += FbsDefine.tableStart.replace('{0}', subTableName);
             content += FbsDefine.fieldStr.replace('{0}', 'key').replace('{1}', keyFbsType);
             content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
             content += FbsDefine.tableEnd;
-            
-            // Generate wrapper for the sub-table array
+
+            // 子 table 数组的包装
             content += FbsDefine.tableStart.replace('{0}', subTableName + '_Array');
             content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + subTableName + ']');
             content += FbsDefine.tableEnd;
         } else {
-            // Generate wrapper table for flatc binary generation (array root type)
+            // 供 flatc 生成二进制的数组根类型
             content += FbsDefine.tableStart.replace('{0}', className + '_Array');
             content += FbsDefine.fieldStr.replace('{0}', 'records').replace('{1}', '[' + className + ']');
             content += FbsDefine.tableEnd;

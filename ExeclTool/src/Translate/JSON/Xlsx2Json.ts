@@ -104,11 +104,11 @@ export default class Xlsx2Json extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
+        let keys = (dataArr[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // 榛樿鐨勫眰绾х粨鏋勬槸绗竴灞傦紝鍗砶ey鐨勪綅缃?
+        // 默认的层级结构是第一层，即 key 所在的位置
         let layerNum = 1;
 
         // 检查是否是数组模式（第一列以@开头）
@@ -119,6 +119,9 @@ export default class Xlsx2Json extends BaseTranslateConfig {
             arrayKey = keys[0].substring(1);
             keys[0] = arrayKey; // 去掉@前缀
         }
+
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -147,17 +150,8 @@ export default class Xlsx2Json extends BaseTranslateConfig {
                 if (_.isNil(value) || typeof (value) == "undefined") {
                     continue;
                 }
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-
-                if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
-                    }
-                }
+                this.structHelper.ApplyCellValue(subTmp, key, type, value,
+                    (t: string, d: any) => this.TransformStructValue(t, d));
             }
 
             if (isArrayMode) {

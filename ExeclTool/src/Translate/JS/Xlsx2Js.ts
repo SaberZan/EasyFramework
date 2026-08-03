@@ -39,10 +39,7 @@ export default class Xlsx2Js extends BaseTranslateConfig {
                 await this.TransferTable(files[i].replace(path.extname(files[i]), ''));
             }
         } else {
-            let parsedPath = path.parse(pathStr);
-            parsedPath.base += '.xlsx';
-            parsedPath.ext = '.xlsx';
-            let data = DataParser.parse(path.format(parsedPath), params.format);
+            let data = DataParser.parseWithOptionalExtension(pathStr, params.format);
             for (let i = 0; i < data.length; ++i) {
                 this.xlsxData[data[i].name] = data[i].data;
             }
@@ -79,11 +76,11 @@ export default class Xlsx2Js extends BaseTranslateConfig {
         }
 
         let dataArr = data;
-        let keys = dataArr[0] || [];
+        let keys = (dataArr[0] || []).slice();
         let typeRowIndex = this.FindTypeRowIndex(dataArr);
         let types = typeRowIndex >= 0 ? (dataArr[typeRowIndex] || []) : [];
 
-        // 默认单层级，如果第一行数据包含嵌套字段（带点的字段名），会自动处理
+        // 默认单层级，结构字段由表头等号声明，统一交给 structHelper 处理
         let layerNum = 1;
 
         // 检查是否是数组模式（第一列以@开头）
@@ -94,6 +91,9 @@ export default class Xlsx2Js extends BaseTranslateConfig {
             arrayKey = keys[0].substring(1);
             keys[0] = arrayKey; // 去掉@前缀
         }
+
+        // 校验同名结构的字段类型是否一致，不一致直接抛错
+        this.structHelper.CollectStructFields(keys, types, className);
 
         for (let rowIndex = 3; rowIndex < dataArr.length; ++rowIndex) {
             let _arrLine = dataArr[rowIndex];
@@ -123,17 +123,8 @@ export default class Xlsx2Js extends BaseTranslateConfig {
                     continue;
                 }
 
-                let fieldPath = this.structHelper.ResolveFieldPath(key);
-
-                if (fieldPath.length > 1) {
-                    this.structHelper.SetNestedValue(subTmp, fieldPath, this.TransformStructValue(type, value));
-                } else {
-                    let result = this.TransformStructValue(type, value, rowIndex, colIndex);
-                    if (!_.isNil(result) && !_.isNaN(result)) {
-                        let keyLower = Utils.GetFristUpperAndLowerStr(key)[1];
-                        subTmp[keyLower] = result;
-                    }
-                }
+                this.structHelper.ApplyCellValue(subTmp, key, type, value,
+                    (t: string, d: any) => this.TransformStructValue(t, d));
             }
 
             if (isArrayMode) {

@@ -73,8 +73,11 @@ export default class Xlsx2ProtoBuffersBefore extends BaseTranslateBefore {
             case 'float': case 'Float': return 'float';
             case 'string': case 'String': return 'string';
             case 'bool': case 'Bool': return 'bool';
-            case 'int[]': return 'repeated int32';
-            default: return type;
+            default:
+                if (typeof type === 'string' && type.includes('[]')) {
+                    return 'repeated ' + this.TransformProtoType(type.replace('[]', ''));
+                }
+                return type;
         }
     }
 
