@@ -57,9 +57,10 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 all[translateName] = jsonData;
             }
-            await this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + file));
+            let fileSuffix = this.StripSheetPrefix(file);
+            await this.SaveTsToFile(all, path.join(this.outputTsPathStr, this.mergeName + fileSuffix));
             if (!this.isDir) {
-                await this.SaveClassMergeToFile(path.join(this.outputTsPathStr, this.mergeName + file + 'Class'));
+                await this.SaveClassMergeToFile(path.join(this.outputTsPathStr, this.mergeName + fileSuffix + 'Class'));
             }
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
@@ -243,11 +244,13 @@ export default class Xlsx2Ts extends BaseTranslateConfig {
 
     private BuildImportStatements(imports: Set<string>): string {
         let lines: string[] = [];
+        // toDir 模式下输出文件在子目录里，结构类与枚举在上一级，需要用 '../'
+        let prefix = this.toDir ? '../' : './';
         imports.forEach((name) => {
             if (this.structHelper.IsStructType(name)) {
-                lines.push("import { " + name + " } from './" + name + "Class';");
+                lines.push("import { " + name + " } from '" + prefix + name + "Class';");
             } else if (this.enumHelper && this.enumHelper.enumDefinitions && this.enumHelper.enumDefinitions[name]) {
-                lines.push("import { " + name + " } from './" + name + "';");
+                lines.push("import { " + name + " } from '" + prefix + name + "';");
             }
         });
         return lines.length > 0 ? lines.join('\n') + '\n\n' : '';

@@ -120,4 +120,20 @@ export default class BaseTranslateConfig {
     public FindFirstDataRow(data: any, typeRowIndex: number): number {
         return typeRowIndex + 2;
     }
+
+    /**
+     * 目录模式（isDir=true）下遍历子文件时，每个子文件名会带上表名前缀，
+     * 例如“船体表_001”。合表输出只需要用于区分的后缀（例如“_001”）接在
+     * mergeName 后面，因此这里把 translateSheets 中声明的表名从文件名中去掉。
+     */
+    public StripSheetPrefix(file: string): string {
+        if (!file || !this.translateSheets) return file;
+        for (let i = 0; i < this.translateSheets.length; ++i) {
+            let sheetName = this.translateSheets[i][0];
+            if (file.indexOf(sheetName) >= 0) {
+                return file.replace(sheetName, '');
+            }
+        }
+        return file;
+    }
 }

@@ -130,7 +130,7 @@ export default class Xlsx2Cs extends BaseTranslateConfig {
                 let keyLower = translateName.charAt(0).toLowerCase() + translateName.slice(1);
                 all[keyLower + 'Dic'] = jsonData;
             }
-            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + this.StripSheetPrefix(file)));
         }else{
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];

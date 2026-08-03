@@ -103,7 +103,11 @@ export default class CsvParser {
      * Parse a single CSV file
      */
     public static parseCsvFile(csvPath: string): CsvSheetData {
-        const content = fs.readFileSync(csvPath, 'utf8');
+        let content = fs.readFileSync(csvPath, 'utf8');
+        // 去掉文件起始的 UTF-8 BOM，避免它被当作第一个单元格的前缀字符
+        if (content.length > 0 && content.charCodeAt(0) === 0xFEFF) {
+            content = content.substring(1);
+        }
         const sheetName = path.basename(csvPath, '.csv');
         return {
             name: sheetName,

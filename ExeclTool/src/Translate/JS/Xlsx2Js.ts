@@ -56,7 +56,7 @@ export default class Xlsx2Js extends BaseTranslateConfig {
                 let jsonData = this.CreateJson(this.xlsxData[sheetName], translateName);
                 all[translateName] = jsonData;
             }
-            await this.saveTsToFile(all, path.join(this.outputJsPathStr, this.mergeName + file));
+            await this.saveTsToFile(all, path.join(this.outputJsPathStr, this.mergeName + this.StripSheetPrefix(file)));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];

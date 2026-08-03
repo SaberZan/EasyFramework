@@ -95,7 +95,7 @@ export default class Xlsx2FlatBuffers extends BaseTranslateConfig {
                 // Wrap in records to match _Array table structure
                 all[fieldName] = { records: jsonData };
             }
-            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(all, path.join(this.outputPathJsonStr, this.mergeName + this.StripSheetPrefix(file)));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];

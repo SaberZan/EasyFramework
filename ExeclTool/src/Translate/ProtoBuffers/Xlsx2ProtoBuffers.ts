@@ -69,9 +69,10 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
                     this.xlsxData[data[i].name] = data[i].data;
                 }
                 let fileName = files[i].replace(path.extname(files[i]), "");
+                let fileSuffix = this.StripSheetPrefix(fileName);
                 let protoPath = path.join(this.outputPathProtosStr, this.mergeName + ".proto");
-                let jsonPath = path.join(this.outputPathJsonStr, this.mergeName + fileName + ".json");
-                let bytesPath = path.join(this.outputPathBytesStr, this.mergeName + fileName + ".bytes");
+                let jsonPath = path.join(this.outputPathJsonStr, this.mergeName + fileSuffix + ".json");
+                let bytesPath = path.join(this.outputPathBytesStr, this.mergeName + fileSuffix + ".bytes");
                 let messageName = "CfgSpace." + this.mergeName;
                 await this.TransferTableJson(fileName);
                 if (i == "0") {
@@ -116,7 +117,7 @@ export default class Xlsx2ProtoBuffers extends BaseTranslateConfig {
             }
             let wrapper: { [key: string]: any } = {};
             wrapper[this.mergeName] = mergedRecord;
-            await this.SaveJsonToFile(wrapper, path.join(this.outputPathJsonStr, this.mergeName + file));
+            await this.SaveJsonToFile(wrapper, path.join(this.outputPathJsonStr, this.mergeName + this.StripSheetPrefix(file)));
         } else {
             for (let i = 0; i < this.translateSheets.length; ++i) {
                 let sheetName = this.translateSheets[i][0];
